@@ -1,0 +1,50 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Institution Summary - Section 4{% endblock %}
+
+{% block report_header_title %}Faculty Headcount & Vacancy Audit{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Audit Category:</div>
+    <div class="meta-value">Human Resources</div>
+    <div class="meta-label">Section:</div>
+    <div class="meta-value">4 of 4: Faculty</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<h2>Departmental Faculty Staffing Analysis</h2>
+<p>Below is the active faculty headcount, estimated recruitment vacancies, and staffing status across departments.</p>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th style="text-align: center;">Active Faculty Headcount</th>
+            <th style="text-align: center;">Estimated Vacancies</th>
+            <th style="text-align: center;">Staffing Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td><strong>{{ row.department }}</strong></td>
+            <td style="text-align: center; font-weight: bold;">{{ row.headcount }}</td>
+            <td style="text-align: center; color: #800000; font-weight: bold;">{{ row.vacancies }}</td>
+            <td style="text-align: center;">
+                {% if row.status == 'Optimal' %}
+                <span class="badge badge-green">Optimal</span>
+                {% else %}
+                <span class="badge badge-amber">Open Recruitment</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" style="text-align: center; color: #777;">No active faculty staff logs found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

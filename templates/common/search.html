@@ -1,0 +1,122 @@
+{% extends "common/base.html" %}
+{% block title %}Search{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Search{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Admin{% endblock %}
+
+{% block page_title %}Global Search{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Search{% endblock %}
+{% block topbar_extras %}
+<form method="GET" action="/search" style="flex:1;max-width:520px;display:flex">
+  <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:8px 14px">
+    <i class="fas fa-magnifying-glass" style="color:var(--ink4);font-size:13px"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Search students, faculty, subjects, marks…"
+           style="border:none;background:none;font-size:13px;outline:none;width:100%;font-family:var(--font)" autofocus>
+  </div>
+  <button type="submit" class="btn btn-dark" style="margin-left:8px;flex-shrink:0"><i class="fas fa-search"></i></button>
+</form>
+{% endblock %}
+{% block content %}
+{% if q %}
+<div class="ph fu"><div><div class="ph-title">Results for "{{ q }}"</div><div class="ph-sub">{{ total }} results across all modules</div></div></div>
+
+{% if total == 0 %}
+<div class="card"><div class="cb"><div class="empty-state" style="padding:60px 20px">
+  <i class="fas fa-magnifying-glass"></i><p>Nothing found for "{{ q }}"</p>
+  <p style="font-size:12px;margin-top:6px;color:var(--ink4)">Try a different name, PRN Number, or subject.</p>
+</div></div></div>
+{% endif %}
+
+{% if results.students %}
+<div class="card mb16 fu fu1">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-users" style="color:var(--blue);margin-right:8px"></i>Students</div><span class="tag t-bl">{{ results.students|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Name</th><th>Roll</th><th>Dept</th><th>Year</th><th>Email</th><th></th></tr></thead>
+    <tbody>{% for s in results.students %}
+    <tr><td><div class="flex-ac gap8"><div class="av av-sm" style="background:#2563EB">{{ s.name[0]|upper }}</div>{{ s.name }}</div></td>
+    <td class="mono" style="font-size:12px">{{ s.roll }}</td>
+    <td><span class="tag t-bl">{{ s.department }}</span></td><td>{{ s.year }}</td>
+    <td style="font-size:12px;color:var(--ink3)">{{ s.email or "—" }}</td>
+    <td><a href="/students?q={{ s.roll }}" class="btn btn-out btn-sm"><i class="fas fa-arrow-right"></i></a></td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% if results.faculty %}
+<div class="card mb16 fu fu2">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-chalkboard-user" style="color:var(--violet);margin-right:8px"></i>Faculty</div><span class="tag t-vi">{{ results.faculty|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Name</th><th>Dept</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+    <tbody>{% for f in results.faculty %}
+    <tr><td><div class="flex-ac gap8"><div class="av av-sm" style="background:#7C3AED">{{ f.name[0]|upper }}</div>{{ f.name }}</div></td>
+    <td><span class="tag t-vi">{{ f.department }}</span></td>
+    <td style="font-size:12px;color:var(--ink3)">{{ f.email }}</td>
+    <td class="mono" style="font-size:12px">{{ f.phone or "—" }}</td>
+    <td><a href="/faculty?q={{ f.email }}" class="btn btn-out btn-sm"><i class="fas fa-arrow-right"></i></a></td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% if results.subjects %}
+<div class="card mb16 fu fu2">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-book" style="color:var(--amber);margin-right:8px"></i>Subjects</div><span class="tag t-am">{{ results.subjects|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Subject</th><th>Code</th><th>Dept</th><th>Teacher</th><th>Sem</th></tr></thead>
+    <tbody>{% for s in results.subjects %}
+    <tr><td><strong>{{ s.name }}</strong></td>
+    <td class="mono" style="font-size:12px;color:var(--ink3)">{{ s.subject_code or "—" }}</td>
+    <td><span class="tag t-am">{{ s.department }}</span></td>
+    <td>{{ s.teacher or "—" }}</td><td>{{ s.semester }}</td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% if results.marks %}
+<div class="card mb16 fu fu3">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-star" style="color:var(--green);margin-right:8px"></i>Marks</div><span class="tag t-gr">{{ results.marks|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Student</th><th>Subject</th><th>Exam</th><th>Score</th><th>Grade</th></tr></thead>
+    <tbody>{% for m in results.marks %}
+    {% set p = (m.marks/m.total*100)|round|int %}
+    <tr><td>{{ m.student_name }}</td><td>{{ m.subject }}</td>
+    <td><span class="tag t-vi" style="font-size:10px">{{ m.exam_type }}</span></td>
+    <td><span class="mono" style="font-weight:700">{{ m.marks }}</span><span style="color:var(--ink4);font-size:11px">/{{ m.total }}</span></td>
+    <td><span class="grade {% if p>=90 %}g-ap{% elif p>=75 %}g-a{% elif p>=60 %}g-b{% elif p>=40 %}g-c{% else %}g-f{% endif %}">{% if p>=90 %}A+{% elif p>=75 %}A{% elif p>=60 %}B+{% elif p>=40 %}B{% elif p>=33 %}C{% else %}F{% endif %}</span></td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% if results.attendance %}
+<div class="card mb16 fu fu3">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-calendar-check" style="color:var(--teal);margin-right:8px"></i>Attendance</div><span class="tag t-te">{{ results.attendance|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Student</th><th>Subject</th><th>Date</th><th>Status</th></tr></thead>
+    <tbody>{% for r in results.attendance %}
+    <tr><td>{{ r.student_name }}</td><td>{{ r.subject }}</td>
+    <td class="mono" style="font-size:12px;color:var(--ink3)">{{ r.date }}</td>
+    <td><span class="tag {% if r.status=="Present" %}t-gr{% elif r.status=="Absent" %}t-re{% else %}t-am{% endif %}">{{ r.status }}</span></td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% if results.timetable %}
+<div class="card fu fu4">
+  <div class="ch flex-sb"><div class="ct"><i class="fas fa-table-cells" style="color:var(--ink3);margin-right:8px"></i>Timetable</div><span class="tag t-nn">{{ results.timetable|length }}</span></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl"><thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead>
+    <tbody>{% for e in results.timetable %}
+    <tr><td><span class="tag t-bl">{{ e.day }}</span></td>
+    <td class="mono" style="font-size:11px;color:var(--ink3)">{{ e.time }}</td>
+    <td><strong>{{ e.subject }}</strong></td>
+    <td>{{ e.teacher or "—" }}</td><td class="mono" style="font-size:11px">{{ e.room or "—" }}</td>
+    </tr>{% endfor %}</tbody></table>
+  </div>
+</div>{% endif %}
+
+{% else %}
+<div class="card"><div class="cb"><div class="empty-state" style="padding:60px 20px">
+  <i class="fas fa-magnifying-glass" style="font-size:36px;color:var(--ink4)"></i>
+  <p style="font-size:15px;margin-top:12px;font-weight:600">Search everything</p>
+  <p style="font-size:13px;margin-top:6px">Search across students, faculty, subjects, marks, attendance and timetable</p>
+</div></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,398 @@
+{% extends "common/base.html" %}
+{% block title %}Subjects{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Subjects{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Subjects{% endblock %}
+
+{% block content %}
+<!-- PAGE HEADER -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Subjects</div>
+    <div class="ph-sub">{{ subjects|length }} subjects</div>
+  </div>
+  <div class="ph-actions">
+    <button class="btn btn-dark btn-sm" onclick="M('addModal')"><i class="fa-solid fa-plus"></i> Add Subject</button>
+  </div>
+</div>
+
+<!-- ALERTS -->
+{% if request.args.get('deleted_all') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>All {{ request.args.get('deleted_all') }} subjects deleted.</span></div>{% endif %}
+{% if request.args.get('cleaned') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('cleaned') }} bad rows removed.</span></div>{% endif %}
+{% if request.args.get('imported') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('imported') }} subjects imported.{% if request.args.get('skipped') %} ({{ request.args.get('skipped') }} already existed){% endif %}</span></div>{% endif %}
+{% if request.args.get('success') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Subject saved.</span></div>{% endif %}
+
+<!-- 3-WAY ADD GUIDE (only when empty) -->
+{% if not subjects %}
+<div class="card mb16 fu fu1" style="border:2px dashed var(--border2)">
+  <div class="cb">
+    <div style="text-align:center;padding:8px 0 18px">
+      <i class="fas fa-lightbulb" style="font-size:28px;color:var(--amber);margin-bottom:10px;display:block"></i>
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px">3 ways to add subjects</div>
+    </div>
+    <div class="g3">
+      <div style="background:var(--blue-s);border-radius:var(--r-md);padding:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px"><i class="fas fa-wand-magic-sparkles"></i> Option 1 — Auto-extract from TT</div>
+        <p style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:12px">
+          Upload <code>FY-TT</code>, <code>SY-TT</code>, or <code>TY-TT</code> Excel — it reads the subject lookup table and extracts names, codes, department, semester, and faculty automatically.
+        </p>
+        <button onclick="M('ttModal')" class="btn btn-blue btn-sm"><i class="fas fa-file-excel"></i> Import TT File</button>
+      </div>
+      <div style="background:var(--green-s);border-radius:var(--r-md);padding:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px"><i class="fas fa-table"></i> Option 2 — Import Excel Template</div>
+        <p style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:12px">
+          Download our template, fill in your subjects, upload it back.
+        </p>
+        <div class="flex-ac gap6">
+          <a href="/download_subjects_template" class="btn btn-gr btn-sm"><i class="fas fa-download"></i> Template</a>
+          <button onclick="M('impModal')" class="btn btn-out btn-sm"><i class="fas fa-upload"></i> Import</button>
+        </div>
+      </div>
+      <div style="background:var(--violet-s);border-radius:var(--r-md);padding:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--violet);margin-bottom:8px"><i class="fas fa-pen"></i> Option 3 — Add Manually</div>
+        <p style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:12px">
+          Add subjects one by one using the form.
+        </p>
+        <button onclick="M('addModal')" class="btn btn-vi btn-sm"><i class="fas fa-plus"></i> Add Subject</button>
+      </div>
+    </div>
+    <div class="alert al-info" style="margin-top:16px">
+      <i class="fas fa-circle-info"></i>
+      <div style="font-size:12px;line-height:1.8">
+        <strong>Excel format:</strong> Columns → <code>Subject Name</code> | <code>Subject Code</code> | <code>Department</code> | <code>Semester</code> | <code>Teacher/Faculty</code><br>
+        Row 1 = headers, Row 2+ = data.
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<!-- AUTO-EXTRACT BAR (when subjects already exist) -->
+<div class="card mb12 fu">
+  <div class="cb" style="padding:12px 20px">
+    <div class="flex-ac gap12 flex-wrap">
+      <div>
+        <div style="font-size:13px;font-weight:600"><i class="fas fa-wand-magic-sparkles" style="color:var(--blue)"></i> Import all subjects from timetable Excel</div>
+        <div style="font-size:11px;color:var(--ink3)">Reads subject lookup tables — full names, subject codes, faculty names</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button onclick="M('ttModal')" class="btn btn-blue btn-sm"><i class="fas fa-file-excel"></i> Import TT</button>
+        <a href="/download_subjects_template" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Template</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- STATS CARDS -->
+{% if subjects %}
+<div class="sg fu fu1" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+  <div class="sc"><div><div class="sv">{{ subjects|length }}</div><div class="sl">Total Subjects</div></div><div class="sico ic-bl"><i class="fas fa-book"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ subjects|selectattr('department','equalto','CS')|list|length + subjects|selectattr('department','equalto','IT')|list|length }}</div><div class="sl">CS + IT</div></div><div class="sico ic-vi"><i class="fas fa-laptop-code"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ subjects|selectattr('teacher')|list|length }}</div><div class="sl">With Faculty</div></div><div class="sico ic-gr"><i class="fas fa-chalkboard-user"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ subjects|selectattr('subject_code')|list|length }}</div><div class="sl">With Code</div></div><div class="sico ic-am"><i class="fas fa-hashtag"></i></div></div>
+</div>
+{% endif %}
+
+<!-- FILTER + BULK BAR -->
+<div class="card fu fu2">
+  <div class="cb">
+    <form method="GET" action="{{ url_for('admin.subjects') }}">
+      <div class="toolbar">
+        <input class="tb-field" type="text" name="q" value="{{ q }}" placeholder="Search name or code…" style="width:220px">
+        <select class="tb-field" name="dept" onchange="this.form.submit()">
+          <option value="">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}" {{ 'selected' if dept==d }}>{{ d }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fa-solid fa-search"></i> Search</button>
+        <a href="{{ url_for('admin.subjects') }}" class="btn btn-out btn-sm"><i class="fa-solid fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- BULK DELETE BAR -->
+  <div id="bulkBar" style="display:none;padding:10px 20px;background:var(--blue-s);border-top:1px solid var(--blue-m);border-bottom:1px solid var(--blue-m)">
+    <div class="flex-ac gap10">
+      <span style="font-size:13px;font-weight:700;color:var(--blue)"><i class="fas fa-check-circle"></i> <span id="bulkNum">0</span> selected</span>
+      <button class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> Delete Selected</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearSel()"><i class="fas fa-xmark"></i> Clear</button>
+    </div>
+  </div>
+  <form method="POST" action="/bulk_delete_subjects" id="bulkForm" style="display:none">
+    <div id="bulkInputs"></div>
+  </form>
+
+  <!-- TABLE -->
+  {% if subjects %}
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox" id="selAll" onchange="toggleAll(this)" style="width:15px;height:15px;cursor:pointer"></th>
+          <th>Subject Name</th>
+          <th>Code</th>
+          <th>Department</th>
+          <th>Sem / Div</th>
+          <th>Credits</th>
+          <th>Teacher</th>
+          <th style="width:100px text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for s in subjects %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td><input type="checkbox" class="row-cb" data-id="{{ s.id }}" onchange="updateBulk()" style="width:15px;height:15px;cursor:pointer"></td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="av av-sm shadow-sm" style="background:#2563EB;font-size:11px">{{ s.name[0]|upper }}</div>
+              <strong class="text-gray-800">{{ s.name }}</strong>
+            </div>
+          </td>
+          <td>
+            {% if s.subject_code or s.code %}
+            <span class="mono" style="font-size:11px;background:var(--bg2);padding:2px 7px;border-radius:4px;color:var(--ink2);border:1px solid var(--border)">{{ s.subject_code or s.code }}</span>
+            {% else %}<span style="color:var(--ink4)">—</span>{% endif %}
+          </td>
+          <td>{% if s.department or s.dept %}<span class="tag t-bl">{{ s.department or s.dept }}</span>{% else %}<span style="color:var(--ink4)">—</span>{% endif %}</td>
+          <td>
+            <div class="text-gray-700" style="font-size:12px;font-weight:600">Sem {{ s.semester or 'I' }}</div>
+            <div class="text-gray-400" style="font-size:10px;text-transform:uppercase">Div {{ s.division or 'A' }}</div>
+          </td>
+          <td>
+            <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold border border-green-100">{{ s.credits or 4 }} CR</span>
+          </td>
+          <td>
+            {% if s.teacher %}
+            <div class="flex-ac gap5">
+              <div class="av av-sm shadow-sm" style="background:#7C3AED;font-size:10px">{{ s.teacher[0]|upper }}</div>
+              <span class="text-gray-600" style="font-size:12px">{{ s.teacher[:30] }}</span>
+            </div>
+            {% else %}<span style="color:var(--ink4)">—</span>{% endif %}
+          </td>
+          <td class="text-right">
+            <div class="flex-ac gap5 justify-end">
+              <a href="{{ url_for('admin.edit_subject', id=s.id) }}" class="btn btn-out btn-sm shadow-sm" title="Edit">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin.delete_subject', id=s.id) }}" style="display:inline" onsubmit="return confirm('Permanently delete {{ s.name }}?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm shadow-sm" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="cb"><div class="empty-state"><i class="fa-solid fa-book-open"></i><p>No subjects found for current criteria.</p></div></div>
+  {% endif %}
+</div>
+
+
+<!-- ════ ADD MODAL ════════════════════════════════════════════ -->
+<div class="modal-bg" id="addModal">
+  <div class="modal-box" style="width:500px; border-radius: var(--r-md); box-shadow: var(--sh-md);">
+    <div class="ch flex-sb" style="padding-bottom:14px; border-bottom: 1px solid var(--border);">
+      <div class="ct font-bold text-gray-800">Add New Subject</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="close('addModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.add_subject') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb" style="padding-top:20px; gap:16px; display:flex; flex-direction:column;">
+        <div class="fg2">
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Subject Name *</label><input type="text" name="name" required placeholder="e.g. AI & Robotics"></div>
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Subject Code</label><input type="text" name="subject_code" placeholder="e.g. CS601"></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Department</label>
+            <select name="department">
+              {% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Semester</label>
+            <select name="semester">
+              {% for s in SEMESTERS %}<option>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Division</label><input type="text" name="division" placeholder="e.g. A" value="A"></div>
+          <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Credits</label><input type="number" name="credits" value="4" min="1" max="10"></div>
+        </div>
+        <div class="fgrp"><label class="text-xs font-bold uppercase tracking-tight text-gray-400">Teacher / Faculty</label>
+          <input type="text" name="teacher" list="tl" placeholder="Search teacher...">
+          <datalist id="tl">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+        </div>
+      </div>
+      <div class="cf" style="background:var(--bg); border-top:1px solid var(--border); border-radius: 0 0 var(--r-md) var(--r-md);">
+        <button type="submit" class="btn btn-dark"><i class="fa-solid fa-plus-circle"></i> Create Subject</button>
+        <button type="button" class="btn btn-out" onclick="close('addModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ════ EDIT MODAL ═══════════════════════════════════════════ -->
+<div class="modal-bg" id="editModal">
+  <div class="modal-box" style="width:500px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div class="ct">Edit Subject</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="close('editModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_subject">
+      <input type="hidden" name="subject_id" id="e-id">
+      <div class="cb" style="padding-top:0">
+        <div class="fg2">
+          <div class="fgrp"><label>Subject Name *</label><input type="text" name="name" id="e-name" required></div>
+          <div class="fgrp"><label>Subject Code</label><input type="text" name="subject_code" id="e-code"></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Department</label>
+            <select name="department" id="e-dept">
+              <option value="">None</option>
+              {% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fgrp"><label>Semester</label>
+            <select name="semester" id="e-sem">
+              <option value="">None</option>
+              {% for s in SEMESTERS %}<option>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="fgrp"><label>Teacher / Faculty</label><input type="text" name="teacher" id="e-tchr"></div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Changes</button>
+        <button type="button" class="btn btn-out" onclick="close('editModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ════ IMPORT TIMETABLE MODAL ══════════════════════════════════ -->
+<div class="modal-bg" id="ttModal">
+  <div class="modal-box" style="width:500px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div>
+        <div class="ct">Import Subjects from Excel</div>
+        <div class="cs">Reads subject lookup tables — full names, codes, faculty</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="close('ttModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_subjects_from_tt" enctype="multipart/form-data">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-info" style="margin-bottom:14px">
+          <i class="fas fa-circle-info"></i>
+          <div style="font-size:12px;line-height:1.8">
+            <strong>Files: FY-TT, SY-TT, or TY-TT Excel</strong><br>
+            Extracts from the subject lookup table of each sheet:<br>
+            <code>Machine Learning (ML) → Prof.Shakil Tamboli → U23CEPC601</code><br>
+            Skips duplicates automatically.
+          </div>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('tt-f').click()">
+          <i class="fas fa-file-excel" style="color:#059669;font-size:28px"></i>
+          <p>Click to select Excel file</p>
+          <small>.xlsx / .xls</small>
+          <input type="file" id="tt-f" name="file" accept=".xlsx,.xls" style="display:none"
+                 onchange="document.getElementById('tt-fn').textContent='✓  '+this.files[0].name;document.getElementById('tt-btn').disabled=false">
+        </div>
+        <p id="tt-fn" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+      </div>
+      <div class="cf">
+        <button type="submit" id="tt-btn" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Subjects</button>
+        <button type="button" class="btn btn-out" onclick="close('ttModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ════ IMPORT EXCEL MODAL ══════════════════════════════════ -->
+<div class="modal-bg" id="impModal">
+  <div class="modal-box" style="width:480px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div class="ct">Import Subjects — Excel Template</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="close('impModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_subjects_v2" enctype="multipart/form-data">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-info" style="margin-bottom:14px">
+          <i class="fas fa-circle-info"></i>
+          <div style="font-size:12px;line-height:1.8">
+            <strong>Required columns:</strong><br>
+            <code>Subject Name | Subject Code | Department | Semester | Teacher</code><br>
+            Row 1 = headers, Row 2+ = data.<br>
+            <a href="/download_subjects_template" style="color:var(--blue);font-weight:600"><i class="fas fa-download"></i> Download template with sample data</a>
+          </div>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('imp-f').click()">
+          <i class="fas fa-file-excel" style="color:#059669;font-size:28px"></i>
+          <p>Click to select Excel file</p><small>.xlsx / .xls</small>
+          <input type="file" id="imp-f" name="file" accept=".xlsx,.xls" style="display:none"
+                 onchange="document.getElementById('imp-fn').textContent='✓  '+this.files[0].name;document.getElementById('imp-btn').disabled=false">
+        </div>
+        <p id="imp-fn" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+      </div>
+      <div class="cf">
+        <button type="submit" id="imp-btn" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="button" class="btn btn-out" onclick="close('impModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function M(id){ document.getElementById(id).classList.add('show'); }
+function close(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-bg').forEach(function(m){
+  m.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); });
+});
+
+function openEdit(id,name,code,dept,sem,teacher){
+  document.getElementById('e-id').value   = id;
+  document.getElementById('e-name').value = name;
+  document.getElementById('e-code').value = code;
+  document.getElementById('e-dept').value = dept;
+  document.getElementById('e-sem').value  = sem;
+  document.getElementById('e-tchr').value = teacher;
+  M('editModal');
+}
+
+// Bulk delete
+function updateBulk(){
+  var n = document.querySelectorAll('.row-cb:checked').length;
+  document.getElementById('bulkBar').style.display = n ? 'block':'none';
+  document.getElementById('bulkNum').textContent = n;
+}
+function toggleAll(cb){
+  document.querySelectorAll('.row-cb').forEach(function(c){ c.checked=cb.checked; });
+  updateBulk();
+}
+function clearSel(){
+  document.querySelectorAll('.row-cb,#selAll').forEach(function(c){ c.checked=false; });
+  updateBulk();
+}
+function bulkDelete(){
+  var ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(function(c){ return c.dataset.id; });
+  if(!ids.length) return;
+  if(!confirm('Delete '+ids.length+' subjects?')) return;
+  var container = document.getElementById('bulkInputs');
+  container.innerHTML = '';
+  ids.forEach(function(id){
+    var inp=document.createElement('input'); inp.type='hidden'; inp.name='ids[]'; inp.value=id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulkForm').submit();
+}
+</script>
+{% endblock %}

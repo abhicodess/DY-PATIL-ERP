@@ -1,0 +1,235 @@
+{% extends "common/base.html" %}
+{% block title %}Marking Attendance — {{ sess.subject }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .att-toggle { display: flex; gap: 4px; background: var(--bg2); padding: 4px; border-radius: 20px; width: fit-content; }
+  .tgl-btn { border: none; background: none; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all .2s; color: var(--ink3); }
+  .tgl-btn:hover { background: rgba(0,0,0,0.05); }
+  
+  .tgl-btn.active.pres { background: var(--green); color: #fff; box-shadow: 0 2px 4px rgba(5,150,105,0.3); }
+  .tgl-btn.active.abs { background: var(--red); color: #fff; box-shadow: 0 2px 4px rgba(220,38,38,0.3); }
+  .tgl-btn.active.lv { background: var(--amber); color: #fff; box-shadow: 0 2px 4px rgba(217,119,6,0.3); }
+
+  .sticky-stats { position: sticky; top: var(--tb-h); background: var(--white); z-index: 50; padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .stat-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 30px; font-weight: 700; font-family: var(--mono); font-size: 13px; border: 1.5px solid var(--border); }
+  
+  .search-wrap { position: relative; width: 300px; }
+  .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink4); font-size: 13px; }
+  .search-wrap input { width: 100%; padding: 8px 12px 8px 34px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 13px; outline: none; }
+  .search-wrap input:focus { border-color: var(--blue); }
+
+  .save-status { font-size: 11px; color: var(--ink4); display: flex; align-items: center; gap: 4px; }
+  .save-status.syncing { color: var(--blue); }
+  .save-status.synced { color: var(--green); }
+</style>
+{% endblock %}
+
+{% block page_title %}Marking Attendance{% endblock %}
+{% block breadcrumb %}<a href="/faculty/attendance_portal">Attendance</a> / {{ sess.subject }}{% endblock %}
+
+{% block content %}
+<div class="ph fu" style="margin-bottom:0">
+  <div>
+    <div class="ph-title">{{ sess.subject }} — {{ sess.lecture_type }}</div>
+    <div class="ph-sub">{{ sess.branch }} {{ sess.division }} • {{ sess.lecture_date }} {% if sess.time_slot %}• {{ sess.time_slot }}{% endif %}</div>
+  </div>
+  <div class="ph-actions">
+    {% if sess.status == 'submitted' and not can_edit_submitted %}
+      <div class="tag t-gr"><i class="fas fa-lock"></i> Finalized & Locked</div>
+    {% else %}
+      <div id="saveStatus" class="save-status"><i class="fas fa-cloud-check"></i> Draft saved</div>
+      <button class="btn btn-out btn-sm" onclick="saveDraft()"><i class="fas fa-save"></i> Save Draft</button>
+      {% if sess.status != 'submitted' %}
+      <form action="/faculty/submit_session" method="POST" onsubmit="return confirm('Finalize and lock attendance? No further changes allowed.')">
+        <input type="hidden" name="session_id" value="{{ sess.id }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-check-double"></i> Submit & Finalize</button>
+      </form>
+      {% else %}
+      <div class="tag t-gr"><i class="fas fa-edit"></i> Submitted (Editable)</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if sess.status == 'submitted' %}
+<div class="cf" style="margin-bottom:12px">
+    {% if can_edit_submitted %}
+    <div class="alert al-info" style="background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;">
+        <i class="fas fa-info-circle"></i> <b>Submitted:</b> Attendance has been submitted. You can make corrections within the 24-hour window.
+    </div>
+    {% else %}
+    <div class="alert al-info" style="background:#fffbeb; border-color:#fde68a; color:#92400e;">
+        <i class="fas fa-exclamation-triangle"></i> <b>Attendance Locked:</b> This session has been submitted and locked. No further modifications are allowed.
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="sticky-stats fu">
+  <div class="flex-sb">
+    <div class="flex-ac gap10">
+      <div class="stat-pill" style="border-color:var(--border2); background:var(--bg2)">Total: <span id="cntTotal">0</span></div>
+      <div class="stat-pill" style="border-color:#a7f3d0; background:var(--green-s); color:var(--green)">Present: <span id="cntP">0</span></div>
+      <div class="stat-pill" style="border-color:#fecaca; background:var(--red-s); color:var(--red)">Absent: <span id="cntA">0</span></div>
+      <div class="stat-pill" style="border-color:#fde68a; background:var(--amber-s); color:var(--amber)">Late: <span id="cntL">0</span></div>
+    </div>
+    {% if sess.status != 'submitted' or can_edit_submitted %}
+    <div class="flex-ac gap8">
+      <button class="btn btn-out btn-sm" onclick="bulkMark('Present')"><i class="fas fa-check"></i> Mark All Present</button>
+      <button class="btn btn-out btn-sm" onclick="bulkMark('Absent')"><i class="fas fa-xmark"></i> Mark All Absent</button>
+    {% endif %}
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="studSearch" placeholder="Filter students by name or roll..." onkeyup="filterTable()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card fu fu1">
+  <div class="cb p0">
+    <table class="tbl" id="studTable">
+      <thead>
+        <tr>
+          <th style="width:100px">Roll No</th>
+          <th>Student Name</th>
+          <th>PRN</th>
+          <th style="text-align:right">Attendance Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr class="stud-row" data-id="{{ s.id }}">
+          <td style="font-family:var(--mono);font-weight:700">{{ s.roll }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="av av-sm ic-bl">{{ s.name[0]|upper }}</div>
+              {{ s.name }}
+            </div>
+          </td>
+          <td style="font-size:11px;color:var(--ink4)">{{ s.prn }}</td>
+          <td align="right">
+            <div class="att-toggle" data-sid="{{ s.id }}">
+              {% set cur = mark_map.get(s.id, 'Absent') %}
+              <button type="button" class="tgl-btn pres {% if cur == 'Present' %}active{% endif %}" onclick="setStatus(this, 'Present')">P</button>
+              <button type="button" class="tgl-btn abs {% if cur == 'Absent' %}active{% endif %}" onclick="setStatus(this, 'Absent')">A</button>
+              <button type="button" class="tgl-btn lv {% if cur == 'Late' %}active{% endif %}" onclick="setStatus(this, 'Late')">L</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let markings = {{ mark_map|tojson }};
+const session_id = {{ sess.id }};
+let isDirty = false;
+
+// Pre-populate markings from rendered student rows
+document.querySelectorAll('.stud-row').forEach(row => {
+    const sid = row.dataset.id;
+    if (!(sid in markings)) {
+        // Read the initial state rendered by Jinja2
+        const activeBtn = row.querySelector('.tgl-btn.active');
+        if (activeBtn) {
+            if (activeBtn.classList.contains('pres')) markings[sid] = 'Present';
+            else if (activeBtn.classList.contains('abs')) markings[sid] = 'Absent';
+            else if (activeBtn.classList.contains('lv')) markings[sid] = 'Late';
+        } else {
+            markings[sid] = 'Absent';
+        }
+    }
+});
+
+function setStatus(btn, status) {
+  if("{{ sess.status }}" === "submitted" && "{{ can_edit_submitted }}" !== "True") return;
+  const wrap = btn.parentElement;
+  const sid = wrap.dataset.sid;
+  
+  // Update UI
+  wrap.querySelectorAll('.tgl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  // Update state
+  markings[sid] = status;
+  isDirty = true;
+  updateCounters();
+}
+
+function updateCounters() {
+  let p = 0, a = 0, l = 0;
+  Object.values(markings).forEach(s => {
+    if(s === 'Present') p++;
+    else if(s === 'Absent') a++;
+    else if(s === 'Late') l++;
+  });
+  document.getElementById('cntP').textContent = p;
+  document.getElementById('cntA').textContent = a;
+  document.getElementById('cntL').textContent = l;
+  document.getElementById('cntTotal').textContent = p + a + l;
+}
+
+function bulkMark(status) {
+  const cls = status === 'Present' ? '.pres' : '.abs';
+  document.querySelectorAll('.stud-row:not([style*="display: none"]) ' + cls).forEach(btn => {
+    setStatus(btn, status);
+  });
+}
+
+function filterTable() {
+  const q = document.getElementById('studSearch').value.toLowerCase();
+  document.querySelectorAll('.stud-row').forEach(row => {
+    const txt = row.innerText.toLowerCase();
+    row.style.display = txt.includes(q) ? '' : 'none';
+  });
+}
+
+async function saveDraft(isSilent = false) {
+  if(!isDirty && isSilent) return;
+  
+  const statusEl = document.getElementById('saveStatus');
+  statusEl.className = 'save-status syncing';
+  statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  
+  try {
+    const res = await fetch('/faculty/api/save_attendance', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({ session_id, markings })
+    });
+    const data = await res.json();
+    if(data.ok) {
+      isDirty = false;
+      statusEl.className = 'save-status synced';
+      statusEl.innerHTML = '<i class="fas fa-cloud-check"></i> ' + (isSilent ? 'Auto-saved' : 'Saved to draft');
+    }
+  } catch(e) {
+    statusEl.className = 'save-status';
+    statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Save failed';
+  }
+}
+
+// Auto-save every 60s
+if("{{ sess.status }}" !== "submitted" || "{{ can_edit_submitted }}" === "True") {
+  setInterval(() => saveDraft(true), 60000);
+}
+
+// Leave warning
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+updateCounters();
+</script>
+{% endblock %}

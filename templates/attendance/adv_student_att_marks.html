@@ -1,0 +1,225 @@
+{% extends "common/base.html" %}
+{% block title %}{{ student.name }} — Attendance + Marks{% endblock %}
+{% block content %}
+<div class="container-fluid px-4">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mt-2 mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="/admin_att_marks_dashboard">Adv Dashboard</a></li>
+      <li class="breadcrumb-item active">{{ student.name }}</li>
+    </ol>
+  </nav>
+
+  <!-- Student header -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
+               style="width:52px;height:52px;font-size:1.3rem">
+            {{ student.name[0] }}
+          </div>
+        </div>
+        <div class="col">
+          <h5 class="mb-0 fw-bold">{{ student.name }}</h5>
+          <small class="text-muted">{{ student.roll }} &bull; {{ student.department }} &bull; Year {{ student.year }} &bull; Div {{ student.division or '—' }}</small>
+        </div>
+        <div class="col-auto">
+          <a href="/report_card/{{ student.id }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-file-person me-1"></i>Report Card
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overall Summary KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="text-muted small">Overall Attendance</div>
+        <div class="display-6 fw-bold {% if summary.att_pct >= 75 %}text-success{% elif summary.att_pct >= 50 %}text-warning{% else %}text-danger{% endif %}">
+          {{ summary.att_pct }}%
+        </div>
+        <div class="text-muted small">{{ summary.att_present }}/{{ summary.att_total }} classes</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="text-muted small">Overall Marks</div>
+        <div class="display-6 fw-bold {% if summary.marks_pct >= 60 %}text-success{% elif summary.marks_pct >= 40 %}text-warning{% else %}text-danger{% endif %}">
+          {{ summary.marks_pct }}%
+        </div>
+        <div class="text-muted small">{{ summary.marks_obtained }}/{{ summary.marks_total }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="text-muted small">Overall Grade</div>
+        <div class="display-6 fw-bold text-primary">{{ summary.overall_grade }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="text-muted small">Combined Score</div>
+        {% set cs = (summary.att_pct * 0.40 + summary.marks_pct * 0.60)|round(1) %}
+        <div class="display-6 fw-bold {% if cs >= 70 %}text-success{% elif cs >= 50 %}text-warning{% else %}text-danger{% endif %}">
+          {{ cs }}
+        </div>
+        <div class="text-muted small">att×40% + marks×60%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danger Subjects Alert -->
+  {% if danger_subjects %}
+  <div class="alert alert-danger border-0 shadow-sm mb-3">
+    <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Needs Attention:</strong>
+    {% for d in danger_subjects %}
+      <span class="badge bg-danger me-1">{{ d.subject[:30] }}
+        {% if d.att_pct < 75 %}(Att {{ d.att_pct }}%){% endif %}
+        {% if d.avg_marks_pct is not none and d.avg_marks_pct < 40 %}(Marks {{ d.avg_marks_pct }}%){% endif %}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Per-Subject Matrix -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white fw-semibold py-2">
+      <i class="bi bi-grid-3x3-gap text-primary me-1"></i>Subject-wise Breakdown
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Subject</th>
+              <th>Attendance</th>
+              <th>Present/Total</th>
+              <th>Att Status</th>
+              <th>Exam Marks</th>
+              <th>Avg Marks %</th>
+              <th>Best Grade</th>
+              <th>Combined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in matrix %}
+            <tr {% if row.att_pct < 75 or (row.avg_marks_pct is not none and row.avg_marks_pct < 40) %}class="table-warning"{% endif %}>
+              <td class="fw-semibold small">{{ row.subject[:35] }}</td>
+              <td style="min-width:110px">
+                <div class="progress" style="height:8px">
+                  <div class="progress-bar {% if row.att_pct >= 75 %}bg-success{% elif row.att_pct >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                       style="width:{{ row.att_pct }}%"></div>
+                </div>
+                <small class="{% if row.att_pct < 75 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ row.att_pct }}%</small>
+              </td>
+              <td><small>{{ row.att_present }}/{{ row.att_total }}</small></td>
+              <td>
+                <span class="badge {% if row.att_status == 'Good' %}bg-success{% elif row.att_status == 'Average' %}bg-warning text-dark{% elif row.att_status == 'Low' %}bg-danger{% else %}bg-secondary{% endif %}">
+                  {{ row.att_status }}
+                </span>
+              </td>
+              <td>
+                {% if row.marks_list %}
+                  {% for m in row.marks_list %}
+                    <div class="small">
+                      <span class="text-muted">{{ m.exam_type[:15] }}:</span>
+                      <strong>{{ m.marks }}/{{ m.total }}</strong>
+                      <span class="badge {% if m.grade in ['A+','A'] %}bg-success{% elif m.grade in ['B+','B'] %}bg-primary{% elif m.grade=='C' %}bg-warning text-dark{% else %}bg-danger{% endif %} ms-1" style="font-size:.65rem">{{ m.grade }}</span>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <small class="text-muted">No marks yet</small>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.avg_marks_pct is not none %}
+                  <span class="fw-semibold {% if row.avg_marks_pct < 40 %}text-danger{% endif %}">{{ row.avg_marks_pct }}%</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {% if row.best_grade in ['A+','A'] %}bg-success{% elif row.best_grade in ['B+','B'] %}bg-primary{% elif row.best_grade=='C' %}bg-warning text-dark{% elif row.best_grade=='F' %}bg-danger{% else %}bg-secondary{% endif %}">
+                  {{ row.best_grade }}
+                </span>
+              </td>
+              <td>
+                <strong {% if row.combined_score < 50 %}class="text-danger"{% elif row.combined_score >= 70 %}class="text-success"{% endif %}>
+                  {{ row.combined_score }}
+                </strong>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted py-3">No attendance or marks data available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Attendance + Recent Marks side by side -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-semibold py-2">
+          <i class="bi bi-calendar-check text-success me-1"></i>Recent Attendance (last 60 records)
+        </div>
+        <div class="card-body p-0" style="max-height:320px;overflow-y:auto">
+          <table class="table table-sm mb-0">
+            <thead class="table-light sticky-top"><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for r in trend_rows %}
+              <tr>
+                <td><small>{{ r.date }}</small></td>
+                <td><small>{{ r.subject[:25] }}</small></td>
+                <td>
+                  <span class="badge {% if r.status=='Present' %}bg-success{% elif r.status=='Absent' %}bg-danger{% elif r.status=='Late' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:.7rem">
+                    {{ r.status }}
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-2">No attendance records.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white fw-semibold py-2">
+          <i class="bi bi-pencil-square text-warning me-1"></i>Recent Marks (last 20)
+        </div>
+        <div class="card-body p-0" style="max-height:320px;overflow-y:auto">
+          <table class="table table-sm mb-0">
+            <thead class="table-light sticky-top"><tr><th>Subject</th><th>Exam</th><th>Marks</th><th>Grade</th></tr></thead>
+            <tbody>
+              {% for m in recent_marks %}
+              <tr>
+                <td><small>{{ m.subject[:20] }}</small></td>
+                <td><small>{{ m.exam_type[:15] }}</small></td>
+                <td><small><strong>{{ m.marks }}/{{ m.total }}</strong> ({{ m.pct }}%)</small></td>
+                <td>
+                  <span class="badge {% if m.grade in ['A+','A'] %}bg-success{% elif m.grade in ['B+','B'] %}bg-primary{% elif m.grade=='C' %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:.7rem">
+                    {{ m.grade }}
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-2">No marks records.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

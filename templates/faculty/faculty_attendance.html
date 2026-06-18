@@ -1,0 +1,597 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Attendance | DY Patil ERP{% endblock %}
+
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}
+{% block user_role %}Faculty{% endblock %}
+
+
+
+{% block page_title %}Take Attendance{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Attendance{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Status radio buttons styled as pill toggles */
+  .status-group { display: flex; gap: 4px; }
+  .status-group input[type="radio"] { display: none; }
+  .status-group label {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1.5px solid var(--border); color: var(--ink3);
+    background: var(--white); transition: all .15s; user-select: none;
+  }
+  .status-group input[value="Present"]:checked + label { background: var(--green-s); color: var(--green); border-color: #6ee7b7; }
+  .status-group input[value="Absent"]:checked  + label { background: var(--red-s);   color: var(--red);   border-color: #fca5a5; }
+  .status-group input[value="Late"]:checked    + label { background: var(--amber-s); color: var(--amber); border-color: #fcd34d; }
+
+  /* Low-attendance row highlight */
+  .tbl tr.low-att td { background: var(--red-s); }
+  .low-att-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
+    border-radius: 10px; background: var(--red-s); color: var(--red);
+    border: 1px solid #fca5a5; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Edit-mode banner */
+  .edit-banner {
+    background: var(--amber-s); border: 1px solid #fcd34d; border-radius: var(--r-sm);
+    padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--amber);
+    margin-bottom: 14px; display: none; gap: 8px; align-items: center;
+  }
+  .edit-banner.show { display: flex; }
+
+  /* Summary card */
+  .att-summary {
+    display: none; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .att-summary.show { display: flex; }
+  .att-summary .sc {
+    flex: 1; min-width: 90px; padding: 12px 16px;
+  }
+  .att-summary .sv { font-size: 20px; }
+
+  /* Collapsible defaulter card */
+  details.defaulter-card { margin-top: 20px; }
+  details.defaulter-card summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; color: var(--ink); padding: 0 0 4px;
+  }
+  details.defaulter-card summary::-webkit-details-marker { display: none; }
+  details.defaulter-card summary i.chevron { transition: transform .2s; }
+  details.defaulter-card[open] summary i.chevron { transform: rotate(90deg); }
+
+  /* Recent activity section */
+  .activity-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
+    margin-top: 4px; flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flash messages are rendered by base.html automatically ── #}
+{# ── URL param banners (for redirect-with-params pattern) ───── #}
+{% if request.args.get('saved') %}
+  <div class="alert al-ok fu" style="margin-bottom:16px">
+    <i class="fas fa-check-circle"></i>
+    <span>Attendance saved — {{ request.args.get('saved') }} new, {{ request.args.get('updated','0') }} updated.</span>
+  </div>
+{% endif %}
+{% if request.args.get('error') %}
+  <div class="alert al-err fu" style="margin-bottom:16px">
+    <i class="fas fa-circle-xmark"></i>
+    <span>{{ request.args.get('error') }}</span>
+  </div>
+{% endif %}
+
+{# ── Page Header ──────────────────────────────────────────── #}
+<div class="ph">
+  <div>
+    <div class="ph-title">Take Attendance</div>
+    <div class="ph-sub">{{ session.name }} — Select subject &amp; date, then mark and commit.</div>
+  </div>
+  <div class="ph-actions">
+    <button class="btn btn-out btn-sm" onclick="exportCSV()" id="btn-export" style="display:none">
+      <i class="fas fa-download"></i> Export CSV
+    </button>
+    <button class="btn btn-out btn-sm" id="btn-mark-all" onclick="massMarkPresent()">
+      <i class="fas fa-check-double"></i> Mark All Present
+    </button>
+  </div>
+</div>
+
+{# ── Session Config Card ──────────────────────────────────── #}
+<div class="card mb20">
+  <div class="ch"><div class="ct">Session Configuration</div><div class="cs">Choose subject and date before marking students</div></div>
+  <div class="cb" style="padding-bottom:14px">
+    <div style="display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="fgrp" style="flex:1; min-width:220px; margin:0">
+        <label>Subject *</label>
+        <select id="sel-subject" onchange="onSubjectChange()">
+          <option value="">— Select Subject —</option>
+          {% for s in my_subjects %}
+          <option value="{{ s.name }}" {% if request.args.get('subject') == s.name %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fgrp" style="min-width:160px; margin:0">
+        <label>Date *</label>
+        <input type="date" id="sel-date" value="{{ today }}" onchange="onConfigChange()">
+      </div>
+      <div class="fgrp" style="min-width:220px; margin:0">
+        <label><i class="fas fa-search" style="color:var(--ink4)"></i> Search Students</label>
+        <input type="text" id="stu-search" placeholder="Name or roll number…" oninput="filterStudents()">
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Edit-mode Banner ─────────────────────────────────────── #}
+<div class="edit-banner" id="edit-banner">
+  <i class="fas fa-pencil-alt"></i>
+  <span id="edit-banner-text">⚠ Editing existing record. Changes will overwrite.</span>
+</div>
+
+{# ── Live Summary Strip ───────────────────────────────────── #}
+<div class="att-summary" id="att-summary">
+  <div class="sc card"><div><div class="sv" id="sum-total">0</div><div class="sl">Total</div></div></div>
+  <div class="sc card"><div><div class="sv" style="color:var(--green)" id="sum-present">0</div><div class="sl">Present</div></div></div>
+  <div class="sc card"><div><div class="sv" style="color:var(--red)" id="sum-absent">0</div><div class="sl">Absent</div></div></div>
+  <div class="sc card"><div><div class="sv" style="color:var(--amber)" id="sum-late">0</div><div class="sl">Late</div></div></div>
+  <div class="sc card"><div><div class="sv" style="color:var(--blue)" id="sum-pct">—</div><div class="sl">Coverage</div></div></div>
+</div>
+
+{# ── Attendance Form ──────────────────────────────────────── #}
+<div class="card">
+  <form id="attendanceForm" action="/faculty_save_attendance" method="POST">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="subject" id="f-subject">
+    <input type="hidden" name="date"    id="f-date">
+    <input type="hidden" name="division" id="f-division" value="">
+    <input type="hidden" name="branch"   id="f-branch"   value="">
+
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl" id="studentTable">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Student Name</th>
+            <th>Roll / PRN</th>
+            <th>Dept</th>
+            <th>Status</th>
+            <th style="width:160px">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="studentBody">
+          {% if all_students %}
+            {% for s in all_students %}
+            <tr class="stu-row" 
+                data-name="{{ s.name|lower }}"
+                data-roll="{{ (s.roll or '')|lower }}"
+                data-id="{{ s.id }}"
+                data-dept="{{ s.department or '' }}"
+                data-pct=""
+                id="row-{{ s.id }}">
+              <td class="row-idx mono" style="color:var(--ink4); font-size:12px">{{ loop.index }}</td>
+              <td>
+                <strong>{{ s.name }}</strong>
+                <span class="low-att-badge" id="badge-{{ s.id }}" style="display:none"></span>
+              </td>
+              <td class="mono" style="font-size:12px; color:var(--ink3)">{{ s.roll or '—' }}</td>
+              <td><span class="tag t-nn" style="font-size:10px">{{ s.department or '—' }}</span></td>
+              <td>
+                <div class="status-group">
+                  <input type="radio" name="status_{{ s.id }}" id="p-{{ s.id }}" value="Present" checked onchange="updateSummary()">
+                  <label for="p-{{ s.id }}">P</label>
+                  <input type="radio" name="status_{{ s.id }}" id="a-{{ s.id }}" value="Absent" onchange="updateSummary()">
+                  <label for="a-{{ s.id }}">A</label>
+                  <input type="radio" name="status_{{ s.id }}" id="l-{{ s.id }}" value="Late" onchange="updateSummary()">
+                  <label for="l-{{ s.id }}">L</label>
+                </div>
+              </td>
+              <td>
+                <input type="text" name="note_{{ s.id }}" placeholder="Optional…"
+                  style="border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:12px; width:100%; background:var(--bg)">
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="no-students-row">
+              <td colspan="6">
+                <div class="empty-state" style="padding:32px">
+                  <i class="fas fa-users"></i>
+                  <p>No students found. Select a subject above to load students.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cf" style="justify-content:space-between">
+      <span class="mono" style="font-size:12px; color:var(--ink4)" id="form-count">
+        {{ all_students|length }} student(s)
+      </span>
+      <div style="display:flex; gap:10px">
+        <button type="button" class="btn btn-out" onclick="resetMarking()">
+          <i class="fas fa-rotate-left"></i> Reset
+        </button>
+        <button type="button" class="btn btn-dark" id="commitBtn" onclick="commitAttendance()">
+          <i class="fas fa-cloud-upload-alt"></i> Commit Attendance
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{# ── Defaulter Risk (collapsible) ────────────────────────── #}
+<details class="defaulter-card card" style="padding:20px" id="defaulter-section">
+  <summary>
+    <i class="fas fa-chevron-right chevron" style="font-size:12px; color:var(--ink4)"></i>
+    <i class="fas fa-exclamation-triangle" style="color:var(--red)"></i>
+    Low Attendance Defaulters
+    <span class="tag t-re" id="defaulter-count-badge" style="font-size:10px; margin-left:6px"></span>
+  </summary>
+  <div style="margin-top:16px">
+    <div id="defaulter-list">
+      <div style="color:var(--ink4); font-size:13px; padding:12px 0">
+        Select a subject to view defaulter risk data.
+      </div>
+    </div>
+    <button class="btn btn-out btn-sm" style="margin-top:12px" onclick="loadDefaulters()">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+</details>
+
+{# ── Recent Audit Activity ────────────────────────────────── #}
+<div class="card" style="margin-top:20px" id="activity-section" {% if not audit_logs %}style="display:none"{% endif %}>
+  <div class="ch"><div class="ct">Recent Attendance Activity</div><div class="cs">Last 10 actions by you</div></div>
+  <div class="cb">
+    {% if audit_logs %}
+      {% for log in audit_logs %}
+      <div class="activity-item">
+        <div class="activity-dot"></div>
+        <div>
+          <div style="font-size:13px; font-weight:600; color:var(--ink)">{{ log.action }}</div>
+          <div style="font-size:12px; color:var(--ink3)">{{ log.details }}</div>
+          <div style="font-size:11px; color:var(--ink4); margin-top:2px">
+            {{ log.created_at.strftime('%d %b %Y, %I:%M %p') if log.created_at else '—' }}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:20px">
+        <i class="fas fa-clock"></i>
+        <p>No attendance activity found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─── State ────────────────────────────────────────────────
+const ALL_STUDENTS_DATA = {{ all_students_json | safe }};
+let loadedSubject = '';
+let loadedDate    = '';
+
+// ─── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updateSummary();
+  // If students pre-loaded, show summary
+  if (ALL_STUDENTS_DATA.length > 0) {
+    document.getElementById('att-summary').classList.add('show');
+    document.getElementById('btn-export').style.display = '';
+  }
+  // Pre-select subject if passed via URL
+  const urlSub = new URLSearchParams(location.search).get('subject');
+  if (urlSub) {
+    const sel = document.getElementById('sel-subject');
+    for (let o of sel.options) { if (o.value === urlSub) { o.selected = true; break; } }
+  }
+  // Load defaulters if subject already set
+  const sub = document.getElementById('sel-subject').value;
+  if (sub) {
+    loadedSubject = sub;
+    loadedDate = document.getElementById('sel-date').value;
+    loadDefaulters();
+    checkEditMode(sub, document.getElementById('sel-date').value);
+  }
+});
+
+// ─── Subject / Date Change ────────────────────────────────
+function onSubjectChange() { onConfigChange(); }
+function onConfigChange() {
+  const sub  = document.getElementById('sel-subject').value;
+  const date = document.getElementById('sel-date').value;
+  if (!sub || !date) return;
+  loadStudentsForSubject(sub, date);
+}
+
+// ─── Load students filtered by subject (via server endpoint) ─
+async function loadStudentsForSubject(sub, date) {
+  // Build URL param so server can filter
+  const url = `/faculty_get_students_for_subject?subject=${encodeURIComponent(sub)}`;
+  try {
+    const r = await fetch(url, { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderStudentTable(data.students || []);
+    document.getElementById('att-summary').classList.add('show');
+    document.getElementById('btn-export').style.display = '';
+    loadedSubject = sub;
+    loadedDate = date;
+    loadDefaulters();
+    checkEditMode(sub, date);
+  } catch(e) {
+    console.warn('Subject filter fetch failed, using pre-loaded list', e);
+    // Fallback: use pre-loaded students
+    renderStudentTable(ALL_STUDENTS_DATA);
+    document.getElementById('att-summary').classList.add('show');
+    document.getElementById('btn-export').style.display = '';
+    loadedSubject = sub;
+    loadedDate = date;
+    loadDefaulters();
+    checkEditMode(sub, date);
+  }
+}
+
+// ─── Render Students into Table ───────────────────────────
+function renderStudentTable(students) {
+  const tbody = document.getElementById('studentBody');
+  if (!students.length) {
+    tbody.innerHTML = `<tr id="no-students-row"><td colspan="6"><div class="empty-state" style="padding:32px">
+      <i class="fas fa-users"></i><p>No students assigned to this subject/section.</p></div></td></tr>`;
+    document.getElementById('form-count').textContent = '0 student(s)';
+    updateSummary();
+    return;
+  }
+  tbody.innerHTML = students.map((s, i) => `
+    <tr class="stu-row" data-name="${(s.name||'').toLowerCase()}" data-roll="${(s.roll||'').toLowerCase()}"
+        data-id="${s.id}" data-dept="${s.department||''}" data-pct="${s.att_pct||''}" id="row-${s.id}">
+      <td class="row-idx mono" style="color:var(--ink4);font-size:12px">${i+1}</td>
+      <td>
+        <strong>${escH(s.name)}</strong>
+        <span class="low-att-badge" id="badge-${s.id}" style="display:none"></span>
+      </td>
+      <td class="mono" style="font-size:12px;color:var(--ink3)">${escH(s.roll||'—')}</td>
+      <td><span class="tag t-nn" style="font-size:10px">${escH(s.department||'—')}</span></td>
+      <td>
+        <div class="status-group">
+          <input type="radio" name="status_${s.id}" id="p-${s.id}" value="Present" checked onchange="updateSummary()">
+          <label for="p-${s.id}">P</label>
+          <input type="radio" name="status_${s.id}" id="a-${s.id}" value="Absent" onchange="updateSummary()">
+          <label for="a-${s.id}">A</label>
+          <input type="radio" name="status_${s.id}" id="l-${s.id}" value="Late" onchange="updateSummary()">
+          <label for="l-${s.id}">L</label>
+        </div>
+      </td>
+      <td>
+        <input type="text" name="note_${s.id}" placeholder="Optional…"
+          style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:100%;background:var(--bg)">
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('form-count').textContent = students.length + ' student(s)';
+  applyLowAttBadges(students);
+  updateSummary();
+}
+
+// ─── Low Attendance Badges ────────────────────────────────
+function applyLowAttBadges(students) {
+  students.forEach(s => {
+    const pct = parseFloat(s.att_pct);
+    const badge = document.getElementById('badge-' + s.id);
+    const row   = document.getElementById('row-' + s.id);
+    if (badge && !isNaN(pct)) {
+      badge.textContent = pct.toFixed(0) + '%';
+      badge.style.display = '';
+      if (pct < 75 && row) row.classList.add('low-att');
+    }
+  });
+}
+
+// ─── Summary Strip ────────────────────────────────────────
+function updateSummary() {
+  const rows = document.querySelectorAll('.stu-row:not([style*="display:none"])');
+  let p=0, a=0, l=0;
+  rows.forEach(row => {
+    const id = row.dataset.id;
+    const val = (document.querySelector(`input[name="status_${id}"]:checked`) || {}).value || 'Present';
+    if (val === 'Present') p++;
+    else if (val === 'Absent') a++;
+    else if (val === 'Late') l++;
+  });
+  const total = p + a + l;
+  const pct = total > 0 ? ((p / total) * 100).toFixed(0) + '%' : '—';
+  document.getElementById('sum-total').textContent   = total;
+  document.getElementById('sum-present').textContent = p;
+  document.getElementById('sum-absent').textContent  = a;
+  document.getElementById('sum-late').textContent    = l;
+  document.getElementById('sum-pct').textContent     = pct;
+}
+
+// ─── Mark All Present ─────────────────────────────────────
+function massMarkPresent() {
+  document.querySelectorAll('.stu-row:not([style*="display:none"])').forEach(row => {
+    const id = row.dataset.id;
+    const radio = document.getElementById('p-' + id);
+    if (radio) radio.checked = true;
+  });
+  updateSummary();
+}
+
+// ─── Reset Marking ────────────────────────────────────────
+function resetMarking() {
+  document.querySelectorAll('.stu-row').forEach(row => {
+    const id = row.dataset.id;
+    const radio = document.getElementById('p-' + id);
+    if (radio) radio.checked = true;
+  });
+  updateSummary();
+}
+
+// ─── Search / Filter ─────────────────────────────────────
+function filterStudents() {
+  const q = document.getElementById('stu-search').value.toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('.stu-row').forEach((row, i) => {
+    const match = !q || row.dataset.name.includes(q) || row.dataset.roll.includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) { visible++; row.querySelector('.row-idx').textContent = visible; }
+  });
+}
+
+// ─── Commit (double-submit guard) ─────────────────────────
+function commitAttendance() {
+  const sub  = document.getElementById('sel-subject').value;
+  const date = document.getElementById('sel-date').value;
+
+  if (!sub) {
+    alert('⚠ Please select a subject before committing.');
+    return;
+  }
+  if (!date) {
+    alert('⚠ Please select a date.');
+    return;
+  }
+
+  // Validate date not wildly in future
+  const today = new Date().toISOString().slice(0, 10);
+  if (date > today) {
+    if (!confirm(`Date ${date} is in the future. Are you sure you want to continue?`)) return;
+  }
+
+  // Check any students are loaded
+  const rows = document.querySelectorAll('.stu-row');
+  if (!rows.length) {
+    alert('⚠ No students loaded. Please select a subject first.');
+    return;
+  }
+
+  // Double-submit guard
+  const btn = document.getElementById('commitBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+  document.getElementById('f-subject').value = sub;
+  document.getElementById('f-date').value    = date;
+
+  document.getElementById('attendanceForm').submit();
+}
+
+// ─── Edit Mode: pre-fill existing attendance ──────────────
+async function checkEditMode(sub, date) {
+  if (!sub || !date) return;
+  try {
+    const r = await fetch(`/faculty_get_attendance?subject=${encodeURIComponent(sub)}&date=${encodeURIComponent(date)}`, { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.records && data.records.length > 0) {
+      // Pre-fill statuses
+      data.records.forEach(rec => {
+        const radio = document.querySelector(`input[name="status_${rec.student_id}"][value="${rec.status}"]`);
+        if (radio) radio.checked = true;
+      });
+      updateSummary();
+      // Show edit banner
+      const banner = document.getElementById('edit-banner');
+      document.getElementById('edit-banner-text').textContent =
+        `⚠ Editing existing record for ${date}. ${data.records.length} existing entries loaded. Changes will overwrite.`;
+      banner.classList.add('show');
+    } else {
+      document.getElementById('edit-banner').classList.remove('show');
+    }
+  } catch(e) { /* no edit record found, fresh session */ }
+}
+
+// ─── Defaulters ────────────────────────────────────────── 
+async function loadDefaulters() {
+  const sub = document.getElementById('sel-subject').value || loadedSubject;
+  const container = document.getElementById('defaulter-list');
+  const badge = document.getElementById('defaulter-count-badge');
+
+  if (!sub) {
+    container.innerHTML = '<div style="color:var(--ink4);font-size:13px;padding:12px 0">Select a subject to view defaulters.</div>';
+    return;
+  }
+
+  try {
+    const r = await fetch('/attendance_dashboard_data', { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+
+    // Safe access with fallbacks
+    const analytics = data.analytics || {};
+    const defs = analytics.defaulters || [];
+
+    if (badge) { badge.textContent = defs.length; badge.style.display = defs.length ? '' : 'none'; }
+
+    if (!defs.length) {
+      container.innerHTML = '<div style="color:var(--green);font-size:13px;padding:12px 0"><i class="fas fa-check-circle"></i> No students below 75% attendance.</div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="tbl" style="font-size:12px">
+        <thead><tr><th>Student</th><th>Att %</th><th>Risk</th></tr></thead>
+        <tbody>
+          ${defs.slice(0, 10).map(d => `
+            <tr>
+              <td style="font-weight:600">${escH(d.student_name || '')}</td>
+              <td class="mono">${(+d.percentage || 0).toFixed(1)}%</td>
+              <td><span class="tag ${d.percentage < 50 ? 't-re' : 't-am'}" style="font-size:10px">
+                ${d.percentage < 50 ? 'Critical' : 'Warning'}
+              </span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--ink4);font-size:12px">Could not load defaulter data. Check console for details.</div>';
+    console.error('Defaulter load error:', e);
+  }
+}
+
+// ─── Export CSV (client-side) ─────────────────────────────
+function exportCSV() {
+  const sub  = document.getElementById('sel-subject').value || '—';
+  const date = document.getElementById('sel-date').value || '—';
+  const rows = document.querySelectorAll('.stu-row');
+  if (!rows.length) { alert('No students to export.'); return; }
+
+  let csv = 'Name,Roll,Department,Status,Subject,Date\n';
+  rows.forEach(row => {
+    const id   = row.dataset.id;
+    const name = row.querySelector('strong').textContent.trim();
+    const roll = row.querySelector('.mono').textContent.trim();
+    const dept = row.dataset.dept;
+    const val  = (document.querySelector(`input[name="status_${id}"]:checked`) || {}).value || 'Present';
+    csv += `"${name}","${roll}","${dept}","${val}","${sub}","${date}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `attendance_${sub.replace(/\s+/g,'_')}_${date}.csv`;
+  a.click();
+}
+
+// ─── Utility ──────────────────────────────────────────────
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

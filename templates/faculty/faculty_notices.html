@@ -1,0 +1,36 @@
+{% extends "common/base.html" %}
+{% block title %}Notices{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Notices{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Notices{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Notices Board</div></div>
+<div class="g4060 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Post Notice</div></div>
+    <form method="POST" action="/faculty_save_notice"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><div class="cb">
+      <div class="fgrp"><label>Title *</label><input type="text" name="title" required placeholder="Notice title…"></div>
+      <div class="fgrp"><label>Message *</label><textarea name="message" rows="5" required placeholder="Write your notice here…"></textarea></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-bullhorn"></i> Post Notice</button></div></form>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">My Notices</div><div class="cs">{{ notices|length }} notices</div></div>
+    <div class="cb">
+      {% for n in notices %}
+      <div class="notice">
+        <div class="flex-sb"><div class="n-title">{{ n.title }}</div>
+          <form method="POST" action="/faculty_delete_notice" style="display:inline" onsubmit="return confirm('Delete?')">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="notice_id" value="{{ n.id }}">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+        <div class="n-meta"><i class="fas fa-clock"></i> {{ n.created_at[:16] if n.created_at else "" }}</div>
+        <div class="n-body">{{ n.message }}</div>
+      </div>
+      {% else %}<div class="empty-state"><i class="fas fa-bullhorn"></i><p>No notices yet.</p></div>{% endfor %}
+    </div>
+  </div>
+</div>{% endblock %}

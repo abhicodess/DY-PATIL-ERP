@@ -1,0 +1,130 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Attendance Defaulter List{% endblock %}
+
+{% block report_styles %}
+.defaulter-header-banner {
+    background-color: #721c24;
+    color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 14pt;
+    text-align: center;
+    letter-spacing: 1px;
+}
+.pct-defaulter {
+    background-color: #f8d7da !important;
+    color: #721c24;
+    font-weight: bold;
+}
+.signature-section {
+    margin-top: 50px;
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+}
+.signature-section td {
+    border: none;
+    width: 33%;
+    text-align: center;
+    vertical-align: bottom;
+    padding: 20px 10px;
+}
+.signature-line {
+    border-top: 1.5px solid #333;
+    width: 80%;
+    margin: 0 auto 5px auto;
+    padding-top: 5px;
+}
+.stamp-area {
+    border: 1.5px dashed #ccc;
+    height: 70px;
+    width: 120px;
+    margin: 0 auto;
+    line-height: 70px;
+    color: #aaa;
+    font-size: 8pt;
+    font-style: italic;
+}
+{% endblock %}
+
+{% block report_header_title %}Attendance Defaulter Report{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Department:</div>
+    <div class="meta-value">{{ department }}</div>
+    <div class="meta-label">Threshold Limit:</div>
+    <div class="meta-value" style="color: #721c24; font-weight: bold;">&lt; {{ threshold }}%</div>
+</div>
+<div class="meta-row">
+    <div class="meta-label">As of Date:</div>
+    <div class="meta-value">{{ as_of_date }}</div>
+    <div class="meta-label">Year:</div>
+    <div class="meta-value">{{ year or 'All' }}</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<div class="defaulter-header-banner">
+    ⚠️ URGENT — ATTENDANCE DEFAULTER LIST ⚠️
+</div>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width: 8%; text-align: center;">Roll</th>
+            <th style="width: 25%;">Student Name</th>
+            <th style="width: 20%;">Student Contact</th>
+            <th style="width: 15%; text-align: center;">Parent Contact</th>
+            <th style="width: 12%; text-align: center;">Attendance %</th>
+            <th style="width: 10%; text-align: center;">Missed</th>
+            <th style="width: 10%; text-align: center;">Subjects &lt;75%</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td style="text-align: center;">{{ row.roll }}</td>
+            <td><strong>{{ row.name }}</strong></td>
+            <td>{{ row.contact }}</td>
+            <td style="text-align: center;">{{ row.parent_contact }}</td>
+            <td style="text-align: center;" class="pct-defaulter">{{ "%.2f" | format(row.percentage) }}%</td>
+            <td style="text-align: center; color: #721c24; font-weight: bold;">{{ row.missed }}</td>
+            <td style="text-align: center; font-weight: bold;">{{ row.subjects_below_75 }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align: center; color: green; font-weight: bold; padding: 20px;">
+                No students fall below the {{ threshold }}% attendance threshold. Excellent work!
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<table class="signature-section">
+    <tr>
+        <td>
+            <div class="signature-line">Class Coordinator</div>
+            <div style="font-size: 8pt; color: #666;">Date: ______________</div>
+        </td>
+        <td>
+            <div class="stamp-area">University Seal</div>
+        </td>
+        <td>
+            <div class="signature-line">Head of Department (HOD)</div>
+            <div style="font-size: 8pt; color: #666;">{{ department }} Dept</div>
+        </td>
+    </tr>
+</table>
+{% endblock %}
+
+{% block report_summary %}
+<div style="margin-top: 20px; font-size: 8pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px;" class="avoid-break">
+    <p><strong>Official Actions Pending:</strong> As per University Ordinance, parents of the defaulting students will be notified via SMS. Defaulting students must submit written explanations countersigned by their parents within 3 working days.</p>
+</div>
+{% endblock %}

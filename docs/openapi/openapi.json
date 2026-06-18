@@ -1,0 +1,1369 @@
+{
+  "paths": {
+    "/api/v1/auth/csrf": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSRFResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get CSRF token"
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "responses": {
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Generate access and refresh tokens"
+      }
+    },
+    "/api/v1/auth/token": {
+      "post": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_ENTITY"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Legacy token endpoint"
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh access token",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Revoke current token",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get current user details",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/students/": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sort_by",
+            "schema": {
+              "type": "string",
+              "default": "created_at"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Results per page, max 100",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "division",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "description": "Search by name or roll number",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "min_attendance",
+            "description": "Filter by min attendance %",
+            "schema": {
+              "type": "number"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_ENTITY"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "List students",
+        "description": "Returns a paginated list of students. Faculty can only see their own division. Admin sees all.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "responses": {
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Roll number already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentCreate"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Create student",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/students/{student_id}": {
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Student not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Get student by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "student_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ],
+      "patch": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_ENTITY"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentUpdate"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Partially update student",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "responses": {
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error1"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Soft-delete student",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/students/{student_id}/attendance": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Get student attendance summary",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "student_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/v1/students/{student_id}/results": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResultResponse"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Students"
+        ],
+        "summary": "Get student results",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "student_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/v1/attendance/": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "Results per page, max 100",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "student_id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "subject",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_ENTITY"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Get list of attendance records",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attendance/session": {
+      "post": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_ENTITY"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceSubmit"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Create a new attendance session",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attendance/submit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Submit or update attendance",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attendance/session/initialize": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Initialize attendance session from timetable",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attendance/session/{session_id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Get session details by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "session_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/v1/attendance/student/{student_id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Get student attendance summary and history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "student_id",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      ]
+    },
+    "/api/v1/attendance/defaulters": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceSummary"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Attendance"
+        ],
+        "summary": "Get list of defaulters below threshold",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/changelog": {
+      "get": {
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "tags": [
+          "Changelog"
+        ],
+        "summary": "Get API changelog",
+        "description": "Returns the full machine-readable release history and migration guide links."
+      }
+    }
+  },
+  "info": {
+    "title": "DY Patil University ERP API",
+    "version": "v1"
+  },
+  "tags": [
+    {
+      "name": "auth_api_v1",
+      "description": "Authentication and Session endpoints"
+    },
+    {
+      "name": "students_api_v1",
+      "description": "Student management endpoints"
+    },
+    {
+      "name": "attendance_api_v1",
+      "description": "Attendance management endpoints"
+    },
+    {
+      "name": "changelog",
+      "description": "API Changelog endpoints"
+    }
+  ],
+  "openapi": "3.1.0",
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Error code"
+          },
+          "status": {
+            "type": "string",
+            "description": "Error name"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "errors": {
+            "type": "object",
+            "description": "Errors"
+          }
+        }
+      },
+      "PaginationMetadata": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          },
+          "first_page": {
+            "type": "integer"
+          },
+          "last_page": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "previous_page": {
+            "type": "integer"
+          },
+          "next_page": {
+            "type": "integer"
+          }
+        }
+      },
+      "CSRFResponse": {
+        "type": "object",
+        "properties": {
+          "csrf_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ]
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "faculty",
+              "student"
+            ]
+          }
+        },
+        "required": [
+          "password",
+          "role",
+          "username"
+        ]
+      },
+      "Error1": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Not found"
+          },
+          "code": {
+            "type": "string",
+            "example": "STUDENT_NOT_FOUND"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "department": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "user"
+        ]
+      },
+      "RefreshResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token"
+        ]
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          },
+          "has_next": {
+            "type": "boolean"
+          },
+          "has_prev": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StudentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "roll": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "division": {
+            "type": "string"
+          },
+          "semester": {
+            "type": "integer"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "attendance_pct": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Current month attendance %"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StudentCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roll": {
+            "type": "string",
+            "example": "CS2024001"
+          },
+          "department": {
+            "type": "string",
+            "enum": [
+              "CS",
+              "IT",
+              "ENTC",
+              "MECH",
+              "CIVIL",
+              "AIDS",
+              "AIML"
+            ]
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "division": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "semester": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "dob": {
+            "type": "string",
+            "format": "date"
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{10,13}$"
+          },
+          "parent_phone": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{10,13}$"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "department",
+          "division",
+          "dob",
+          "email",
+          "name",
+          "roll",
+          "semester",
+          "year"
+        ]
+      },
+      "StudentUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          }
+        }
+      },
+      "AttendanceSummary": {
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "integer"
+          },
+          "student_name": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "attended": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "percentage": {
+            "type": "number"
+          }
+        }
+      },
+      "ResultResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "student_id": {
+            "type": "integer"
+          },
+          "semester": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "integer"
+          },
+          "internal_marks": {
+            "type": "number"
+          },
+          "external_marks": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "is_published": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AttendanceRecord": {
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Present",
+              "Absent",
+              "Late",
+              "Excused",
+              "Leave"
+            ]
+          },
+          "remark": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "status",
+          "student_id"
+        ]
+      },
+      "AttendanceSubmit": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "time_slot": {
+            "type": "string"
+          },
+          "division": {
+            "type": "string"
+          },
+          "semester": {
+            "type": "string"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceRecord"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "division",
+          "records",
+          "semester",
+          "subject",
+          "time_slot"
+        ]
+      },
+      "ErrorSchema": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Not found"
+          },
+          "code": {
+            "type": "string",
+            "example": "STUDENT_NOT_FOUND"
+          },
+          "details": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    "responses": {
+      "DEFAULT_ERROR": {
+        "description": "Default error response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UNPROCESSABLE_ENTITY": {
+        "description": "Unprocessable Entity",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "JWT missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorSchema"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Insufficient role permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorSchema"
+            }
+          }
+        }
+      },
+      "TenantMismatchError": {
+        "description": "JWT tenant does not match request subdomain",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorSchema"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

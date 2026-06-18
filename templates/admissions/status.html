@@ -1,0 +1,325 @@
+{% extends "common/base.html" %}
+
+{% block title %}Track Admission Status{% endblock %}
+
+{% block extra_css %}
+<style>
+  body {
+    background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%) !important;
+    color: #F8FAFC !important;
+    min-height: 100vh;
+  }
+  .sidebar, .topbar, .sb-toggle {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 40px 16px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .shell {
+    display: block !important;
+  }
+
+  .status-container {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .status-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .status-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #FFF;
+    margin-bottom: 8px;
+  }
+
+  .status-header p {
+    color: #94A3B8;
+    font-size: 13px;
+  }
+
+  .lookup-form {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+
+  .lookup-form input {
+    flex: 1;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 14px;
+    font-family: var(--mono);
+    outline: none;
+    text-transform: uppercase;
+  }
+
+  .lookup-form input::placeholder {
+    font-family: var(--font);
+    text-transform: none;
+  }
+
+  /* Badge Styles */
+  .badge-status {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    text-transform: uppercase;
+  }
+  .badge-PENDING { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid #F59E0B; }
+  .badge-UNDER_REVIEW { background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid #3B82F6; }
+  .badge-MERIT_LISTED { background: rgba(139, 92, 246, 0.15); color: #8B5CF6; border: 1px solid #8B5CF6; }
+  .badge-SELECTED { background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; }
+  .badge-WAITLISTED { background: rgba(107, 114, 128, 0.15); color: #9CA3AF; border: 1px solid #9CA3AF; }
+  .badge-REJECTED { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid #EF4444; }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+    background: rgba(15, 23, 42, 0.4);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .info-item span {
+    display: block;
+    font-size: 11px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .info-item div {
+    font-size: 14px;
+    color: #F1F5F9;
+    font-weight: 500;
+  }
+
+  /* Document Checklist */
+  .doc-section {
+    margin-bottom: 30px;
+  }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #FFF;
+    border-left: 3px solid #6366F1;
+    padding-left: 8px;
+  }
+
+  .checklist-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: rgba(30, 41, 59, 0.4);
+    border-bottom: 1px solid #334155;
+  }
+
+  .checklist-item:last-child {
+    border-bottom: none;
+  }
+
+  .doc-type-text {
+    font-size: 13px;
+    color: #E2E8F0;
+    font-weight: 500;
+  }
+
+  .doc-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-verified { color: #10B981; }
+  .status-pending { color: #F59E0B; }
+  .status-notuploaded { color: #64748B; }
+
+  /* Timeline */
+  .timeline-wrapper {
+    position: relative;
+    padding-left: 20px;
+    margin-top: 15px;
+  }
+
+  .timeline-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 4px;
+    width: 2px;
+    height: calc(100% - 20px);
+    background: #334155;
+  }
+
+  .timeline-node {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .timeline-node::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: -20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366F1;
+    border: 2px solid #1E293B;
+  }
+
+  .timeline-time {
+    font-size: 11px;
+    color: #94A3B8;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .timeline-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #FFF;
+  }
+
+  .timeline-notes {
+    font-size: 12px;
+    color: #94A3B8;
+    margin-top: 2px;
+  }
+
+  .btn-container {
+    text-align: center;
+    margin-top: 30px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="status-container">
+  <div class="status-header">
+    <h1>Track Admission Status</h1>
+    <p>Check the real-time processing status of your application</p>
+  </div>
+
+  <form class="lookup-form" action="" method="GET" onsubmit="event.preventDefault(); window.location.href='/admissions/status/' + document.getElementById('tokenInput').value.trim().toUpperCase();">
+    <input type="text" id="tokenInput" placeholder="Enter your 8-character application token (e.g. AB12CD34)" required value="{% if application %}{{ application.token }}{% endif %}">
+    <button type="submit" class="btn btn-blue">Search</button>
+  </form>
+
+  {% if not_found %}
+    <div style="text-align: center; padding: 40px 0; color: #EF4444;">
+      <i class="fa-solid fa-circle-exclamation" style="font-size: 32px; margin-bottom: 12px;"></i>
+      <p style="color: #EF4444; margin-bottom:0;">The application token entered does not match our records. Please verify and try again.</p>
+    </div>
+  {% elif application %}
+    <!-- Application Details Card -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="font-size:18px; font-weight:700; color:#FFF;">{{ application.applicant_name }}</h2>
+      <div class="badge-status badge-{{ application.status }}">{{ application.status.replace('_', ' ') }}</div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <span>Applied Course</span>
+        <div>{{ application.applied_department }}</div>
+      </div>
+      <div class="info-item">
+        <span>Academic Year</span>
+        <div>{{ application.applied_year }}</div>
+      </div>
+      <div class="info-item">
+        <span>Merit Score</span>
+        <div>{{ application.merit_score if application.merit_score else 'N/A' }} / 100</div>
+      </div>
+      <div class="info-item">
+        <span>Category</span>
+        <div>{{ application.category }}</div>
+      </div>
+    </div>
+
+    <!-- Document checklist -->
+    <div class="doc-section">
+      <div class="section-title">Document Checklist</div>
+      <div style="border-radius: 8px; overflow: hidden; border: 1px solid #334155;">
+        {% set core_docs = ['SSC_MARKSHEET', 'HSC_MARKSHEET', 'LEAVING_CERTIFICATE', 'DOMICILE', 'PHOTO', 'SIGNATURE'] %}
+        {% set doc_map = {} %}
+        {% for doc in documents %}
+          {% set _ = doc_map.update({doc.document_type: doc}) %}
+        {% endfor %}
+
+        {% for dt in core_docs %}
+          <div class="checklist-item">
+            <span class="doc-type-text">{{ dt.replace('_', ' ') }}</span>
+            <div class="doc-status">
+              {% if dt in doc_map %}
+                {% if doc_map[dt].verified %}
+                  <span class="status-verified"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                {% else %}
+                  <span class="status-pending"><i class="fa-solid fa-circle-notch fa-spin"></i> Uploaded, Pending Verification</span>
+                {% endif %}
+              {% else %}
+                <span class="status-notuploaded"><i class="fa-solid fa-circle-xmark"></i> Not Uploaded</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Timeline of Events -->
+    <div class="doc-section">
+      <div class="section-title">Application Timeline</div>
+      <div class="timeline-wrapper">
+        {% for node in timeline %}
+          <div class="timeline-node">
+            <div class="timeline-time">{{ node.action_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            <div class="timeline-title">{{ node.action.replace('_', ' ') }}</div>
+            {% if node.notes %}
+              <div class="timeline-notes">{{ node.notes }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 40px 0; color: #94A3B8;">
+      <i class="fa-solid fa-magnifying-glass" style="font-size: 32px; margin-bottom: 12px;"></i>
+      <p style="margin-bottom:0;">Enter your token above to retrieve your application information.</p>
+    </div>
+  {% endif %}
+
+  <div class="btn-container">
+    <a href="{{ url_for('admissions.apply') }}" class="btn btn-out">Back to Form</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+<!--
+  ================================================================
+  SIDEBAR FIX — Remove these items from your base.html / sidebar
+  ================================================================
+
+  REMOVE these two sidebar link blocks entirely from base.html:
+
+  1. GLOBAL SEARCH — delete this block:
+  ────────────────────────────────────────────────────────────────
+    ... Search / Global Search ...
+  </a>
+  ────────────────────────────────────────────────────────────────
+
+  2. TEACHERS — delete this block:
+  ────────────────────────────────────────────────────────────────
+    ... Teachers ...
+  </a>
+  ────────────────────────────────────────────────────────────────
+
+  ADD Results to the sidebar (place it near Marks):
+  ────────────────────────────────────────────────────────────────
+  <!-- ADMIN sidebar -->
+  <a href="/admin_results" class="nav-item {% if request.path == '/admin_results' %}active{% endif %}">
+    <i class="fas fa-award"></i>
+    <span>Results</span>
+  </a>
+
+  <!-- FACULTY sidebar -->
+  <a href="/faculty_results" class="nav-item {% if request.path == '/faculty_results' %}active{% endif %}">
+    <i class="fas fa-award"></i>
+    <span>Results</span>
+  </a>
+
+  <!-- STUDENT sidebar -->
+  <a href="/student_results" class="nav-item {% if request.path == '/student_results' %}active{% endif %}">
+    <i class="fas fa-award"></i>
+    <span>My Results</span>
+  </a>
+  ────────────────────────────────────────────────────────────────
+
+  ================================================================
+  TIMETABLE SHARE PAGE FIX — WHAT CHANGED
+  ================================================================
+  The new timetable_share.html fixes these issues from the screenshot:
+
+  BEFORE (broken):
+  - "Select Faculty" card showed "0 in timetable"  
+  - No dropdown / no way to select individual faculty
+  - Teacher name text box was the only input (caused partial matches)
+  - Sending was unreliable — matched wrong faculty
+
+  AFTER (fixed):
+  - LEFT PANEL: scrollable list of ALL faculty with search box
+  - Click any faculty → preview their slots on the right instantly
+  - RIGHT PANEL: shows full weekly grid (Day / Time / Subject / Room / Division / Type)
+  - SEND button at the bottom sends ONLY to that specific faculty by ID
+  - "Send to All Faculty" bulk button still available
+  - No more partial-name matching bugs
+  ================================================================
+-->

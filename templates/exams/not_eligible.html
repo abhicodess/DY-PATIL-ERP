@@ -1,0 +1,14 @@
+{% extends "common/base.html" %}
+{% block title %}Not Eligible{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Examinations{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-20 text-center">
+    <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-ban text-3xl"></i>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">Not Eligible</h1>
+    <p class="text-gray-500 mb-8">You are currently not eligible to download the hall ticket. This may be due to low attendance or pending fee dues.</p>
+    <a href="/student_dashboard" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">Back to Dashboard</a>
+</div>
+{% endblock %}

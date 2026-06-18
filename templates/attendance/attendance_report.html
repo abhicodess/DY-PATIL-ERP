@@ -1,0 +1,165 @@
+{% extends "attendance/attendance_base.html" %}
+{% block title %}Student Attendance Report{% endblock %}
+{% block nav_report %}active{% endblock %}
+{% block page_title %}Student Report{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a> / Report{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Student Attendance Report</div>
+    <div class="ph-sub">Subject-wise breakdown per student</div>
+  </div>
+  <div class="ph-actions">
+    <a href="/export_attendance_report_excel?{{ request.query_string.decode() }}" class="btn btn-out btn-sm">
+      <i class="fas fa-download"></i> Export Excel
+    </a>
+    <a href="/shortage_report" class="btn btn-dark btn-sm">
+      <i class="fas fa-triangle-exclamation"></i> Shortage
+    </a>
+  </div>
+</div>
+
+<!-- Filter card -->
+<div class="card fu fu1">
+  <div class="ch"><div class="ct">Filter</div></div>
+  <div class="cb">
+    <form method="GET" action="/attendance_report">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Department</label>
+          <select name="department" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Departments</option>
+            {% for d in ['AIML','AIDS','CS','IT'] %}<option {% if request.args.get('department')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Division</label>
+          <select name="division" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Divisions</option>
+            {% for d in ['A','B','C','D'] %}<option {% if request.args.get('division')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Search</label>
+          <input type="text" name="search" value="{{ request.args.get('search','') }}"
+                 placeholder="Name or roll…" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Threshold</label>
+          <select name="threshold" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All %</option>
+            <option value="75" {% if request.args.get('threshold')=='75' %}selected{% endif %}>Below 75%</option>
+            <option value="50" {% if request.args.get('threshold')=='50' %}selected{% endif %}>Below 50%</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-magnifying-glass"></i> Filter</button>
+        <a href="/attendance_report" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Report table -->
+<div class="card fu fu2">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Student-wise Summary</div>
+      {% if students is defined %}<div class="cs">{{ students|length }} students</div>{% endif %}
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Dept</th>
+          <th>Div</th>
+          <th>Attended / Total</th>
+          <th>%</th>
+          <th>Status</th>
+          <th>Subjects</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if students %}
+          {% for s in students %}
+          <tr>
+            <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="flex-ac gap8">
+                <div class="av av-sm" style="background:{% if s.pct>=75 %}#059669{% elif s.pct>=50 %}#D97706{% else %}#DC2626{% endif %}">
+                  {{ s.name[0]|upper }}
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
+                  <div style="font-size:11px;color:var(--ink4)">{{ s.roll or '' }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="tag t-bl">{{ s.department or '—' }}</span></td>
+            <td><span class="tag t-vi">{{ s.division or '—' }}</span></td>
+            <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
+            <td>
+              <span class="tag {% if s.pct>=75 %}t-gr{% elif s.pct>=50 %}t-am{% else %}t-re{% endif %}">
+                {{ s.pct }}%
+              </span>
+            </td>
+            <td>
+              <span style="font-size:12px;font-weight:600;color:{% if s.status=='Good' %}#059669{% elif s.status=='Average' %}#D97706{% else %}#DC2626{% endif %}">
+                {{ s.status }}
+              </span>
+            </td>
+            <td>
+              {% if s.subjects %}
+              <button class="btn btn-ghost btn-sm" onclick="toggleSubjects({{ loop.index }},this)">
+                <i class="fas fa-list-ul"></i> {{ s.subjects|length }}
+              </button>
+              <div id="sub-{{ loop.index }}" style="display:none;margin-top:6px">
+                {% for sub in s.subjects %}
+                <span class="tag {% if sub.percentage>=75 %}t-gr{% elif sub.percentage>=50 %}t-am{% else %}t-re{% endif %}"
+                      style="margin:2px;display:inline-block">
+                  {{ sub.subject }} — {{ sub.percentage }}%
+                </span>
+                {% endfor %}
+              </div>
+              {% else %}
+              <span style="color:var(--ink4);font-size:12px">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm" title="View dashboard">
+                <i class="fas fa-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="9">
+            <div class="empty-state"><i class="fas fa-inbox"></i><p>No data found. Adjust filters.</p></div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSubjects(idx, btn) {
+  var el = document.getElementById('sub-' + idx);
+  if(el.style.display === 'none') {
+    el.style.display = 'block';
+    btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+  } else {
+    el.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-list-ul"></i> ' + el.querySelectorAll('.tag').length;
+  }
+}
+</script>
+{% endblock %}

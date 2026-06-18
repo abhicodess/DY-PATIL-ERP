@@ -1,0 +1,328 @@
+﻿docker : time="2026-05-2
+2T19:19:04+05:30" 
+level=warning 
+msg="D:\\DY PATIL ERP\\d
+ocker-compose.yml: the 
+attribute `version` is 
+obsolete, it will be 
+ignored, please remove 
+it to avoid potential 
+confusion"
+At line:1 char:1
++ docker compose logs 
+app --tail=300 2>&1 | 
+Out-File -FilePath 
+"d:\DY P ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified: 
+(t    
+ime="2026-05-2...tial   
+  confusion":String) [  
+  ], RemoteException
+    + 
+FullyQualifiedError    
+Id : NativeCommandErr   
+ or
+ 
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+erp_app  |     return self._execute_internal(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+erp_app  |     result: Result[Any] = compile_state_cls.orm_execute_statement(
+erp_app  |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+erp_app  |     result = conn.execute(
+erp_app  |              ^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+erp_app  |     return meth(
+erp_app  |            ^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+erp_app  |     return connection._execute_clauseelement(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+erp_app  |     ret = self._execute_context(
+erp_app  |           ^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+erp_app  |     return self._exec_single_context(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+erp_app  |     self._handle_dbapi_exception(
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+erp_app  |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+erp_app  |     self.dialect.do_execute(
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+erp_app  |     cursor.execute(statement, parameters)
+erp_app  | sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "applications" does not exist
+erp_app  | LINE 2: FROM applications 
+erp_app  |              ^
+erp_app  | 
+erp_app  | [SQL: SELECT applications.id AS applications_id, applications.applicant_name AS applications_applicant_name, applications.email AS applications_email, applications.phone AS applications_phone, applications.dept_preference AS applications_dept_preference, applications.score_10th AS applications_score_10th, applications.score_12th AS applications_score_12th, applications.entrance_score AS applications_entrance_score, applications.documents_url AS applications_documents_url, applications.status AS applications_status, applications.applied_at AS applications_applied_at, applications.token AS applications_token 
+erp_app  | FROM applications 
+erp_app  | WHERE applications.status = %(status_1)s]
+erp_app  | [parameters: {'status_1': 'Pending'}]
+erp_app  | (Background on this error at: https://sqlalche.me/e/20/f405)
+erp_app  | ERROR:app:Server Error: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+erp_app  |     self.dialect.do_execute(
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+erp_app  |     cursor.execute(statement, parameters)
+erp_app  | psycopg2.errors.UndefinedTable: relation "applications" does not exist
+erp_app  | LINE 2: FROM applications 
+erp_app  |              ^
+erp_app  | 
+erp_app  | 
+erp_app  | The above exception was the direct cause of the following exception:
+erp_app  | 
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+erp_app  |     response = self.full_dispatch_request()
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+erp_app  |     rv = self.handle_user_exception(e)
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+erp_app  |     rv = self.dispatch_request()
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+erp_app  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/auth/decorators.py", line 29, in decorated_function
+erp_app  |     return f(*args, **kwargs)
+erp_app  |            ^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/admissions/routes.py", line 28, in dashboard
+erp_app  |     apps = admissions_service.repository.get_pending()
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/repositories/admissions_repository.py", line 12, in get_pending
+erp_app  |     return Application.query.filter_by(status='Pending').all()
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2711, in all
+erp_app  |     return self._iter().all()  # type: ignore
+erp_app  |            ^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2864, in _iter
+erp_app  |     result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+erp_app  |                                                   ^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+erp_app  |     return self._execute_internal(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+erp_app  |     result: Result[Any] = compile_state_cls.orm_execute_statement(
+erp_app  |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+erp_app  |     result = conn.execute(
+erp_app  |              ^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+erp_app  |     return meth(
+erp_app  |            ^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+erp_app  |     return connection._execute_clauseelement(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+erp_app  |     ret = self._execute_context(
+erp_app  |           ^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+erp_app  |     return self._exec_single_context(
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+erp_app  |     self._handle_dbapi_exception(
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+erp_app  |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+erp_app  |     self.dialect.do_execute(
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+erp_app  |     cursor.execute(statement, parameters)
+erp_app  | sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "applications" does not exist
+erp_app  | LINE 2: FROM applications 
+erp_app  |              ^
+erp_app  | 
+erp_app  | [SQL: SELECT applications.id AS applications_id, applications.applicant_name AS applications_applicant_name, applications.email AS applications_email, applications.phone AS applications_phone, applications.dept_preference AS applications_dept_preference, applications.score_10th AS applications_score_10th, applications.score_12th AS applications_score_12th, applications.entrance_score AS applications_entrance_score, applications.documents_url AS applications_documents_url, applications.status AS applications_status, applications.applied_at AS applications_applied_at, applications.token AS applications_token 
+erp_app  | FROM applications 
+erp_app  | WHERE applications.status = %(status_1)s]
+erp_app  | [parameters: {'status_1': 'Pending'}]
+erp_app  | (Background on this error at: https://sqlalche.me/e/20/f405)
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:25 +0000] "GET /admissions/dashboard HTTP/1.1" 500 32966 "http://localhost/hr/faculty_list" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | [2026-05-22 13:43:26,650] ERROR in app: Exception on /hr/faculty_list [GET]
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+erp_app  |     response = self.full_dispatch_request()
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+erp_app  |     rv = self.handle_user_exception(e)
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+erp_app  |     rv = self.dispatch_request()
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+erp_app  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/auth/decorators.py", line 29, in decorated_function
+erp_app  |     return f(*args, **kwargs)
+erp_app  |            ^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/hr/routes.py", line 15, in faculty_list
+erp_app  |     return render_template("hr/faculty_list.html", faculties=faculties)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+erp_app  |     template = app.jinja_env.get_or_select_template(template_name_or_list)
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+erp_app  |     return self.get_template(template_name_or_list, parent, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+erp_app  |     return self._load_template(name, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+erp_app  |     template = self.loader.load(self, name, self.make_globals(globals))
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+erp_app  |     source, filename, uptodate = self.get_source(environment, name)
+erp_app  |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 66, in get_source
+erp_app  |     return self._get_source_fast(environment, template)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 100, in _get_source_fast
+erp_app  |     raise TemplateNotFound(template)
+erp_app  | jinja2.exceptions.TemplateNotFound: hr/faculty_list.html
+erp_app  | ERROR:app:Exception on /hr/faculty_list [GET]
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+erp_app  |     response = self.full_dispatch_request()
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+erp_app  |     rv = self.handle_user_exception(e)
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+erp_app  |     rv = self.dispatch_request()
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+erp_app  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/auth/decorators.py", line 29, in decorated_function
+erp_app  |     return f(*args, **kwargs)
+erp_app  |            ^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/hr/routes.py", line 15, in faculty_list
+erp_app  |     return render_template("hr/faculty_list.html", faculties=faculties)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+erp_app  |     template = app.jinja_env.get_or_select_template(template_name_or_list)
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+erp_app  |     return self.get_template(template_name_or_list, parent, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+erp_app  |     return self._load_template(name, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+erp_app  |     template = self.loader.load(self, name, self.make_globals(globals))
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+erp_app  |     source, filename, uptodate = self.get_source(environment, name)
+erp_app  |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 66, in get_source
+erp_app  |     return self._get_source_fast(environment, template)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 100, in _get_source_fast
+erp_app  |     raise TemplateNotFound(template)
+erp_app  | jinja2.exceptions.TemplateNotFound: hr/faculty_list.html
+erp_app  | [2026-05-22 13:43:26,666] ERROR in app: Server Error: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+erp_app  |     response = self.full_dispatch_request()
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+erp_app  |     rv = self.handle_user_exception(e)
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+erp_app  |     rv = self.dispatch_request()
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+erp_app  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/auth/decorators.py", line 29, in decorated_function
+erp_app  |     return f(*args, **kwargs)
+erp_app  |            ^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/hr/routes.py", line 15, in faculty_list
+erp_app  |     return render_template("hr/faculty_list.html", faculties=faculties)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+erp_app  |     template = app.jinja_env.get_or_select_template(template_name_or_list)
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+erp_app  |     return self.get_template(template_name_or_list, parent, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+erp_app  |     return self._load_template(name, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+erp_app  |     template = self.loader.load(self, name, self.make_globals(globals))
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+erp_app  |     source, filename, uptodate = self.get_source(environment, name)
+erp_app  |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 66, in get_source
+erp_app  |     return self._get_source_fast(environment, template)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 100, in _get_source_fast
+erp_app  |     raise TemplateNotFound(template)
+erp_app  | jinja2.exceptions.TemplateNotFound: hr/faculty_list.html
+erp_app  | ERROR:app:Server Error: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
+erp_app  | Traceback (most recent call last):
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+erp_app  |     response = self.full_dispatch_request()
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+erp_app  |     rv = self.handle_user_exception(e)
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+erp_app  |     rv = self.dispatch_request()
+erp_app  |          ^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+erp_app  |     return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/auth/decorators.py", line 29, in decorated_function
+erp_app  |     return f(*args, **kwargs)
+erp_app  |            ^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/app/blueprints/hr/routes.py", line 15, in faculty_list
+erp_app  |     return render_template("hr/faculty_list.html", faculties=faculties)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+erp_app  |     template = app.jinja_env.get_or_select_template(template_name_or_list)
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+erp_app  |     return self.get_template(template_name_or_list, parent, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+erp_app  |     return self._load_template(name, globals)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+erp_app  |     template = self.loader.load(self, name, self.make_globals(globals))
+erp_app  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+erp_app  |     source, filename, uptodate = self.get_source(environment, name)
+erp_app  |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 66, in get_source
+erp_app  |     return self._get_source_fast(environment, template)
+erp_app  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+erp_app  |   File "/home/appuser/.local/lib/python3.12/site-packages/flask/templating.py", line 100, in _get_source_fast
+erp_app  |     raise TemplateNotFound(template)
+erp_app  | jinja2.exceptions.TemplateNotFound: hr/faculty_list.html
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:26 +0000] "GET /hr/faculty_list HTTP/1.1" 500 32966 "http://localhost/admissions/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:27 +0000] "GET /faculty HTTP/1.1" 302 213 "http://localhost/hr/faculty_list" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:27 +0000] "GET /faculty/list HTTP/1.1" 200 37844 "http://localhost/hr/faculty_list" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:29 +0000] "GET /subjects HTTP/1.1" 404 32886 "http://localhost/faculty/list" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:30 +0000] "GET /admin HTTP/1.1" 302 219 "http://localhost/subjects" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:43:30 +0000] "GET /admin/dashboard HTTP/1.1" 200 39282 "http://localhost/subjects" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:43:50 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:44:20 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:44:51 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 172.18.0.7 - - [22/May/2026:13:45:07 +0000] "GET /analytics HTTP/1.1" 404 32886 "http://localhost/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:45:21 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:45:53 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:46:23 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:46:53 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:47:24 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:47:54 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:48:24 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"
+erp_app  | 127.0.0.1 - - [22/May/2026:13:48:54 +0000] "GET /health HTTP/1.1" 200 21 "-" "curl/8.14.1"

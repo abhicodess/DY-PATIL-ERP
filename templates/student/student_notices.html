@@ -1,0 +1,23 @@
+{% extends "common/base.html" %}
+{% block title %}Notices{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Student Portal{% endblock %}
+{% block av_color %}#059669{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Student{% endblock %}
+
+{% block page_title %}Notices{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Notices{% endblock %}
+{% block topbar_extras %}{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Notices Board</div></div>
+<div class="card fu fu1">
+  <div class="cb">
+    {% for n in notices %}
+    <div class="notice">
+      <div class="n-title">{{ n.title }}</div>
+      <div class="n-meta"><i class="fas fa-user"></i> {{ n.faculty_name }} &nbsp;·&nbsp; <i class="fas fa-clock"></i> {{ n.created_at[:16] if n.created_at else "" }}</div>
+      <div class="n-body">{{ n.message }}</div>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-bullhorn"></i><p>No notices at this time.</p></div>
+    {% endfor %}
+  </div>
+</div>{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "common/base.html" %}
+{% block title %}Notes{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Study Notes{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Notes{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Study Notes</div></div>
+<div class="g4060 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Add Note</div></div>
+    <form method="POST" action="/faculty_save_note"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><div class="cb">
+      <div class="fgrp"><label>Subject *</label>
+        <select name="subject"><option value="">— Select —</option>{% for s in my_subjects %}<option value="{{ s.name }}">{{ s.name }}</option>{% endfor %}</select>
+      </div>
+      <div class="fgrp"><label>Title *</label><input type="text" name="title" required></div>
+      <div class="fgrp"><label>Note Type</label>
+        <select name="note_type"><option>Lecture Note</option><option>Assignment</option><option>Reference</option><option>Important</option></select>
+      </div>
+      <div class="fgrp"><label>Content *</label><textarea name="content" rows="6" required></textarea></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-file-lines"></i> Add Note</button></div></form>
+  </div>
+  <div class="card">
+    <div class="ch flex-sb pb0"><div class="ct">My Notes</div>
+      <form method="GET" action="/faculty_notes">
+        <select class="tb-field btn-sm" name="subject" onchange="this.form.submit()">
+          <option value="">All Subjects</option>
+          {% for s in my_subjects %}<option value="{{ s.name }}" {% if f_subject==s.name %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="cb">
+      {% for n in notes %}
+      <div class="notice">
+        <div class="flex-sb">
+          <div><span class="tag {% if n.note_type=="Important" %}t-re{% elif n.note_type=="Assignment" %}t-am{% else %}t-bl{% endif %}" style="margin-bottom:6px">{{ n.note_type }}</span><div class="n-title">{{ n.title }}</div></div>
+          <form method="POST" action="/faculty_delete_note" style="display:inline" onsubmit="return confirm('Delete?')">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="note_id" value="{{ n.id }}">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+        <div class="n-meta">{{ n.subject }} · {{ n.created_at[:10] if n.created_at else "" }}</div>
+        <div class="n-body">{{ n.content[:150] }}{% if n.content|length > 150 %}…{% endif %}</div>
+      </div>
+      {% else %}<div class="empty-state"><i class="fas fa-file-lines"></i><p>No notes yet.</p></div>{% endfor %}
+    </div>
+  </div>
+</div>{% endblock %}

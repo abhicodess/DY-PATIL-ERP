@@ -1,0 +1,53 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Institution Summary - Section 1{% endblock %}
+
+{% block report_header_title %}Institution Enrollment Executive Summary{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Academic Year:</div>
+    <div class="meta-value">{{ academic_year }}</div>
+    <div class="meta-label">Section:</div>
+    <div class="meta-value">1 of 4: Enrollments</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<h2>Department-Wise Student Headcounts</h2>
+<p>Below is a summary of active student enrollments grouped by Department, Year, and Division.</p>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th style="text-align: center;">Year</th>
+            <th style="text-align: center;">Division</th>
+            <th style="text-align: center;">Enrolled Students</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set vars = {'total': 0} %}
+        {% for row in data %}
+        <tr>
+            <td><strong>{{ row.department }}</strong></td>
+            <td style="text-align: center;">{{ row.year }}</td>
+            <td style="text-align: center;">{{ row.division }}</td>
+            <td style="text-align: center; font-weight: bold; color: #800000;">{{ row.student_count }}</td>
+        </tr>
+        {% if vars.update({'total': vars.total + row.student_count}) %}{% endif %}
+        {% else %}
+        <tr>
+            <td colspan="4" style="text-align: center; color: #777;">No student records found.</td>
+        </tr>
+        {% endfor %}
+        
+        {% if data %}
+        <tr class="summary-row">
+            <td colspan="3">Total Active Students Enrollment</td>
+            <td style="text-align: center; font-size: 11pt;">{{ vars.total }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

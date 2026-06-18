@@ -1,0 +1,765 @@
+{% extends "common/base.html" %}
+{% block title %}Roll Call List | Neo-ERP{% endblock %}
+
+{% block page_title %}Attendance Roll Call{% endblock %}
+{% block breadcrumb %}Attendance / Roll Call List{% endblock %}
+
+{% block content %}
+<style>
+    /* 
+    ==================================================
+    NEO-MINIMAL DESIGN SYSTEM (SaaS Premium)
+    ==================================================
+    */
+    :root {
+        --p-white: #ffffff;
+        --p-bg: #fdfdfe;
+        --p-gray-50: #f8fafc;
+        --p-gray-100: #f1f5f9;
+        --p-gray-200: #e2e8f0;
+        --p-gray-700: #334155;
+        --p-gray-800: #1e293b;
+        --p-gray-900: #0f172a;
+        
+        --p-blue: #2563eb;
+        --p-emerald: #10b981;
+        --p-amber: #f59e0b;
+        --p-rose: #f43f5e;
+        
+        --p-glass: rgba(255, 255, 255, 0.7);
+        --p-glass-border: rgba(255, 255, 255, 0.5);
+        --p-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+        --p-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        
+        --p-radius-xl: 20px;
+        --p-radius-lg: 16px;
+        --p-radius-md: 12px;
+        --p-font: 'Inter', 'Manrope', 'Plus Jakarta Sans', sans-serif;
+        --p-mono: 'JetBrains Mono', 'DM Mono', monospace;
+    }
+
+    body { background-color: var(--p-bg); font-family: var(--p-font); }
+    .mono { font-family: var(--p-mono) !important; }
+
+    .premium-container { padding: 32px; max-width: 1600px; margin: 0 auto; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Page Header Section */
+    .p-header { margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .p-title-group h1 { font-size: 32px; font-weight: 800; color: var(--p-gray-900); letter-spacing: -0.04em; margin: 0; }
+    .p-subtitle { color: var(--p-gray-700); font-size: 14px; margin-top: 4px; font-weight: 500; }
+
+    /* KPI Grid Enhancements */
+    .rc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
+    .rc-stat-card { 
+        background: var(--p-white); 
+        border: 1px solid var(--p-gray-100); 
+        border-radius: var(--p-radius-lg); 
+        padding: 24px; 
+        box-shadow: var(--p-shadow); 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .rc-stat-card:hover { transform: translateY(-4px); box-shadow: var(--p-shadow-hover); }
+    .rc-stat-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    
+    .sc-blue .rc-stat-icon { background: #eff6ff; color: var(--p-blue); }
+    .sc-green .rc-stat-icon { background: #ecfdf5; color: var(--p-emerald); }
+    .sc-amber .rc-stat-icon { background: #fffbeb; color: var(--p-amber); }
+    .sc-red .rc-stat-icon { background: #fef2f2; color: var(--p-rose); }
+
+    .rc-stat-info div:first-child { font-size: 11px; font-weight: 800; color: var(--p-gray-700); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .rc-stat-info div:nth-child(2) { font-size: 28px; font-weight: 800; color: var(--p-gray-900); font-family: var(--p-mono); letter-spacing: -0.05em; }
+    .sub-text { font-size: 11px; color: var(--ink4); font-weight: 500; margin-top: 4px; }
+
+    /* Glass Toolbar */
+    .rc-toolbar { 
+        background: var(--p-glass); 
+        backdrop-filter: blur(16px); 
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--p-glass-border); 
+        border-radius: var(--p-radius-lg); 
+        padding: 24px; 
+        margin-bottom: 24px; 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 16px; 
+        align-items: flex-end;
+        box-shadow: var(--p-shadow);
+    }
+    .rc-toolbar .field { flex: 1; min-width: 140px; }
+    .rc-toolbar label { font-size: 11px; font-weight: 800; color: var(--p-gray-700); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block; }
+    
+    .inp { 
+        background: var(--p-white); 
+        border: 1px solid var(--p-gray-200); 
+        border-radius: 10px; 
+        height: 42px; 
+        padding: 0 14px; 
+        font-size: 13px; 
+        font-weight: 500; 
+        transition: all 0.2s;
+        outline: none;
+        width: 100%;
+    }
+    .inp:focus { border-color: var(--p-blue); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+    /* View Toggle */
+    .view-toggle { background: var(--p-gray-100); padding: 4px; border-radius: 10px; display: flex; gap: 4px; margin-left: 12px; }
+    .view-btn { width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; color: var(--p-gray-700); transition: all 0.2s; }
+    .view-btn.active { background: white; color: var(--p-blue); box-shadow: var(--p-shadow); }
+
+    /* Search Bar */
+    .rc-search-wrap { margin-bottom: 24px; }
+    .rc-search { position: relative; }
+    .rc-search i.fa-search { position: absolute; left: 18px; top: 50%; translate: 0 -50%; color: var(--p-gray-700); font-size: 15px; }
+    .rc-search input { 
+        width: 100%; 
+        padding: 16px 20px 16px 52px; 
+        border-radius: var(--p-radius-lg); 
+        border: 1px solid var(--p-gray-200); 
+        background: var(--p-white); 
+        font-size: 15px; 
+        font-weight: 500; 
+        box-shadow: var(--p-shadow); 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        outline: none;
+    }
+    .rc-search input:focus { border-color: var(--p-blue); transform: scale(1.01); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.06); }
+
+    /* Bulk Action Bar (Floating Dark Mode) */
+    .bulk-bar { 
+        background: var(--p-gray-900); 
+        color: white; 
+        border-radius: 16px; 
+        padding: 12px 24px; 
+        margin-bottom: 24px; 
+        display: none; 
+        align-items: center; 
+        gap: 20px; 
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideDown 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    /* Premium Table Redesign */
+    .rc-card { background: var(--p-white); border-radius: var(--p-radius-xl); border: 1px solid var(--p-gray-100); overflow: hidden; box-shadow: var(--p-shadow); }
+    .rc-tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .rc-tbl thead th { 
+        background: var(--p-gray-50); 
+        padding: 16px 24px; 
+        font-size: 11px; 
+        font-weight: 800; 
+        letter-spacing: 0.1em; 
+        color: var(--p-gray-700); 
+        text-transform: uppercase; 
+        border-bottom: 1px solid var(--p-gray-100);
+        cursor: pointer;
+    }
+    .rc-tbl tbody td { padding: 16px 24px; border-bottom: 1px solid var(--p-gray-50); vertical-align: middle; }
+    .rc-tbl tbody tr { transition: all 0.2s; cursor: pointer; }
+    .rc-tbl tbody tr:hover { background: var(--p-gray-50); transform: translateX(4px); }
+    .rc-tbl tbody tr.row-selected { background: var(--blue-s); }
+
+    /* Student Identity */
+    .rc-name { font-size: 15px; font-weight: 700; color: var(--p-gray-900); }
+    .rc-sub { font-size: 11px; font-weight: 600; color: var(--ink4); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .cv-avatar { width: 42px; height: 42px; border-radius: 12px; background: var(--p-gray-100); color: var(--p-gray-800); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+
+    /* Metric Pills */
+    .status-pill { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 6px; 
+        padding: 6px 14px; 
+        border-radius: 100px; 
+        font-size: 11px; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+    }
+    .st-reg { background: var(--green-s); color: var(--p-emerald); }
+    .st-watch { background: var(--amber-s); color: var(--p-amber); }
+    .st-def { background: var(--red-s); color: var(--p-rose); }
+
+    /* Progress Indicators */
+    .pg-track { height: 8px; background: var(--p-gray-100); border-radius: 100px; overflow: hidden; margin-top: 8px; }
+    .pg-bar { height: 100%; border-radius: 100px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+    .bg-grad-gr { background: linear-gradient(90deg, #10b981, #34d399); }
+    .bg-grad-am { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .bg-grad-re { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+
+    /* Card View Redesign */
+    .card-view-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+    .std-card { 
+        background: var(--p-white); 
+        border-radius: var(--p-radius-xl); 
+        padding: 24px; 
+        border: 1px solid var(--p-gray-100); 
+        box-shadow: var(--p-shadow); 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    .std-card:hover { transform: translateY(-8px); box-shadow: var(--p-shadow-hover); border-color: var(--p-blue); }
+    .card-check { position: absolute; top: 18px; right: 18px; width: 20px; height: 20px; }
+
+    /* Buttons Premium */
+    .p-btn-action { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--p-gray-200); background: white; color: var(--p-gray-700); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .p-btn-action:hover { background: var(--p-gray-900); color: white; border-color: var(--p-gray-900); transform: translateY(-2px); }
+
+    /* Utility */
+    .filtered-out { display: none !important; }
+</style>
+
+<div class="premium-container" id="rcRoot">
+    
+    <!-- Page Header -->
+    <header class="p-header">
+        <div class="p-title-group">
+            <h1>Master Roll Call Dashboard</h1>
+            <p class="p-subtitle">Advanced student analytics and attendance tracking system</p>
+        </div>
+        <div class="flex-ac gap12">
+            <a href="{{ url_for('admin_intel.admin_attendance_intelligence') }}" class="btn btn-out" style="height:44px; border-radius:12px; padding:0 24px; border-color:var(--p-blue); color:var(--p-blue); text-decoration:none;">
+                <i class="fas fa-brain mr8"></i> AI Insights
+            </a>
+            <a href="{{ url_for('admin_intel.admin_faculty_logs') }}" class="btn btn-dark" style="height:44px; border-radius:12px; padding:0 24px; text-decoration:none;">
+                <i class="fas fa-microchip mr8"></i> Faculty Logs
+            </a>
+        </div>
+    </header>
+
+    <!-- 1. Stats Overview -->
+    <div class="rc-stats">
+        <div class="rc-stat-card sc-blue">
+            <div class="rc-stat-icon"><i class="fas fa-fingerprint"></i></div>
+            <div class="rc-stat-info">
+                <div>Enrolled Students</div>
+                <div id="kpiTotal">{{ total_found|default(0) }}</div>
+                <div class="sub-text">Active in current cohort</div>
+            </div>
+        </div>
+        <div class="rc-stat-card sc-green">
+            <div class="rc-stat-icon"><i class="fas fa-waveform"></i></div>
+            <div class="rc-stat-info">
+                <div>Collective Avg</div>
+                <div id="kpiAvg">{{ avg_att|default(0) }}%</div>
+                <div class="sub-text">Resource efficiency index</div>
+            </div>
+        </div>
+        <div class="rc-stat-card sc-amber">
+            <div class="rc-stat-icon"><i class="fas fa-satellite-dish"></i></div>
+            <div class="rc-stat-info">
+                <div>Warning Zone</div>
+                <div id="kpiWatch" class="mono">0</div>
+                <div class="sub-text">Critical 60% – 74% range</div>
+            </div>
+        </div>
+        <div class="rc-stat-card sc-red">
+            <div class="rc-stat-icon"><i class="fas fa-shield-virus"></i></div>
+            <div class="rc-stat-info">
+                <div>Defaulter Risk</div>
+                <div id="kpiDef">{{ defaulters_count|default(0) }}</div>
+                <div class="sub-text">Below 60% system threshold</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Smart Filters Toolbar -->
+    <form method="GET" action="/attendance_roll_call" id="filterForm">
+        <div class="rc-toolbar">
+            <div class="field">
+                <label>Temporal View</label>
+                <select name="view" class="inp" onchange="this.form.submit()">
+                    <option value="daily" {% if view=='daily' %}selected{% endif %}>Daily Overview</option>
+                    <option value="weekly" {% if view=='weekly' %}selected{% endif %}>Weekly Trends</option>
+                    <option value="monthly" {% if view=='monthly' %}selected{% endif %}>Monthly Summary</option>
+                    <option value="cumulative" {% if view=='cumulative' %}selected{% endif %}>Cumulative Records</option>
+                    <option value="subject" {% if view=='subject' %}selected{% endif %}>Subject Intelligence</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Department</label>
+                <select name="dept" class="inp" onchange="this.form.submit()">
+                    <option value="">All Branches</option>
+                    {% for d in DEPARTMENTS %}
+                    <option value="{{ d }}" {% if dept==d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field" style="max-width:140px">
+                <label>Year / Phase</label>
+                <select name="year" class="inp" onchange="this.form.submit()">
+                    <option value="">All Years</option>
+                    {% for y in YEARS %}
+                    <option value="{{ y }}" {% if year==y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field" style="max-width:100px">
+                <label>Division</label>
+                <select name="division" class="inp" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    {% for dv in DIVISIONS %}
+                    <option value="{{ dv }}" {% if div==dv %}selected{% endif %}>{{ dv }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Student Profile</label>
+                <select id="statusFilter" class="inp" onchange="applyStatusFilter()">
+                    <option value="all">Every Student</option>
+                    <option value="regular">Regular Participants (≥75%)</option>
+                    <option value="watch">Watchlist Profiles (60-74%)</option>
+                    <option value="default">Critical Defaulters (<60%)</option>
+                    <option value="zero">No Engagement Found (0%)</option>
+                </select>
+            </div>
+            
+            <div class="view-toggle">
+                <button type="button" class="view-btn active" id="btnTableView" onclick="toggleLayout('table')" title="List View Mode">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button type="button" class="view-btn" id="btnCardView" onclick="toggleLayout('card')" title="Visual Grid Mode">
+                    <i class="fas fa-grip-vertical"></i>
+                </button>
+            </div>
+
+            <div style="flex-shrink:0;">
+                <a href="/export_attendance_report?view={{view}}&dept={{dept}}&year={{year}}&division={{div}}" class="p-btn-filter" style="height:42px; background:var(--p-blue); text-decoration:none;">
+                    <i class="fas fa-file-export mr8"></i> Export Data
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- 3. Dynamic Search -->
+    <div class="rc-search-wrap">
+        <div class="rc-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="rcSearch" placeholder="Type name, enrollment ID or roll number to filter in real-time..." onkeyup="handleSearch()">
+            <i class="fas fa-times-circle rc-search-clear" id="searchClear" onclick="clearSearch()" style="right:20px; top:50%; translate:0 -50%; position:absolute;"></i>
+        </div>
+        <div class="rc-search-hint mt12" id="searchHint" style="font-size:12px; font-weight:600; color:var(--p-blue);"></div>
+    </div>
+
+    <!-- Bulk Action Overlay -->
+    <div class="bulk-bar" id="bulkBar">
+        <div class="flex-ac gap12">
+            <i class="fas fa-layer-group" style="font-size:16px;"></i>
+            <span class="bulk-count" id="selectedCount">0 Profiles Selected</span>
+        </div>
+        <div class="flex-ac gap10" style="margin-left:auto">
+            <button class="p-btn-filter" onclick="triggerBulkSMS()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">
+                <i class="fas fa-paper-plane mr8"></i> Broadcast Alert
+            </button>
+            <button class="p-btn-filter" onclick="exportSelected()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">
+                <i class="fas fa-file-excel mr8"></i> Export Selection
+            </button>
+            <button class="btn btn-ghost" onclick="clearSelection()" style="color:rgba(255,255,255,0.6);">Dismiss</button>
+        </div>
+    </div>
+
+    <!-- 4. Main Record View -->
+    {% if view != 'subject' %}
+    <div class="rc-card" id="tableViewContainer">
+        <div class="p0">
+            <table class="rc-tbl" id="rcTable">
+                <thead>
+                    <tr>
+                        <th width="60" class="t-c"><input type="checkbox" id="selectAll" onchange="toggleAll(this.checked)" style="width:18px; height:18px;"></th>
+                        <th width="100" onclick="sortTable(1)">Roll</th>
+                        <th onclick="sortTable(2)">Student Identity</th>
+                        <th width="200" onclick="sortTable(3)">Academic Track</th>
+                        <th width="120" onclick="sortTable(4)" class="t-c">Sess</th>
+                        <th width="120" onclick="sortTable(5)" class="t-c">Pres</th>
+                        <th width="200" onclick="sortTable(6)">Performance</th>
+                        <th width="140" onclick="sortTable(7)">Profile Status</th>
+                        <th width="100" class="t-r">Engage</th>
+                    </tr>
+                </thead>
+                <tbody id="rcTableBody">
+                    {% for r in rows %}
+                    {% set pct = ((r.present_count or 0) * 100 / (r.total_sessions or 1))|round|int if (r.total_sessions or 0) > 0 else 0 %}
+                    {% set status = 'regular' if pct >= 75 else ('watch' if pct >= 60 else 'default') %}
+                    <tr data-status="{{ status }}" data-pct="{{ pct }}" data-id="{{ r.id }}" data-name="{{ r.name|default('') }}">
+                        <td class="t-c"><input type="checkbox" class="row-check" onchange="updateSelection()" style="width:18px; height:18px;"></td>
+                        <td><span class="mono" style="font-weight:800; color:var(--p-gray-900); font-size:14px;">{{ r.roll }}</span></td>
+                        <td>
+                            <div class="flex-ac gap12">
+                                <div class="cv-avatar">{{ (r.name or 'S')[0]|upper }}</div>
+                                <div onclick="window.location='{{ url_for('admin_intel.student_attendance_profile', student_id=r.id) }}'">
+                                    <span class="rc-name">{{ r.name|default('Unknown Student') }}</span>
+                                    <span class="rc-sub">ID: #{{ r.id }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex-ac-sb">
+                                <span class="tag t-bl" style="font-weight:800; border-radius:6px; font-size:10px;">{{ r.department }}</span>
+                                <span style="font-size:10px; font-weight:800; opacity:0.6;">DIV {{ r.division }}</span>
+                            </div>
+                        </td>
+                        <td class="mono t-c" style="font-weight:700;">{{ r.total_sessions }}</td>
+                        <td class="mono t-c" style="font-weight:700; color:var(--p-emerald);">{{ r.present_count }}</td>
+                        <td>
+                            <div class="flex-ac-sb gap8 mb4">
+                                <span class="mono" style="font-weight:800; font-size:12px">{{ pct }}%</span>
+                            </div>
+                            <div class="pg-track">
+                                <div class="pg-bar {% if pct>=75 %}bg-grad-gr{% elif pct>=60 %}bg-grad-am{% else %}bg-grad-re{% endif %}" style="width:{{ pct|default(0) }}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if pct >= 75 %}
+                            <div class="status-pill st-reg"><i class="fas fa-check-circle"></i> Regular</div>
+                            {% elif pct >= 60 %}
+                            <div class="status-pill st-watch"><i class="fas fa-info-circle"></i> Watchlist</div>
+                            {% else %}
+                            <div class="status-pill st-def"><i class="fas fa-exclamation-triangle"></i> Defaulter</div>
+                            {% endif %}
+                        </td>
+                        <td class="t-r">
+                            <div class="flex-ac gap8 justify-content-end">
+                                <a href="{{ url_for('admin_intel.student_attendance_profile', student_id=r.id) }}" class="p-btn-action" title="Full Report">
+                                    <i class="fas fa-file-invoice"></i>
+                                </a>
+                                <button class="p-btn-action" onclick="sendSingleSMS('{{ r.id }}', '{{ (r.name or 'Student')|replace("'", "")|replace('"', "") }}')" title="Notify Guardian">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-view-grid" id="cardViewContainer">
+        {% for r in rows %}
+        {% set pct = ((r.present_count or 0) * 100 / (r.total_sessions or 1))|round|int if (r.total_sessions or 0) > 0 else 0 %}
+        {% set status = 'regular' if pct >= 75 else ('watch' if pct >= 60 else 'default') %}
+        <div class="std-card" data-status="{{ status }}" data-pct="{{ pct }}" data-id="{{ r.id }}" data-name="{{ r.name|default('') }}">
+            <input type="checkbox" class="card-check" onchange="updateSelection()">
+            <div class="flex-ac gap16 mb20">
+                <div class="cv-avatar" style="width:56px; height:56px; font-size:20px; border-radius:14px;">{{ (r.name or 'S')[0]|upper }}</div>
+                <div style="flex:1">
+                    <div class="rc-name" style="font-size:16px">{{ r.name|default('Unknown Student') }}</div>
+                    <div class="mono" style="font-size:12px; color:var(--p-blue); font-weight:700;">#{{ r.roll }}</div>
+                </div>
+            </div>
+            
+            <div style="background:var(--p-gray-50); padding:16px; border-radius:12px;" class="mb20">
+                <div class="flex-ac-sb mb12">
+                    <span class="rc-sub">{{ r.department }} • {{ r.year }}</span>
+                    <span class="mono" style="font-weight:800; font-size:14px;">{{ pct }}%</span>
+                </div>
+                <div class="pg-track">
+                    <div class="pg-bar {% if pct>=75 %}bg-grad-gr{% elif pct>=60 %}bg-grad-am{% else %}bg-grad-re{% endif %}" style="width:{{ pct|default(0) }}%"></div>
+                </div>
+                <div class="flex-ac-sb mt16">
+                    <div class="flex-ac gap8">
+                        <i class="fas fa-calendar-check" style="color:var(--p-emerald); font-size:12px;"></i>
+                        <span class="mono" style="font-size:12px; font-weight:700;">{{ r.present_count }} / {{ r.total_sessions }}</span>
+                    </div>
+                    {% if pct >= 75 %}
+                    <div class="status-pill st-reg" style="padding:4px 10px; font-size:10px;">Regular</div>
+                    {% elif pct >= 60 %}
+                    <div class="status-pill st-watch" style="padding:4px 10px; font-size:10px;">Watcher</div>
+                    {% else %}
+                    <div class="status-pill st-def" style="padding:4px 10px; font-size:10px;">Defaulter</div>
+                    {% endif %}
+                </div>
+            </div>
+
+             <div class="flex-ac gap10 mt-auto">
+                <a href="{{ url_for('admin_intel.student_attendance_profile', student_id=r.id) }}" class="btn btn-dark" style="flex:1; border-radius:10px; justify-content:center;">
+                    Intelligence Report
+                </a>
+                <button class="p-btn-action" style="width:40px; height:40px;" onclick="sendSingleSMS('{{ r.id }}', '{{ (r.name or 'Student')|replace("'", "")|replace('"', "") }}')">
+                    <i class="fas fa-bell"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Subject Level Summary -->
+    <div class="rc-card">
+        <div class="p0">
+            <table class="rc-tbl">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Academic Subject</th>
+                        <th width="120" onclick="sortTable(1)">Division</th>
+                        <th width="150" onclick="sortTable(2)" class="t-c">Unit Sessions</th>
+                        <th width="240" onclick="sortTable(3)">Average Engagement</th>
+                        <th width="100" class="t-r">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subject_rows %}
+                    <tr>
+                        <td><span class="rc-name">{{ s.subject }}</span></td>
+                        <td><span class="tag t-bl" style="border-radius:6px; font-weight:800;">{{ s.division }}</span></td>
+                        <td class="mono t-c" style="font-weight:700;">{{ s.total_sessions }}</td>
+                        <td>
+                            <div class="flex-ac-sb gap8 mb4">
+                                <span class="mono" style="font-weight:800; font-size:13px">{{ (s.avg_attendance_pct or 0)|round(1) }}%</span>
+                            </div>
+                            <div class="pg-track">
+                                <div class="pg-bar {% if (s.avg_attendance_pct or 0)>=75 %}bg-grad-gr{% elif (s.avg_attendance_pct or 0)>=60 %}bg-grad-am{% else %}bg-grad-re{% endif %}" style="width:{{ (s.avg_attendance_pct or 0) }}%"></div>
+                            </div>
+                        </td>
+                        <td class="t-r">
+                            <button class="p-btn-view" onclick="alert('Module Analytics Deep Dive Coming Soon')">
+                                <i class="fas fa-chart-line"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}</div>
+
+    <!-- Empty Discovery State -->
+    <div id="emptyState" style="display:none">
+        <div class="p-empty">
+            <div class="p-empty-icon"><i class="fas fa-satellite-dish"></i></div>
+            <h3>No Records Captured</h3>
+            <p>We've scanned the current query spatial range but found no matching student entities. Try clearing architectural filters.</p>
+            <button class="btn btn-dark mt24" style="border-radius:12px" onclick="resetFilters()">Reset Global Search</button>
+        </div>
+    </div>
+
+    <!-- Modernized Pagination -->
+    <div class="p-header" id="paginationWrap" style="margin-top:32px; padding-top:24px; border-top:1px solid var(--p-gray-100);">
+        <div class="p-subtitle" id="pagInfo" style="font-weight:700;">Analyzing 1–50 of total population</div>
+        <div class="pag-btns flex-ac gap8" id="pagButtons"></div>
+    </div>
+</div>
+
+<!-- Interaction Toasts -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    // Configuration & Performance State
+    const CONFIG = {
+        pageSize: 50,
+        sortAsc: true,
+        currentSortCol: -1,
+        activeLayout: 'table'
+    };
+
+    let currentPage = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        computeWatchlist();
+        applyAllFilters();
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                document.getElementById('rcSearch').focus();
+            }
+        });
+    });
+
+    // ── LOGIC (Preserving all original functionality) ──
+
+    function handleSearch() {
+        const query = document.getElementById('rcSearch').value.trim();
+        const clearBtn = document.getElementById('searchClear');
+        clearBtn.style.display = query.length > 0 ? 'inline-block' : 'none';
+        applyAllFilters();
+    }
+
+    function clearSearch() {
+        document.getElementById('rcSearch').value = '';
+        handleSearch();
+    }
+
+    function applyStatusFilter() {
+        applyAllFilters();
+    }
+
+    function applyAllFilters() {
+        const query = document.getElementById('rcSearch').value.toLowerCase();
+        const statusLimit = document.getElementById('statusFilter').value;
+        const rows = Array.from(document.querySelectorAll('#rcTableBody tr'));
+        const cards = Array.from(document.querySelectorAll('#cardViewContainer .std-card'));
+        
+        let visibleCount = 0;
+
+        rows.forEach((row, idx) => {
+            const card = cards[idx];
+            const name = row.getAttribute('data-name').toLowerCase();
+            const roll = row.querySelector('.mono').textContent.toLowerCase();
+            const id = row.getAttribute('data-id');
+            const pct = parseInt(row.getAttribute('data-pct'));
+            const status = row.getAttribute('data-status');
+
+            let matchesSearch = !query || name.includes(query) || roll.includes(query) || id.includes(query);
+            let matchesStatus = true;
+
+            if (statusLimit !== 'all') {
+                if (statusLimit === 'zero') matchesStatus = (pct === 0);
+                else matchesStatus = (status === statusLimit);
+            }
+
+            const isVisible = matchesSearch && matchesStatus;
+            row.classList.toggle('filtered-out', !isVisible);
+            if (card) card.classList.toggle('filtered-out', !isVisible);
+            if (isVisible) visibleCount++;
+        });
+
+        const hint = document.getElementById('searchHint');
+        const total = rows.length;
+        if (query || statusLimit !== 'all') {
+            hint.style.display = 'block';
+            hint.textContent = `Visibility: ${visibleCount} units found in localized search.`;
+        } else {
+            hint.style.display = 'none';
+        }
+
+        document.getElementById('emptyState').style.display = visibleCount === 0 ? 'block' : 'none';
+        document.getElementById('tableViewContainer').style.display = (visibleCount > 0 && CONFIG.activeLayout === 'table') ? 'block' : 'none';
+        document.getElementById('cardViewContainer').style.display = (visibleCount > 0 && CONFIG.activeLayout === 'card') ? 'grid' : 'none';
+        
+        currentPage = 1;
+        paginate();
+    }
+
+    function computeWatchlist() {
+        const rows = document.querySelectorAll('#rcTableBody tr');
+        let count = 0;
+        rows.forEach(r => {
+            const pct = parseInt(r.getAttribute('data-pct'));
+            if (pct >= 60 && pct < 75) count++;
+        });
+        document.getElementById('kpiWatch').textContent = count;
+    }
+
+    function resetFilters() {
+        document.getElementById('rcSearch').value = '';
+        document.getElementById('statusFilter').value = 'all';
+        applyAllFilters();
+    }
+
+    function paginate() {
+        const activeContainer = CONFIG.activeLayout === 'table' ? '#rcTableBody tr' : '#cardViewContainer .std-card';
+        const items = Array.from(document.querySelectorAll(activeContainer)).filter(el => !el.classList.contains('filtered-out'));
+        const total = items.length;
+        const totalPages = Math.ceil(total / CONFIG.pageSize);
+        
+        const startIdx = (currentPage - 1) * CONFIG.pageSize;
+        const endIdx = startIdx + CONFIG.pageSize;
+
+        document.querySelectorAll(activeContainer).forEach(el => el.style.display = 'none');
+        items.slice(startIdx, endIdx).forEach(el => {
+            el.style.display = (CONFIG.activeLayout === 'table' ? 'table-row' : 'block');
+        });
+
+        const info = document.getElementById('pagInfo');
+        if (total === 0) {
+            info.textContent = 'Operational results: 0';
+            document.getElementById('paginationWrap').style.display = 'none';
+        } else {
+            info.textContent = `Displaying index ${startIdx + 1} – ${Math.min(endIdx, total)} of population total (${total})`;
+            document.getElementById('paginationWrap').style.display = 'flex';
+        }
+
+        renderPaginationButtons(totalPages);
+    }
+
+    function renderPaginationButtons(totalPages) {
+        const container = document.getElementById('pagButtons');
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const createBtn = (content, active = false, disabled = false, onClick) => {
+            const b = document.createElement('button');
+            b.className = `view-btn ${active ? 'active' : ''}`;
+            b.style.width = 'auto'; b.style.padding = '0 12px';
+            b.innerHTML = content; b.disabled = disabled;
+            b.onclick = onClick; return b;
+        };
+
+        container.appendChild(createBtn('<i class="fas fa-chevron-left"></i>', false, currentPage === 1, () => { currentPage--; paginate(); }));
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                container.appendChild(createBtn(i, i === currentPage, false, () => { currentPage = i; paginate(); }));
+            }
+        }
+        container.appendChild(createBtn('<i class="fas fa-chevron-right"></i>', false, currentPage === totalPages, () => { currentPage++; paginate(); }));
+    }
+
+    function toggleLayout(type) {
+        CONFIG.activeLayout = type;
+        document.getElementById('btnTableView').classList.toggle('active', type === 'table');
+        document.getElementById('btnCardView').classList.toggle('active', type === 'card');
+        applyAllFilters();
+    }
+
+    // ── INTERACTION SCRIPTS ─────────────────────────────────
+
+    function toggleAll(checked) {
+        const checkboxes = document.querySelectorAll(CONFIG.activeLayout === 'table' ? '.row-check' : '.card-check');
+        checkboxes.forEach(cb => {
+            const parent = cb.closest(CONFIG.activeLayout === 'table' ? 'tr' : '.std-card');
+            if (parent && parent.style.display !== 'none') {
+                cb.checked = checked;
+                if (CONFIG.activeLayout === 'table') parent.classList.toggle('row-selected', checked);
+            }
+        });
+        updateSelection();
+    }
+
+    function updateSelection() {
+        const checks = Array.from(document.querySelectorAll(CONFIG.activeLayout === 'table' ? '.row-check' : '.card-check')).filter(c => c.checked);
+        const bar = document.getElementById('bulkBar');
+        const count = document.getElementById('selectedCount');
+        
+        if (checks.length > 0) {
+            bar.style.display = 'flex';
+            count.textContent = `${checks.length} Student Profiles Selected`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function clearSelection() {
+        document.getElementById('selectAll').checked = false;
+        toggleAll(false);
+    }
+
+    function triggerBulkSMS() {
+        const checks = Array.from(document.querySelectorAll('.row-check, .card-check')).filter(c => c.checked);
+        const ids = checks.map(c => c.closest('[data-id]').getAttribute('data-id'));
+        if (confirm(`Initiate bulk SMS deployment to ${ids.length} guardians?`)) {
+            showToast(`Targeting ${ids.length} contacts for SMS deployment...`, 'info');
+            // Backend integration logic would go here
+        }
+    }
+
+    function sendSingleSMS(id, name) {
+        if (confirm(`Send urgent attendance alert to ${name}'s guardians?`)) {
+            showToast(`Alert dispatched to ${name}`, 'success');
+        }
+    }
+
+    function showToast(msg, type = 'info') {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> <span>${msg}</span>`;
+        document.getElementById('toastContainer').appendChild(t);
+        setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 3000);
+    }
+</script>
+{% endblock %}

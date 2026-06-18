@@ -1,0 +1,33 @@
+{% extends "common/base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block page_title %}Audit Logs{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Logs{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">System Audit Logs</div><div class="ph-sub">Recent actions inside the system</div></div>
+</div>
+
+<div class="card fu fu1">
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr><th>ID</th><th>Timestamp</th><th>Action</th><th>Role/User ID</th><th>IP Address</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td><span class="mono">{{ log.id }}</span></td>
+          <td><span class="tag t-nn">{{ log.created_at }}</span></td>
+          <td><b>{{ log.action }}</b></td>
+          <td><span class="tag t-bl">{{ log.role|title }}</span> #{{ log.user_id }}</td>
+          <td class="mono">{{ log.ip_addr }}</td>
+          <td><span style="color:var(--ink3);font-size:12px">{{ log.details }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="fas fa-shield"></i><p>No audit logs found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

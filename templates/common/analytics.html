@@ -1,0 +1,311 @@
+{% extends "common/base.html" %}
+{% block title %}Admin Analytics Dashboard | DY Patil ERP{% endblock %}
+
+{% block page_title %}Analytics & Insights{% endblock %}
+{% block breadcrumb %}<a href="/">Dashboard</a> / Analytics{% endblock %}
+
+{% block content %}
+<style>
+    .an-container { padding-bottom: 40px; }
+    
+    /* Stats Row */
+    .an-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .an-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r-md); padding: 20px; box-shadow: var(--sh-sm); }
+    .an-v { font-size: 28px; font-weight: 700; color: var(--ink); font-family: var(--mono); }
+    .an-l { font-size: 11px; color: var(--ink3); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em; }
+    .an-d { font-size: 11px; margin-top: 8px; color: var(--ink4); }
+    .an-d.up { color: var(--green); }
+    .an-d.dn { color: var(--red); }
+
+    /* Layout Grids */
+    .an-grid { display: grid; grid-template-columns: 1.6fr 1.1fr; gap: 20px; margin-bottom: 24px; }
+    .an-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+    /* Tables */
+    .an-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .an-tbl th { text-align: left; padding: 12px 16px; font-size: 11px; color: var(--ink4); text-transform: uppercase; border-bottom: 1.5px solid var(--border); background: var(--bg2); letter-spacing: 0.05em; }
+    .an-tbl td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .an-tbl tr:last-child td { border-bottom: none; }
+    .an-tbl tr:hover { background: var(--bg2); }
+
+    /* Avatars */
+    .an-av { width: 32px; height: 32px; border-radius: 8px; background: var(--blue-s); color: var(--blue); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+
+    /* Chart Containers */
+    .ch-box { position: relative; height: 280px; width: 100%; }
+</style>
+
+<div class="an-container fu">
+    <!-- 1. Top Metrics -->
+    <div class="an-stats">
+        <div class="an-card">
+            <div class="an-l"><i class="fas fa-users-viewfinder"></i> Total Enrollment</div>
+            <div class="an-v">{{ total_students }}</div>
+            <div class="an-d">Registered student profiles</div>
+        </div>
+        <div class="an-card">
+            <div class="an-l"><i class="fas fa-chart-line"></i> Global Attendance</div>
+            <div class="an-v">{% set pre = att_status.get('Present',0) %}{% set tot = total_att %}{{ ((pre/tot*100) if tot > 0 else 0)|round(1) }}%</div>
+            <div class="an-d up"><i class="fas fa-caret-up"></i> Trending healthy</div>
+        </div>
+        <div class="an-card">
+            <div class="an-l"><i class="fas fa-graduation-cap"></i> Pass Efficiency</div>
+            <div class="an-v">{{ ((pass_count / (pass_count + fail_count) * 100) if (pass_count+fail_count) > 0 else 0)|round(1) }}%</div>
+            <div class="an-d">Based on latest assessments</div>
+        </div>
+        <div class="an-card">
+            <div class="an-l"><i class="fas fa-database"></i> Metadata Nodes</div>
+            <div class="an-v">{{ (total_marks + total_att)//1000 }}K+</div>
+            <div class="an-d">Academic records analyzed</div>
+        </div>
+    </div>
+
+    <!-- 2. Main Trends -->
+    <div class="an-grid">
+        <div class="card">
+            <div class="ch flex-sb"><div class="ct">Monthly Attendance Pipeline</div><div class="cs">Institutional reach velocity</div></div>
+            <div class="cb">
+                <div class="ch-box">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="ch"><div class="ct">Status Breakdown</div><div class="cs">Aggregate session distribution</div></div>
+            <div class="cb">
+                <div class="ch-box">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Performance & Defaulters -->
+    <div class="an-grid">
+        <div class="card">
+            <div class="ch flex-sb">
+                <div><div class="ct">Defaulter Spotlight</div><div class="cs">Students requiring urgent attention (<75%)</div></div>
+                <a href="/shortage_report" class="btn btn-out btn-sm">Audit All</a>
+            </div>
+            <div class="cb p0">
+                <table class="an-tbl">
+                    <thead><tr><th>Student</th><th>Roll</th><th>Dept</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for s in bottom5 %}
+                        <tr>
+                            <td><div class="flex-ac gap10"><div class="an-av">{{ s.name[0] }}</div><strong>{{ s.name }}</strong></div></td>
+                            <td class="mono" style="font-size:11px">{{ s.roll }}</td>
+                            <td>{{ s.dept }}</td>
+                            <td><span class="tag t-re" style="font-family:var(--mono)">{{ s.pct }}%</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" style="text-align:center; padding:40px; color:var(--ink4)">No critical defaulters.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="ch"><div class="ct">Department Health Index</div><div class="cs">Attendance vs Performance correlation</div></div>
+            <div class="cb">
+                <div class="ch-box">
+                    <canvas id="deptChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Academic Deep Dive -->
+    <div class="an-row">
+        <div class="card">
+            <div class="ch"><div class="ct">Subject Average Marks</div><div class="cs">Top 10 subjects</div></div>
+            <div class="cb">
+                <div class="ch-box" style="height: 250px;">
+                    <canvas id="subjChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="ch"><div class="ct">Grade Distribution</div><div class="cs">Aggregated grading</div></div>
+            <div class="cb">
+                <div class="ch-box" style="height: 250px;">
+                    <canvas id="gradeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="ch"><div class="ct">Exam Type Analysis</div><div class="cs">Score weighting</div></div>
+            <div class="cb">
+                <div class="ch-box" style="height: 250px;">
+                    <canvas id="examChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    Chart.defaults.font.weight = 600;
+    Chart.defaults.color = '#64748b';
+
+    // 1. Monthly Trend
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: {{ month_labels|tojson }},
+                datasets: [{
+                    label: 'Attendance %',
+                    data: {{ month_pcts|tojson }},
+                    borderColor: '#2563EB',
+                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { max: 100, min: 0, grid: { borderDash: [5,5] } }, x: { grid: { display: false } } }
+            }
+        });
+    }
+
+    // 2. Status Breakdown
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ (att_status.keys()|list)|tojson }},
+                datasets: [{
+                    data: {{ (att_status.values()|list)|tojson }},
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6'],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }
+            }
+        });
+    }
+
+    // 3. Dept Performance
+    const deptCtx = document.getElementById('deptChart');
+    if (deptCtx) {
+        new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ (dept_att|map(attribute='dept')|list)|tojson }},
+                datasets: [
+                    {
+                        label: 'Attendance %',
+                        data: {{ (dept_att|map(attribute='pct')|list)|tojson }},
+                        backgroundColor: '#DBEAFE',
+                        borderColor: '#2563EB',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Avg Marks',
+                        data: {{ (dept_marks|map(attribute='avg')|list)|tojson }},
+                        backgroundColor: '#F5F3FF',
+                        borderColor: '#7C3AED',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { max: 100, min: 0 } }
+            }
+        });
+    }
+
+    // 4. Subject Comparison
+    const subjCtx = document.getElementById('subjChart');
+    if (subjCtx) {
+        new Chart(subjCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ sm_labels|tojson }},
+                datasets: [{
+                    label: 'Avg Marks',
+                    data: {{ sm_data|tojson }},
+                    backgroundColor: '#2563EB',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    // 5. Grade Distribution
+    const gradeCtx = document.getElementById('gradeChart');
+    if (gradeCtx) {
+        new Chart(gradeCtx, {
+            type: 'polarArea',
+            data: {
+                labels: {{ (grade_dist.keys()|list)|tojson }},
+                datasets: [{
+                    data: {{ (grade_dist.values()|list)|tojson }},
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.6)',
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(139, 92, 246, 0.6)',
+                        'rgba(245, 158, 11, 0.6)',
+                        'rgba(239, 68, 68, 0.6)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }
+            }
+        });
+    }
+
+    // 6. Exam Analysis
+    const examCtx = document.getElementById('examChart');
+    if (examCtx) {
+        new Chart(examCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ exam_labels|tojson }},
+                datasets: [{
+                    data: {{ exam_data|tojson }},
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#7c3aed', '#ec4899'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }
+            }
+        });
+    }
+</script>
+{% endblock %}

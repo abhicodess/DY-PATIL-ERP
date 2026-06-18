@@ -1,0 +1,106 @@
+{% extends "common/base.html" %}
+{% block title %}Calendar{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Calendar{% endblock %}
+{% block av_color %}{% if session.role=='faculty' %}#7C3AED{% elif session.role=='student' %}#059669{% else %}#2563EB{% endif %}{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}{{ session.role|title }}{% endblock %}
+{% block sidebar_nav %}
+{% if session.role == 'admin' %}
+<div class="sb-sec">Overview</div><a href="/admin" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% elif session.role == 'faculty' %}
+<div class="sb-sec">My Workspace</div><a href="/faculty_dashboard" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% else %}
+<div class="sb-sec">My Academics</div><a href="/student_dashboard" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% endif %}
+<div class="sb-sec">Tools</div>
+<a href="/calendar" class="sb-link active"><i class="fas fa-calendar"></i> Calendar</a>
+{% endblock %}
+{% block page_title %}Calendar{% endblock %}
+{% block breadcrumb %}Calendar / {{ month }}{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Events & Holidays</div><div class="ph-sub">{{ month }}</div></div>
+  <div class="ph-actions">
+    {% set prev_month = month[:7] %}
+    <a href="/calendar?month={{ month }}" class="btn btn-out btn-sm">← Prev</a>
+    <a href="/calendar?month={{ month }}" class="btn btn-out btn-sm">Next →</a>
+    {% if session.role == 'admin' %}
+    <button class="btn btn-dark btn-sm" onclick="document.getElementById('addEventModal').classList.add('show')"><i class="fas fa-plus"></i> Add Event</button>
+    {% endif %}
+  </div>
+</div>
+<div class="g4060 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Events This Month</div><div class="cs">{{ events|length }} events in {{ month }}</div></div>
+    <div class="cb">
+      {% for e in events %}
+      <div class="notice" style="border-left:4px solid {% if e.event_type=='Holiday' %}var(--red){% elif e.event_type=='Exam' %}var(--amber){% elif e.event_type=='Cultural' %}var(--violet){% else %}var(--blue){% endif %}">
+        <div class="flex-sb">
+          <div>
+            <span class="tag {% if e.event_type=='Holiday' %}t-re{% elif e.event_type=='Exam' %}t-am{% elif e.event_type=='Cultural' %}t-vi{% else %}t-bl{% endif %}" style="margin-bottom:5px">{{ e.event_type }}</span>
+            <div class="n-title">{{ e.title }}</div>
+            <div class="n-meta"><i class="fas fa-calendar-day"></i> {{ e.event_date }}</div>
+            {% if e.description %}<div class="n-body">{{ e.description }}</div>{% endif %}
+          </div>
+          {% if session.role=='admin' %}
+          <form method="POST" action="/delete_event" onsubmit="return confirm('Delete event?')">
+            <input type="hidden" name="event_id" value="{{ e.id }}">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fas fa-calendar"></i><p>No events this month.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Upcoming Events</div><div class="cs">Next events</div></div>
+    <div class="cb">
+      {% for e in upcoming %}
+      <div class="notice">
+        <div class="flex-sb">
+          <div>
+            <span class="tag {% if e.event_type=='Holiday' %}t-re{% elif e.event_type=='Exam' %}t-am{% elif e.event_type=='Cultural' %}t-vi{% else %}t-bl{% endif %}">{{ e.event_type }}</span>
+            <div class="n-title" style="margin-top:5px">{{ e.title }}</div>
+            <div class="n-meta"><i class="fas fa-calendar"></i> {{ e.event_date }}</div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fas fa-calendar-check"></i><p>No upcoming events.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if session.role == 'admin' %}
+<div class="modal-bg" id="addEventModal">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div class="ct">Add Event / Holiday</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('addEventModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/save_event"><div class="cb" style="padding-top:0">
+      <div class="fgrp"><label>Title *</label><input type="text" name="title" required placeholder="e.g. Republic Day Holiday"></div>
+      <div class="fg2">
+        <div class="fgrp"><label>Date *</label><input type="date" name="event_date" required></div>
+        <div class="fgrp"><label>Type</label>
+          <select name="event_type">
+            <option>Holiday</option><option>Exam</option><option>Cultural</option><option>Event</option><option>Meeting</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgrp"><label>Description</label><textarea name="description" rows="3" placeholder="Optional details…"></textarea></div>
+    </div><div class="cf">
+      <button type="submit" class="btn btn-dark"><i class="fas fa-plus"></i> Add Event</button>
+      <button type="button" class="btn btn-out" onclick="document.getElementById('addEventModal').classList.remove('show')">Cancel</button>
+    </div></form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');}));
+</script>{% endblock %}

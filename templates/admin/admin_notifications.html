@@ -1,0 +1,68 @@
+{% extends "common/base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Notifications{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Manage Notifications</div><div class="ph-sub">Broadcast messages to students and staff</div></div>
+</div>
+
+<div class="g4060 mb16 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Send Notification</div></div>
+    <form method="POST" action="/admin_notifications"><div class="cb">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="fgrp">
+        <label>Title</label>
+        <input type="text" name="title" required placeholder="Important Update">
+      </div>
+      <div class="fgrp">
+        <label>Target Audience</label>
+        <select name="role_target">
+          <option value="all">Everyone</option>
+          <option value="student">Students Only</option>
+          <option value="faculty">Faculty Only</option>
+          <option value="admin">Admins Only</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <label>Message</label>
+        <textarea name="message" rows="4" required placeholder="Your message here..."></textarea>
+      </div>
+    </div><div class="cf">
+      <button type="submit" class="btn btn-dark"><i class="fas fa-paper-plane"></i> Send</button>
+    </div></form>
+  </div>
+  
+  <div class="card">
+    <div class="ch"><div class="ct">Recent Notifications</div></div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead>
+          <tr><th>Content</th><th>Audience</th><th>Date</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for n in notifications %}
+          <tr>
+            <td>
+              <div style="font-weight:700;color:var(--ink);font-size:13px;margin-bottom:2px">{{ n.title }}</div>
+              <div style="font-size:12px;color:var(--ink3)">{{ n.message }}</div>
+            </td>
+            <td><span class="tag t-bl">{{ n.role_target|title }}</span></td>
+            <td><span class="tag t-nn">{{ n.created_at[:10] }}</span></td>
+            <td>
+              <form method="POST" action="/delete_notification/{{ n.id }}" onsubmit="return confirm('Delete this notification?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4"><div class="empty-state"><i class="fas fa-bell"></i><p>No notifications.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

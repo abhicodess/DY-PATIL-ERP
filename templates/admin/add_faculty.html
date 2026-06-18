@@ -1,0 +1,29 @@
+{% extends "common/base.html" %}
+{% block title %}Add Faculty{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Add Faculty{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/faculty">Faculty</a> / Add{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Add Faculty Member</div><a href="/faculty" class="btn btn-out btn-sm"><i class="fas fa-arrow-left"></i> Back</a></div>
+{% if error %}<div class="alert al-err fu"><i class="fas fa-exclamation-circle"></i><span>{{ error }}</span></div>{% endif %}
+<div class="card fu fu1" style="max-width:580px">
+  <div class="ch"><div class="ct">Faculty Information</div><div class="cs">Login: email / faculty123 (unless changed)</div></div>
+  <form method="POST" action="/save_faculty"><div class="cb">
+    <div class="fg2">
+      <div class="fgrp"><label>Full Name *</label><input type="text" name="name" required></div>
+      <div class="fgrp"><label>Email *</label><input type="email" name="email" required></div>
+    </div>
+    <div class="fg2">
+      <div class="fgrp"><label>Department</label><select name="department">{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select></div>
+      <div class="fgrp"><label>Designation</label><select name="designation">{% for d in DESIGNATIONS %}<option>{{ d }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fg2">
+      <div class="fgrp"><label>Phone</label><input type="text" name="phone"></div>
+      <div class="fgrp"><label>Joining Date</label><input type="date" name="joining_date"></div>
+    </div>
+    <div class="fgrp"><label>Qualification</label><input type="text" name="qualification" placeholder="e.g. M.Tech, Ph.D"></div>
+    <div class="fgrp"><label>Password</label><input type="text" name="password" value="faculty123" placeholder="Default: faculty123"></div>
+  </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-plus"></i> Add Faculty</button><a href="/faculty" class="btn btn-out">Cancel</a></div></form>
+</div>{% endblock %}

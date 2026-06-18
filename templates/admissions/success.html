@@ -1,0 +1,122 @@
+{% extends "common/base.html" %}
+
+{% block title %}Application Success{% endblock %}
+
+{% block extra_css %}
+<style>
+  body {
+    background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%) !important;
+    color: #F8FAFC !important;
+    min-height: 100vh;
+  }
+  .sidebar, .topbar, .sb-toggle {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 40px 16px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .shell {
+    display: block !important;
+  }
+
+  .success-container {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 550px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+  }
+
+  .success-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid #10B981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: #10B981;
+    font-size: 32px;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #FFF;
+  }
+
+  p {
+    color: #94A3B8;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+  }
+
+  .token-box {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+
+  .token-box span {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #A78BFA;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .token-value {
+    font-size: 28px;
+    font-family: var(--mono);
+    font-weight: 700;
+    color: #FFF;
+    letter-spacing: 0.1em;
+  }
+
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="success-container">
+  <div class="success-icon">
+    <i class="fa-solid fa-circle-check"></i>
+  </div>
+
+  <h1>Application Submitted!</h1>
+  <p>Your application has been received successfully. We have sent a confirmation email to the address provided. Please save the application token below to track your admission status.</p>
+
+  <div class="token-box">
+    <span>Application Token</span>
+    <div class="token-value" id="tokenVal">{{ token }}</div>
+  </div>
+
+  <div class="action-buttons">
+    <a href="{{ url_for('admissions.status', token=token) }}" class="btn btn-blue">Track Status</a>
+    <a href="{{ url_for('admissions.apply') }}" class="btn btn-out">Apply Again</a>
+  </div>
+</div>
+{% endblock %}

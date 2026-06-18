@@ -1,0 +1,42 @@
+{% extends "common/base.html" %}
+{% block title %}Add Student{% endblock %}
+{% block page_title %}Add Student{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/students">Students</a> / Add{% endblock %}
+{% block content %}
+<div class="ph fu"><div><div class="ph-title">Add New Student</div></div><a href="/students" class="btn btn-out btn-sm"><i class="fas fa-arrow-left"></i> Back</a></div>
+{% if error %}<div class="alert al-err fu"><i class="fas fa-exclamation-circle"></i><span>{{ error }}</span></div>{% endif %}
+<div class="card fu fu1" style="max-width:700px">
+  <div class="ch"><div class="ct">Student Information</div><div class="cs">Fill in all required fields</div></div>
+  <form method="POST" action="/save_student">
+    <div class="cb">
+      <div class="fg2">
+        <div class="fgrp"><label>Full Name *</label><input type="text" name="name" placeholder="e.g. Riya Sharma" required></div>
+        <div class="fgrp"><label>PRN Number *</label><input type="text" name="prn" placeholder="e.g. 23BIT001" required></div>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>Department *</label>
+          <select name="department" required><option value="">Select…</option>{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select>
+        </div>
+        <div class="fgrp"><label>Year *</label>
+          <select name="year" required><option value="">Select…</option>{% for y in YEARS %}<option>{{ y }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="fg3">
+        <div class="fgrp"><label>Division</label><input type="text" name="division" placeholder="A, B, C..."></div>
+        <div class="fgrp"><label>Gender</label><select name="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="fgrp"><label>Date of Birth</label><input type="date" name="dob"></div>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>Contact Number</label><input type="text" name="contact_number" placeholder="Phone..."></div>
+        <div class="fgrp"><label>Parent Contact</label><input type="text" name="parent_contact" placeholder="Parent phone..."></div>
+      </div>
+      <div class="fgrp"><label>Email</label><input type="email" name="email" placeholder="student@school.edu"></div>
+      <div class="fgrp"><label>Address</label><textarea name="address" rows="2" placeholder="Full residential address..."></textarea></div>
+      <div class="fg2">
+        <div class="fgrp"><label>Admission Year</label><input type="number" name="admission_year" placeholder="e.g. 2024"></div>
+        <div class="fgrp"><label>Password</label><input type="text" name="password" value="student123" placeholder="Default: student123"></div>
+      </div>
+    </div>
+    <div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-plus"></i> Add Student</button><a href="/students" class="btn btn-out">Cancel</a></div>
+  </form>
+</div>{% endblock %}

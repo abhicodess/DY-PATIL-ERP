@@ -1,0 +1,48 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Institution Summary - Section 2{% endblock %}
+
+{% block report_header_title %}Departmental Attendance Dashboard{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Reporting Period:</div>
+    <div class="meta-value">{{ month_range }}</div>
+    <div class="meta-label">Section:</div>
+    <div class="meta-value">2 of 4: Attendance</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<h2>Department-Wise Attendance Performance</h2>
+<p>Below is the average student attendance percentage recorded for each academic department during the reporting month.</p>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th style="text-align: center;">Average Attendance %</th>
+            <th style="text-align: center;">Status Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td><strong>{{ row.department }}</strong></td>
+            {% set pct = row.attendance_pct | float %}
+            {% if pct >= 75.0 %}
+            <td style="text-align: center; color: green; font-weight: bold; background-color: #e2efda;">{{ "%.2f" | format(pct) }}%</td>
+            <td style="text-align: center;"><span class="badge badge-green">Satisfactory</span></td>
+            {% else %}
+            <td style="text-align: center; color: red; font-weight: bold; background-color: #fce4d6;">{{ "%.2f" | format(pct) }}%</td>
+            <td style="text-align: center;"><span class="badge badge-red">Critical / Low</span></td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3" style="text-align: center; color: #777;">No attendance records found for this period.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

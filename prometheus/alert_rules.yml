@@ -1,0 +1,52 @@
+groups:
+  - name: scale_alerts
+    rules:
+      # Alert when p95 response time is greater than 1s for 2 minutes
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le)) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected on app instances"
+          description: "p95 latency is {{ $value }}s, exceeding the 1s threshold."
+
+      # Alert when PgBouncer pool is > 80% used
+      - alert: DatabaseConnectionSaturation
+        expr: pgbouncer_pools_cl_active / pgbouncer_pools_cl_max > 0.80
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PgBouncer connections saturating"
+          description: "PgBouncer active client connection ratio is {{ $value }}, exceeding 80% of limit."
+
+      # Alert when Celery critical queue size is > 500 tasks
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length{queue="critical"} > 500
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog alert"
+          description: "Celery critical queue length is {{ $value }}, exceeding 500 tasks backlog limit."
+
+      # Alert when Redis memory usage is > 80% of maxmemory
+      - alert: RedisMemorySaturation
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis memory near capacity"
+          description: "Redis memory usage is at {{ $value }}, exceeding 80% of configured maxmemory."
+
+      # Alert when 5xx error rate is > 1% of total requests for 1 minute
+      - alert: HighErrorRate
+        expr: sum(rate(flask_http_request_duration_seconds_count{status=~"5.."}[1m])) / sum(rate(flask_http_request_duration_seconds_count[1m])) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High server error rate (5xx)"
+          description: "HTTP 5xx error rate is {{ $value }}, exceeding 1% of total traffic."

@@ -1,0 +1,590 @@
+{% extends "attendance/attendance_base.html" %}
+
+{% block title %}View Attendance Intelligence | DY Patil ERP{% endblock %}
+{% block nav_view %}active{% endblock %}
+{% block page_title %}Attendance Intelligence{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a> / Console{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --bg-main: #f8fafc;
+    --card-bg: #ffffff;
+    --ink-bold: #0f172a;
+    --ink-medium: #334155;
+    --ink-soft: #64748b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --glass: rgba(255, 255, 255, 0.8);
+  }
+
+  .console-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding-bottom: 50px;
+    animation: slideUp 0.5s ease-out;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Hero Section */
+  .hero-banner {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .banner-content {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 32px;
+    padding: 48px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .banner-content::before {
+    content: ''; position: absolute; bottom: -20%; right: -10%; width: 300px; height: 300px;
+    background: var(--primary); opacity: 0.1; filter: blur(60px); border-radius: 50%;
+  }
+
+  .badge-ui {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+  }
+  .hero-title { font-size: 42px; font-weight: 900; line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.03em; }
+  .hero-desc { font-size: 16px; opacity: 0.8; line-height: 1.6; max-width: 540px; margin-bottom: 32px; }
+
+  /* Stats Overlay */
+  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .stat-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: var(--primary); }
+  .stat-label { font-size: 11px; font-weight: 800; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .stat-main { display: flex; align-items: baseline; gap: 6px; }
+  .stat-val { font-size: 32px; font-weight: 900; color: var(--ink-bold); }
+  .stat-trend { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .tr-up { color: var(--success); } .tr-dn { color: var(--danger); }
+
+  /* Analytics Charts Row */
+  .analytics-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+  .chart-container {
+    background: var(--card-bg);
+    border-radius: 28px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .chart-title { font-size: 15px; font-weight: 900; color: var(--ink-bold); }
+  .chart-subtitle { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+
+  /* Filter Bar */
+  .filter-bar {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    padding: 24px 32px;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    align-items: flex-end;
+  }
+  .field-group label { display: block; font-size: 11px; font-weight: 800; color: var(--ink-medium); text-transform: uppercase; margin-bottom: 8px; }
+  .glass-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 16px;
+    font-size: 14px; font-weight: 600; color: var(--ink-bold); transition: all 0.2s;
+    background: rgba(255,255,255,0.6);
+  }
+  .glass-input:focus { border-color: var(--primary); background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(37,99,235,0.08); }
+
+  /* Main Section */
+  .main-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start; }
+  .records-panel {
+    background: var(--card-bg);
+    border-radius: 32px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 700px;
+  }
+  .panel-header { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .panel-title { font-size: 18px; font-weight: 900; color: var(--ink-bold); }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    background: #f8fafc; padding: 18px 24px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; color: var(--ink-soft); text-align: left;
+    border-bottom: 1px solid var(--border); letter-spacing: 0.05em;
+  }
+  .data-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: var(--ink-medium); }
+  .data-table tr:hover td { background: #f8fbff; }
+
+  .student-avatar {
+    width: 42px; height: 42px; border-radius: 14px; background: var(--primary-light);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: var(--primary); border: 1px solid rgba(37,99,235,0.15);
+  }
+
+  .status-pill {
+    padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .pill-present { background: #dcfce7; color: #166534; }
+  .pill-absent { background: #fee2e2; color: #991b1b; }
+  .pill-late { background: #dbeafe; color: #1e40af; }
+  .pill-other { background: #f1f5f9; color: #475569; }
+
+  .side-intel { display: flex; flex-direction: column; gap: 24px; }
+  .sidebar-card { background: #fff; border-radius: 28px; border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-sm); }
+  .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 900; color: var(--ink-bold); }
+  
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+  .list-item:last-child { border-bottom: none; }
+  .list-info strong { font-size: 13px; color: var(--ink-medium); display: block; font-weight: 700; }
+  .list-info span { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+
+  /* Floating Action */
+  .fab {
+    position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px;
+    background: var(--ink-bold); color: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    box-shadow: 0 20px 40px -10px rgba(15,23,42,0.5); cursor: pointer; transition: all 0.3s;
+    border: none; z-index: 100;
+  }
+  .fab:hover { transform: scale(1.1) rotate(90deg); background: var(--primary); }
+
+  @media (max-width: 1200px) {
+    .hero-banner, .analytics-row, .main-layout { grid-template-columns: 1fr; }
+    .hero-title { font-size: 32px; }
+  }
+</style>
+
+<div class="console-wrapper">
+  <!-- Top Banner -->
+  <header class="hero-banner">
+    <div class="banner-content">
+      <span class="badge-ui">Live Analytics</span>
+      <h1 class="hero-title">Attendance Intelligence Console.</h1>
+      <p class="hero-desc">The central command for branch-wide attendance surveillance. Analyze macro patterns, detect systemic absence, and generate validated compliance reports.</p>
+      <div style="display: flex; gap: 16px;">
+        <a href="/export_attendance_excel?{{ request.query_string.decode() }}" class="btn btn-out" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white;">
+          <i class="fas fa-file-excel"></i> Export Intelligence
+        </a>
+        <a href="/attendance" class="btn" style="background: white; color: var(--ink-bold); font-weight: 800;">
+          <i class="fas fa-plus"></i> Manual Override
+        </a>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Retention Index</span>
+        <div class="stat-main">
+          <span class="stat-val" style="color: var(--success)">{{ analytics.avg_attendance }}%</span>
+        </div>
+        <div class="stat-trend tr-up"><i class="fas fa-arrow-trend-up"></i> +2.4% vs last week</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">At-Risk Students</span>
+        <div class="stat-main">
+          <span class="stat-val" style="color: var(--danger)">{{ analytics.defaulters|length }}</span>
+        </div>
+        <div class="stat-trend tr-dn"><i class="fas fa-circle-exclamation"></i> Critical Priority</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Total Data Volume</span>
+        <div class="stat-main">
+          <span class="stat-val">{{ total_count or stats.total }}</span>
+        </div>
+        <div style="font-size: 11px; color: var(--ink-soft); font-weight: 600;">Verified Transactions</div>
+      </div>
+      <div class="stat-card">
+          <span class="stat-label">Subject Modules</span>
+          <div class="stat-main">
+            <span class="stat-val" style="color: var(--primary)">{{ analytics.subject_wise|length }}</span>
+          </div>
+          <div style="font-size: 11px; color: var(--ink-soft); font-weight: 600;">Active Curriculum</div>
+        </div>
+    </div>
+  </header>
+
+  <!-- Level 2: Visualization -->
+  <div class="analytics-row">
+    <div class="chart-container">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Weekly Attendance Flow</div>
+          <div class="chart-subtitle">Check-in volume per active day</div>
+        </div>
+        <i class="fas fa-chart-line" style="color: var(--primary); font-size: 20px; opacity: 0.2;"></i>
+      </div>
+      <div style="height: 180px;">
+        <canvas id="weekChart" 
+          data-labels='{{ analytics.weekly_activity|map(attribute="day")|list|tojson }}' 
+          data-counts='{{ analytics.weekly_activity|map(attribute="count")|list|tojson }}'></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Compliance Spectrum</div>
+          <div class="chart-subtitle">Distribution of attendance brackets</div>
+        </div>
+        <i class="fas fa-chart-pie" style="color: var(--warning); font-size: 20px; opacity: 0.2;"></i>
+      </div>
+      <div style="height: 180px;">
+        <canvas id="distChart"
+          data-vals='[{{ analytics.distribution.excellent }}, {{ analytics.distribution.good }}, {{ analytics.distribution.average }}, {{ analytics.distribution.critical }}]'></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Metric Overview</div>
+            <div class="chart-subtitle">Summary of current status flags</div>
+          </div>
+          <i class="fas fa-microchip" style="color: var(--ink-bold); font-size: 20px; opacity: 0.2;"></i>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <span style="color: var(--ink-medium); font-weight: 600;"><i class="fas fa-circle" style="color:var(--success); font-size: 8px;"></i> Present</span>
+            <span style="font-weight: 800;">{{ stats.present }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <span style="color: var(--ink-medium); font-weight: 600;"><i class="fas fa-circle" style="color:var(--danger); font-size: 8px;"></i> Absent</span>
+            <span style="font-weight: 800;">{{ stats.absent }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <span style="color: var(--ink-medium); font-weight: 600;"><i class="fas fa-circle" style="color:var(--primary); font-size: 8px;"></i> Leave/Late</span>
+            <span style="font-weight: 800;">{{ stats.leave + stats.late + stats.medical }}</span>
+          </div>
+          <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 5px;">
+            <div style="font-size: 11px; color: var(--ink-soft); font-weight: 800; text-transform: uppercase;">Engagement Signal</div>
+            <div style="font-size: 18px; font-weight: 900; color: var(--success); margin-top: 2px;">Healthy <i class="fas fa-check-double"></i></div>
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <!-- Level 3: Filters -->
+  <form method="GET" action="/view_attendance" class="filter-bar">
+    <div class="field-group">
+      <label>Entity Identification</label>
+      <input type="text" name="student_name" value="{{ request.args.get('student_name','') }}" placeholder="Name or PRN..." class="glass-input">
+    </div>
+    <div class="field-group">
+      <label>Module Selection</label>
+      <input type="text" name="subject" value="{{ request.args.get('subject','') }}" placeholder="Search subjects..." class="glass-input">
+    </div>
+    <div class="field-group">
+      <label>Status Protocol</label>
+      <select name="status" class="glass-input">
+        <option value="">Full records</option>
+        {% for st in ['Present','Absent','Leave','Late','Medical'] %}
+        <option {% if request.args.get('status')==st %}selected{% endif %}>{{ st }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group">
+      <label>Division</label>
+      <select name="division" class="glass-input">
+        <option value="">All Divisions</option>
+        {% for d in divs %}
+        <option value="{{ d }}" {% if request.args.get('division')==d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group" style="grid-column: span 1;">
+      <label>Date Threshold</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="date" name="date_from" value="{{ request.args.get('date_from','') }}" class="glass-input">
+        <button type="submit" class="btn btn-dark" style="width: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 0;">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Level 4: Main Explorer -->
+  <div class="main-layout">
+    <section class="records-panel">
+      <div class="panel-header">
+        <div class="panel-title">Transaction Log</div>
+        <div style="font-size: 13px; color: var(--ink-soft); font-weight: 700;">
+          Records {{ (current_page-1)*50 + 1 }} - {{ [current_page*50, total_count]|min }} of {{ total_count }}
+        </div>
+      </div>
+      <div style="flex: 1; overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Entity Profile</th>
+              <th>PRN ID</th>
+              <th>Curriculum Link</th>
+              <th>Timestamp</th>
+              <th>Verification</th>
+              <th style="text-align: right;">Modify</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records %}
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <div class="student-avatar">{{ r.student_name[0]|upper }}</div>
+                  <div>
+                    <div style="font-weight: 800; color: var(--ink-bold);">{{ r.student_name }}</div>
+                    <div style="font-size: 11px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase;">Div {{ r.division }} • Roll {{ r.roll_no }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><code style="background: #f1f5f9; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 12px; border: 1px solid var(--border);">{{ r.prn_no or r.roll_no }}</code></td>
+              <td>
+                <div style="font-weight: 700; font-size: 13px;">{{ r.subject }}</div>
+                <div style="font-size: 11px; color: var(--ink-soft); font-weight: 600;">Lec Author: {{ r.faculty or 'Standard' }}</div>
+              </td>
+              <td style="color: var(--ink-medium); font-weight: 700; font-size: 13px;">{{ r.date }}</td>
+              <td>
+                <span class="status-pill {% if r.status == 'Present' %}pill-present{% elif r.status == 'Absent' %}pill-absent{% elif r.status == 'Late' %}pill-late{% else %}pill-other{% endif %}">
+                  {{ r.status }}
+                </span>
+              </td>
+              <td style="text-align: right;">
+                <button class="btn btn-ghost btn-sm" onclick='openEdit("{{ r.id }}", "{{ r.student_name|e }}", "{{ r.subject|e }}", "{{ r.date }}", "{{ r.status }}", "{{ (r.remark or "")|e }}")'>
+                  <i class="fas fa-sliders" style="font-size: 16px; color: var(--primary);"></i>
+                </button>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="padding: 120px; text-align: center; color: var(--ink-soft); font-weight: 700; font-size: 18px;">
+               <i class="fas fa-satellite-dish" style="font-size: 40px; margin-bottom: 20px; opacity: 0.3; display: block;"></i>
+               No matching intelligence data found.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="panel-header" style="background: #fcfcfc;">
+        <div style="font-size: 13px; color: var(--ink-soft); font-weight: 700;">Page {{ current_page }} of {{ total_pages }}</div>
+        <div style="display: flex; gap: 8px;">
+          {% if current_page > 1 %}
+          <a href="/view_attendance?{{ request.query_string.decode().replace('page='~current_page, 'page='~(current_page-1)) if 'page=' in request.query_string.decode() else request.query_string.decode() ~ '&page=' ~ (current_page-1) }}" class="btn btn-out btn-sm">Prev</a>
+          {% endif %}
+          
+          {% set start_page = [1, current_page - 2]|max %}
+          {% set end_page = [total_pages, current_page + 2]|min %}
+          
+          {% for p in range(start_page, end_page + 1) %}
+          <a href="/view_attendance?{{ request.query_string.decode().replace('page='~current_page, 'page='~p) if 'page=' in request.query_string.decode() else request.query_string.decode() ~ '&page=' ~ p }}" class="btn btn-sm {{ 'btn-dark' if p == current_page else 'btn-out' }}" style="padding: 4px 12px;">{{ p }}</a>
+          {% endfor %}
+          
+          {% if current_page < total_pages %}
+          <a href="/view_attendance?{{ request.query_string.decode().replace('page='~current_page, 'page='~(current_page+1)) if 'page=' in request.query_string.decode() else request.query_string.decode() ~ '&page=' ~ (current_page+1) }}" class="btn btn-out btn-sm">Next</a>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Side Intelligence -->
+    <aside class="side-intel">
+      <div class="sidebar-card">
+        <div class="sidebar-header"><i class="fas fa-medal" style="color: #fbbf24;"></i> High Consistency</div>
+        {% for item in analytics.student_wise[:5] %}
+        <div class="list-item">
+          <div class="list-info">
+            <strong>{{ item.student_name }}</strong>
+            <span>Active Engagement</span>
+          </div>
+          <span style="font-weight: 900; color: var(--success); font-size: 14px;">{{ item.percentage }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="sidebar-card" style="border-color: rgba(239, 68, 68, 0.2);">
+        <div class="sidebar-header"><i class="fas fa-radiation" style="color: var(--danger);"></i> Risk Assessment</div>
+        {% for item in analytics.defaulters[:5] %}
+        <div class="list-item">
+          <div class="list-info">
+            <strong>{{ item.student_name }}</strong>
+            <span style="color: var(--danger);">Critical Alert</span>
+          </div>
+          <span style="font-weight: 900; color: var(--danger); font-size: 14px;">{{ item.percentage }}%</span>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 15px; color: var(--ink-soft); font-size: 12px; font-weight: 700;">No critical risks detected.</div>
+        {% endfor %}
+      </div>
+
+      <div class="sidebar-card">
+        <div class="sidebar-header"><i class="fas fa-brain" style="color: var(--primary);"></i> Module Performance</div>
+        {% for item in analytics.subject_wise[:5] %}
+        <div class="list-item">
+          <div class="list-info">
+            <strong>{{ item.subject }}</strong>
+            <span>Course Velocity</span>
+          </div>
+          <span style="font-weight: 800; color: var(--ink-medium); font-size: 13px;">{{ item.percentage }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Add Overlay -->
+<button class="fab" onclick="window.location.href='/attendance'"><i class="fas fa-plus"></i></button>
+
+<!-- Edit Overlay -->
+<div id="editOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter: blur(12px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: white; border-radius: 28px; padding: 40px; width: 100%; max-width: 500px; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.5);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+      <div>
+        <h3 style="font-size: 24px; font-weight: 900; color: var(--ink-bold);">Override protocol.</h3>
+        <p style="font-size: 13px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase;">Manual record modification</p>
+      </div>
+      <button onclick="document.getElementById('editOverlay').style.display='none'" style="border: none; background: #f1f5f9; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form method="POST" action="/edit_attendance">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="att_id" id="editAttId">
+      <input type="hidden" name="redirect" value="{{ request.full_path }}">
+      
+      <div style="margin-bottom: 20px;">
+        <label class="badge-ui" style="background: var(--primary-light); color: var(--primary); margin-bottom: 8px;">Target Student</label>
+        <input type="text" id="editStudent" readonly style="background: #f8fafc; border-color: transparent; font-size: 18px; font-weight: 900;" class="glass-input">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <div class="field-group">
+          <label>Module Title</label>
+          <input type="text" name="subject" id="editSubject" class="glass-input">
+        </div>
+        <div class="field-group">
+          <label>Event Date</label>
+          <input type="date" name="date" id="editDate" class="glass-input">
+        </div>
+      </div>
+
+      <div class="field-group" style="margin-bottom: 32px;">
+        <label>Verification Override</label>
+        <select name="status" id="editStatus" class="glass-input" style="height: 54px; font-size: 18px; font-weight: 800;">
+          <option>Present</option>
+          <option>Absent</option>
+          <option>Late</option>
+          <option>Leave</option>
+          <option>Medical</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px;">
+        <button type="button" onclick="document.getElementById('editOverlay').style.display='none'" class="btn btn-out" style="height: 54px; font-weight: 800;">Abort</button>
+        <button type="submit" class="btn btn-dark" style="height: 54px; background: var(--primary); font-weight: 800; border-color: var(--primary);">Execute Override</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+var tick = { color: '#94a3b8', font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '700' } };
+var grid = { color: '#f1f5f9' };
+
+// Weekly Activity Chart
+var weekEl = document.getElementById('weekChart');
+if (weekEl) {
+  new Chart(weekEl, {
+    type: 'line',
+    data: {
+      labels: JSON.parse(weekEl.getAttribute('data-labels') || '[]'),
+      datasets: [{
+        label: 'Check-ins',
+        data: JSON.parse(weekEl.getAttribute('data-counts') || '[]'),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.06)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3,
+        pointRadius: 4,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: '#2563eb',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: grid, ticks: tick },
+        x: { grid: { display: false }, ticks: tick }
+      }
+    }
+  });
+}
+
+// Distribution Donut
+var distEl = document.getElementById('distChart');
+if (distEl) {
+  new Chart(distEl, {
+    type: 'doughnut',
+    data: {
+      labels: ['Excellent (>90%)', 'Good (>75%)', 'Average', 'Critical'],
+      datasets: [{
+        data: JSON.parse(distEl.getAttribute('data-vals') || '[0,0,0,0]'),
+        backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#ef4444'],
+        hoverOffset: 12,
+        borderWidth: 0,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { ...tick, boxWidth: 12, padding: 15 } }
+      },
+      cutout: '75%'
+    }
+  });
+}
+
+function openEdit(id, name, subject, date, status, remark) {
+  document.getElementById('editStudent').value = name;
+  document.getElementById('editSubject').value = subject;
+  document.getElementById('editDate').value = date;
+  document.getElementById('editStatus').value = status;
+  document.getElementById('editAttId').value = id;
+  document.getElementById('editOverlay').style.display = 'flex';
+}
+</script>
+{% endblock %}

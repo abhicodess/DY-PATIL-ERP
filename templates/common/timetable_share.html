@@ -1,0 +1,287 @@
+{% extends "common/base.html" %}
+{% block title %}Share Timetable — Production Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --indigo-600: #4f46e5;
+    --indigo-700: #4338ca;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-900: #0f172a;
+    --emerald-600: #10b981;
+    --emerald-700: #059669;
+  }
+
+  .tt-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  
+  /* Header & Breadcrumbs */
+  .tt-nav { margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--slate-600); }
+  .tt-nav a { color: var(--indigo-600); text-decoration: none; }
+  
+  .tt-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .tt-header h1 { font-size: 1.75rem; font-weight: 800; color: var(--slate-900); margin: 0; letter-spacing: -0.025em; }
+  .tt-header p { color: var(--slate-600); margin: 4px 0 0; font-size: 0.95rem; }
+
+  /* Tab Bar */
+  .tab-bar { display: flex; gap: 8px; background: var(--slate-100); padding: 4px; border-radius: 12px; margin-bottom: 24px; width: fit-content; }
+  .tab-btn { padding: 8px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--slate-600); transition: 0.2s; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .tab-btn.active { background: #fff; color: var(--slate-900); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .tab-btn:hover:not(.active) { color: var(--indigo-600); }
+
+  /* Main Layout */
+  .tt-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+  @media (max-width: 1024px) { .tt-layout { grid-template-columns: 1fr; } }
+
+  /* Sidebar Lists */
+  .tt-sidebar { background: #fff; border: 1px solid var(--slate-200); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 250px); position: sticky; top: 24px; }
+  .sidebar-search { padding: 16px; border-bottom: 1px solid var(--slate-100); }
+  .search-box { position: relative; }
+  .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--slate-400); font-size: 0.9rem; }
+  .search-box input { width: 100%; padding: 10px 12px 10px 38px; border: 1px solid var(--slate-200); border-radius: 10px; font-size: 0.9rem; outline: none; transition: 0.2s; }
+  .search-box input:focus { border-color: var(--indigo-600); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+
+  .list-container { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .list-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; text-decoration: none; transition: 0.2s; border: 1px solid transparent; }
+  .list-item:hover { background: var(--slate-50); }
+  .list-item.active { background: rgba(79,70,229,0.08); border-color: rgba(79,70,229,0.2); }
+  
+  .avatar { width: 40px; height: 40px; border-radius: 10px; background: var(--indigo-600); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+  .student-avatar { background: var(--emerald-600); }
+  
+  .item-info { flex: 1; min-width: 0; }
+  .item-title { display: block; font-size: 0.9rem; font-weight: 600; color: var(--slate-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { display: block; font-size: 0.75rem; color: var(--slate-600); margin-top: 2px; }
+
+  /* Preview Panel */
+  .preview-card { background: #fff; border: 1px solid var(--slate-200); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-height: 500px; }
+  
+  .preview-top { padding: 20px 24px; border-bottom: 1px solid var(--slate-100); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: var(--slate-50); }
+  .entity-meta h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--slate-900); }
+  .entity-meta p { margin: 4px 0 0; font-size: 0.85rem; color: var(--slate-600); display: flex; align-items: center; gap: 8px; }
+  
+  .badge { padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+  .badge-dept { background: #fee2e2; color: #991b1b; }
+  .badge-div { background: #dcfce7; color: #166534; }
+
+  /* Timetable Table */
+  .table-wrap { overflow-x: auto; padding: 0; }
+  .tt-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .tt-table th { padding: 14px 24px; background: #fff; color: var(--slate-600); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--slate-100); }
+  .tt-table td { padding: 14px 24px; border-bottom: 1px solid var(--slate-100); font-size: 0.9rem; color: var(--slate-700); vertical-align: middle; }
+  
+  .day-cell { font-weight: 700; color: var(--slate-900); background: var(--slate-50) !important; width: 120px; }
+  .slot-type { font-weight: 600; font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
+  .type-Theory { background: #eff6ff; color: #1d4ed8; }
+  .type-Lab { background: #f0fdf4; color: #166534; }
+  
+  /* Empty States */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; text-align: center; }
+  .empty-state i { font-size: 3rem; color: var(--slate-200); margin-bottom: 16px; }
+  .empty-state h3 { font-size: 1.1rem; color: var(--slate-900); margin: 0 0 8px; }
+
+  /* Buttons */
+  .btn-grp { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: 0.2s; text-decoration: none; }
+  .btn-primary { background: var(--indigo-600); color: #fff; }
+  .btn-primary:hover { background: var(--indigo-700); transform: translateY(-1px); }
+  .btn-outline { background: #fff; border-color: var(--slate-200); color: var(--slate-700); }
+  .btn-outline:hover { background: var(--slate-50); border-color: var(--slate-300); }
+  .btn-success { background: var(--emerald-600); color: #fff; }
+  .btn-success:hover { background: var(--emerald-700); transform: translateY(-1px); }
+  
+  .status-toast { position: fixed; bottom: 24px; right: 24px; z-index: 1000; animation: slideUp 0.3s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); opacity:0; } to { transform: translateY(0); opacity:1; } }
+</style>
+
+<div class="tt-page">
+  <div class="tt-nav">
+    <a href="/admin">Dashboard</a> / <a href="/timetable">Timetable</a> / <span>Share Dashboard</span>
+  </div>
+
+  <div class="tt-header">
+    <div>
+      <h1>Share Timetable</h1>
+      <p>Distribute personalized schedules to faculty and students in one click.</p>
+    </div>
+    <div class="btn-grp">
+      <form method="POST" action="/timetable_send_all" onsubmit="return confirm('Attention: This will send individual messages to ALL currently selected users. Proceed?')">
+        <input type="hidden" name="target_role" value="{{ role_sel }}">
+        <button type="submit" class="btn btn-outline" style="color: var(--indigo-600); border-color: var(--indigo-600);">
+          <i class="fas fa-paper-plane"></i> Send to All {{ role_sel|title }}s
+        </button>
+      </form>
+      <a href="/timetable" class="btn btn-primary"><i class="fas fa-plus"></i> Edit Master Schedule</a>
+    </div>
+  </div>
+
+  <!-- Role Tabs -->
+  <div class="tab-bar">
+    <a href="/timetable_share?role=faculty" class="tab-btn {% if role_sel == 'faculty' %}active{% endif %}">
+      <i class="fas fa-chalkboard-teacher"></i> Faculty
+    </a>
+    <a href="/timetable_share?role=student" class="tab-btn {% if role_sel == 'student' %}active{% endif %}">
+      <i class="fas fa-user-graduate"></i> Students
+    </a>
+  </div>
+
+  <div class="tt-layout">
+    <!-- Sidebar -->
+    <div class="tt-sidebar">
+      <div class="sidebar-search">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="ttSearch" placeholder="Search by name, dept, or div..." oninput="handleSearch(this.value)">
+        </div>
+      </div>
+      
+      <div class="list-container" id="ttList">
+        {% if role_sel == 'faculty' %}
+          {% for f in faculty_list %}
+          <a href="/timetable_share?role=faculty&id={{ f.id }}" class="list-item {% if matched_entity and matched_entity.id == f.id %}active{% endif %}"
+             data-search="{{ f.name|lower }} {{ f.department|lower }}">
+            <div class="avatar">{{ f.name[0]|upper }}</div>
+            <div class="item-info">
+              <span class="item-title">{{ f.name }}</span>
+              <span class="item-sub">{{ f.department or 'General' }}</span>
+            </div>
+          </a>
+          {% endfor %}
+        {% else %}
+          {% for s in student_list %}
+          <a href="/timetable_share?role=student&id={{ s.id }}" class="list-item {% if matched_entity and matched_entity.id == s.id %}active{% endif %}"
+             data-search="{{ s.name|lower }} {{ s.department|lower }} {{ s.division|lower }}">
+            <div class="avatar student-avatar">{{ s.name[0]|upper }}</div>
+            <div class="item-info">
+              <span class="item-title">{{ s.name }}</span>
+              <span class="item-sub">Div {{ s.division or '?' }} · {{ s.department or '?' }}</span>
+            </div>
+          </a>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-card">
+      {% if matched_entity %}
+        <div class="preview-top">
+          <div class="entity-meta">
+            <h2>{{ matched_entity.name }}</h2>
+            <p>
+              {% if role_sel == 'student' %}
+                <span class="badge badge-div">Division {{ matched_entity.division }}</span>
+              {% endif %}
+              <span class="badge badge-dept">{{ matched_entity.department }}</span>
+              · {{ selected_slots|length }} Active Slots
+            </p>
+          </div>
+          <div class="btn-grp">
+            <a href="/timetable_share?role={{ role_sel }}&id={{ matched_entity.id }}" class="btn btn-outline"><i class="fas fa-sync-alt"></i> Refresh</a>
+            {% if selected_slots %}
+              <form method="POST" action="/timetable_share" style="margin:0">
+                <input type="hidden" name="target_role" value="{{ role_sel }}">
+                <input type="hidden" name="target_id" value="{{ matched_entity.id }}">
+                <button type="submit" class="btn btn-success">
+                  <i class="fas fa-envelope"></i> Send to {{ (matched_entity.name or "User").split()[0] }}
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          {% if selected_slots %}
+            <table class="tt-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Period</th>
+                  <th>Subject</th>
+                  <th>Location</th>
+                  {% if role_sel == 'faculty' %}<th>Division</th>{% else %}<th>Teacher</th>{% endif %}
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set days_map = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] %}
+                {% for dname in days_map %}
+                  {% set dslots = selected_slots | selectattr('day', 'equalto', dname) | list %}
+                  {% if dslots %}
+                    {% for s in dslots %}
+                    <tr>
+                      {% if loop.first %}<td rowspan="{{ dslots|length }}" class="day-cell">{{ dname }}</td>{% endif %}
+                      <td style="font-family: monospace; font-weight: 600;">{{ s.time or s.start_time or '—' }}</td>
+                      <td style="font-weight: 700; color: var(--indigo-600);">{{ s.subject }}</td>
+                      <td><i class="fas fa-map-marker-alt" style="color: var(--slate-300); margin-right: 4px;"></i> {{ s.room or 'TBD' }}</td>
+                      <td>
+                        {% if role_sel == 'faculty' %}
+                          <span class="badge badge-div">{{ s.division or 'All' }}</span>
+                        {% else %}
+                          <span style="font-size: 0.8rem; font-weight: 500;">{{ s.teacher or 'Staff' }}</span>
+                        {% endif %}
+                      </td>
+                      <td><span class="slot-type type-{{ s.slot_type or 'Theory' }}">{{ s.slot_type or 'Theory' }}</span></td>
+                    </tr>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="empty-state">
+              <i class="fas fa-calendar-times"></i>
+              <h3>No Schedule Data Found</h3>
+              <p>We couldn't find any timetable entries matching this {{ role_sel }}.</p>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="far fa-hand-point-left"></i>
+          <h3>Select a {{ role_sel|title }}</h3>
+          <p>Choose an entry from the left sidebar to preview and send their schedule.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if request.args.get('sent') %}
+<div class="status-toast">
+  <div style="background: var(--slate-900); color: #fff; padding: 14px 24px; border-radius: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <i class="fas fa-check-circle" style="color: var(--emerald-600);"></i>
+    <span>Timetable successfully sent to <strong>{{ request.args.get('to') }}</strong></span>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color: #fff; opacity:0.5; padding:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+{% endif %}
+
+{% if request.args.get('bulk_sent') %}
+<div class="status-toast">
+  <div style="background: var(--indigo-600); color: #fff; padding: 14px 24px; border-radius: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <i class="fas fa-mail-bulk"></i>
+    <span>Bulk delivery complete! Sent to <strong>{{ request.args.get('bulk_sent') }}</strong> users.</span>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color: #fff; opacity:0.5; padding:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function handleSearch(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#ttList .list-item').forEach(el => {
+    const text = el.dataset.search || '';
+    el.style.display = text.includes(q) ? 'flex' : 'none';
+  });
+}
+
+// Auto-hide toast after 5s
+setTimeout(() => {
+  document.querySelectorAll('.status-toast').forEach(t => t.remove());
+}, 5000);
+</script>
+{% endblock %}

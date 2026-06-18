@@ -1,0 +1,188 @@
+{% extends "common/base.html" %}
+{% block title %}Attendance Report — {{ student.name }}{% endblock %}
+
+
+
+{% block page_title %}Student Attendance Record{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('faculty_att.my_students') }}">Students</a> / {{ student.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--sh-sm);
+  }
+  .stat-card .val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+  .stat-card .lbl {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink3);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .grade-good { color: var(--green) !important; }
+  .grade-warning { color: var(--amber) !important; }
+  .grade-defaulter { color: var(--red) !important; }
+  .grade-no_data { color: var(--ink4) !important; }
+</style>
+
+<!-- Profile Header Card -->
+<div class="card mb20">
+  <div class="cb" style="display:flex; align-items:center; gap:20px;">
+    <div class="av av-xl" style="background:var(--blue); font-size:28px;">{{ student.name[0]|upper }}</div>
+    <div style="flex:1;">
+      <h2 style="margin:0 0 8px 0; font-size:22px; color:var(--ink);">{{ student.name }}</h2>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:14px; color:var(--ink3); align-items:center;">
+        <span><i class="fas fa-id-badge" style="margin-right:6px; color:var(--ink4);"></i>{{ student.prn or student.roll or "N/A" }}</span>
+        <span style="color:var(--border);">|</span>
+        <span><i class="fas fa-building" style="margin-right:6px; color:var(--ink4);"></i>{{ student.department }}</span>
+        <span style="color:var(--border);">|</span>
+        <span><i class="fas fa-graduation-cap" style="margin-right:6px; color:var(--ink4);"></i>Yr {{ student.year }}</span>
+        <span style="color:var(--border);">|</span>
+        <span><span class="tag t-vi">Div {{ student.division }}</span></span>
+      </div>
+    </div>
+    
+    {% if grade != 'no_data' %}
+    <div style="text-align:right;">
+      <div style="font-size:12px; font-weight:600; color:var(--ink3); margin-bottom:4px; text-transform:uppercase;">Overall Standing</div>
+      {% if grade == 'good' %}
+      <span class="tag t-gr" style="padding:10px 20px; font-size:15px;"><i class="fas fa-check-circle"></i> Good Standing</span>
+      {% elif grade == 'warning' %}
+      <span class="tag t-am" style="padding:10px 20px; font-size:15px;"><i class="fas fa-triangle-exclamation"></i> Warning</span>
+      {% elif grade == 'defaulter' %}
+      <span class="tag t-re" style="padding:10px 20px; font-size:15px;"><i class="fas fa-circle-exclamation"></i> Defaulter</span>
+      {% else %}
+      <span class="tag t-nn" style="padding:10px 20px; font-size:15px;"><i class="fas fa-info-circle"></i> No Data</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if grade == 'no_data' %}
+<div class="empty-state" style="padding:60px; text-align:center; background:var(--white); border-radius:var(--r-md); border:1px solid var(--border);">
+  <div style="font-size:48px; color:var(--border); margin-bottom:16px;"><i class="fas fa-calendar-times"></i></div>
+  <h3 style="margin:0 0 8px 0; color:var(--ink);">No Attendance Recorded Yet</h3>
+  <p style="margin:0 0 24px 0; color:var(--ink3);">You haven't marked any attendance for this student in your subjects.</p>
+  <a href="{{ url_for('faculty_att.attendance_portal') }}" class="btn btn-blue"><i class="fas fa-check-double"></i> Mark Attendance Now</a>
+</div>
+{% else %}
+
+<!-- Highlight Stats -->
+<div class="grid g5 mb20" style="grid-template-columns: repeat(5, 1fr);">
+  <div class="stat-card">
+    <div class="val">{{ total_sessions }}</div>
+    <div class="lbl">Classes Held</div>
+  </div>
+  <div class="stat-card">
+    <div class="val" style="color:var(--green)">{{ total_present }}</div>
+    <div class="lbl">Present</div>
+  </div>
+  <div class="stat-card">
+    <div class="val" style="color:var(--red)">{{ total_absent }}</div>
+    <div class="lbl">Absent</div>
+  </div>
+  <div class="stat-card">
+    <div class="val" style="color:var(--amber)">{{ total_leave }}</div>
+    <div class="lbl">Leave</div>
+  </div>
+  <div class="stat-card">
+    <div class="val grade-{{ grade }}">{{ overall_pct }}%</div>
+    <div class="lbl">Overall %</div>
+  </div>
+</div>
+
+<div class="grid g6040">
+  <!-- Subject Breakdown -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Subject-wise Summary</div>
+      <div class="cs">Direct breakdown from live attendance records</div>
+    </div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th style="text-align:center;">Total</th>
+            <th style="text-align:center;">P</th>
+            <th style="text-align:center;">A</th>
+            <th style="width:120px;">Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in subjects_data %}
+          <tr>
+            <td style="font-weight:600; color:var(--ink);">{{ b.subject }}</td>
+            <td style="text-align:center;">{{ b.total }}</td>
+            <td style="text-align:center; color:var(--green); font-weight:600;">{{ b.present }}</td>
+            <td style="text-align:center; color:var(--red); font-weight:600;">{{ b.absent }}</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-family:var(--mono); font-size:13px; font-weight:700; min-width:40px; color:{% if b.percentage >= 75 %}var(--green){% elif b.percentage >= 60 %}var(--amber){% else %}var(--red){% endif %}">
+                  {{ b.percentage }}%
+                </span>
+                <div style="flex:1; height:6px; background:var(--bg2); border-radius:3px; overflow:hidden;">
+                  <div style="height:100%; width:{{ b.percentage }}%; background:{% if b.percentage >= 75 %}var(--green){% elif b.percentage >= 60 %}var(--amber){% else %}var(--red){% endif %}; border-radius:3px;"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent History -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Recent History</div>
+      <div class="cs">Last 10 sessions logged by you</div>
+    </div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Subject</th>
+            <th style="text-align:right;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td style="white-space:nowrap; font-size:13px; color:var(--ink3);">
+              <i class="far fa-calendar-alt" style="margin-right:6px;"></i>{{ h.date }}
+            </td>
+            <td style="font-weight:500;">{{ h.subject }}</td>
+            <td style="text-align:right;">
+              {% if h.status == 'Present' %}
+              <span class="tag t-gr" style="border-radius:20px; font-weight:700;">P</span>
+              {% elif h.status == 'Absent' %}
+              <span class="tag t-re" style="border-radius:20px; font-weight:700;">A</span>
+              {% elif h.status == 'Leave' %}
+              <span class="tag t-am" style="border-radius:20px; font-weight:700;">L</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

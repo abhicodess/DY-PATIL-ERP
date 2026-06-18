@@ -1,0 +1,48 @@
+{% extends "common/base.html" %}
+{% block title %}Leave Application{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Student Portal{% endblock %}
+{% block av_color %}#059669{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Student{% endblock %}
+
+{% block page_title %}Leave Application{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Leave{% endblock %}
+{% block topbar_extras %}{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Leave Application</div></div>
+<div class="g4060 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Apply for Leave</div><div class="cs">Submit a new leave request</div></div>
+    <form method="POST" action="/student_leave"><div class="cb">
+      <div class="fgrp"><label>Leave Type</label>
+        <select name="leave_type">
+          <option>Personal</option><option>Medical</option><option>Family</option><option>Event</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>From Date *</label><input type="date" name="from_date" required></div>
+        <div class="fgrp"><label>To Date *</label><input type="date" name="to_date" required></div>
+      </div>
+      <div class="fgrp"><label>Reason *</label><textarea name="reason" rows="4" required placeholder="Explain your reason for leave…"></textarea></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-paper-plane"></i> Submit Application</button></div></form>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">My Applications</div><div class="cs">{{ leaves|length }} applications</div></div>
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl">
+        <thead><tr><th>Dates</th><th>Type</th><th>Status</th><th>Remarks</th></tr></thead>
+        <tbody>
+          {% for l in leaves %}
+          <tr>
+            <td><span class="mono" style="font-size:11px">{{ l.from_date }}</span>{% if l.from_date!=l.to_date %}<br><span class="mono" style="font-size:11px">→ {{ l.to_date }}</span>{% endif %}</td>
+            <td><span class="tag t-bl">{{ l.leave_type }}</span></td>
+            <td><span class="tag {% if l.status=='Approved' %}t-gr{% elif l.status=='Rejected' %}t-re{% else %}t-am{% endif %}">{{ l.status }}</span></td>
+            <td style="font-size:12px;color:var(--ink3)">{{ l.remarks or "—" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4"><div class="empty-state" style="padding:24px"><p>No applications yet.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .container { font-family: sans-serif; padding: 20px; border: 1px solid #eee; }
+        .header { background: #1a73e8; color: white; padding: 10px; text-align: center; }
+        .body { padding: 20px; color: #333; }
+        .footer { font-size: 12px; color: #777; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DY Patil College of Engineering</h1>
+        </div>
+        <div class="body">
+            <h2>Welcome, {{ student.name }}!</h2>
+            <p>Your admission has been approved and your student account is now active.</p>
+            <p><strong>Your Roll Number:</strong> {{ student.roll_no }}</p>
+            <p>You can now log in to the ERP portal to view your timetable and syllabus.</p>
+            <p>Welcome to the family!</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 DY Patil ERP System. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+
+{% extends "common/base.html" %}
+{% block title %}Faculty Dashboard{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+
+
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a>{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Welcome back, {{ profile.name or session.name }} 👋</div>
+    <div class="ph-sub">{{ profile.department }} — {{ profile.designation or 'Faculty' }}</div>
+  </div>
+</div>
+
+<!-- STAT CARDS -->
+<div class="sg fu fu1">
+  <div class="sc">
+    <div>
+      <div class="sv">{{ today_sessions }}</div>
+      <div class="sl">Today's Sessions</div>
+      <div class="sdelta {% if today_sessions > 0 %}up{% endif %}">Marked today</div>
+    </div>
+    <div class="sico ic-gr"><i class="fas fa-calendar-day"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv">{{ pending_drafts }}</div>
+      <div class="sl">Pending Drafts</div>
+      <div class="sdelta {% if pending_drafts > 0 %}dn{% endif %}">Need submission</div>
+    </div>
+    <div class="sico ic-am"><i class="fas fa-file-pen"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv">{{ low_att_count }}</div>
+      <div class="sl">Low Attendance</div>
+      <div class="sdelta dn">Below 75%</div>
+    </div>
+    <div class="sico ic-re"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv">{{ notes_count }}</div>
+      <div class="sl">Study Materials</div>
+      <div class="sdelta up">Shared notes</div>
+    </div>
+    <div class="sico ic-vi"><i class="fas fa-book"></i></div>
+  </div>
+</div>
+
+<div class="g6040 mb20 fu fu2">
+  <!-- TODAY'S ACTIONS -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Today's Actions</div>
+      <div class="cs">Unmarked attendance from your timetable</div>
+    </div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Subject</th>
+            <th>Class</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for act in today_actions %}
+          <tr>
+            <td class="mono">{{ act.time }}</td>
+            <td><strong>{{ act.subject }}</strong></td>
+            <td><span class="tag t-bl">{{ act.division }}</span></td>
+            <td>
+              <form action="/faculty/create_session" method="POST" style="margin:0">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="subject" value="{{ act.subject }}">
+                <button type="submit" class="btn btn-dark btn-sm">Mark Now</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4">
+              <div class="empty-state" style="padding:40px">
+                <i class="fas fa-circle-check" style="color:var(--green)"></i>
+                <p>All set! No pending attendance for today.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Upcoming Schedule</div>
+      <div class="cs">Next classes in your timeline</div>
+    </div>
+    <div class="cb p0">
+       <table class="tbl">
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th></tr></thead>
+        <tbody>
+          {% for e in my_timetable[:5] %}
+          <tr>
+            <td><span class="tag t-nn">{{ e.day[:3] }}</span></td>
+            <td class="mono">{{ e.time }}</td>
+            <td>{{ e.subject }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="g2 fu fu3">
+  <div class="card">
+    <div class="ch flex-sb pb0">
+      <div><div class="ct">Recent Notices</div></div>
+      <a href="/notices" class="btn btn-ghost btn-sm">View all <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="cb">
+      {% for n in recent_notices %}
+      <div class="notice" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border)">
+        <div style="font-weight:700">{{ n.title }}</div>
+        <div style="font-size:12px; color:var(--ink3)">{{ n.message[:120] }}...</div>
+      </div>
+      {% else %}
+      <div class="empty-state"><p>No recent notices</p></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Overall Performance</div><div class="cs">Student attendance overview</div></div>
+    <div class="cb">
+       <div style="height:200px"><canvas id="perfChart"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var ctx = document.getElementById('perfChart');
+if(ctx) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Present', 'Absent', 'Leave'],
+      datasets: [{
+        data: [{{ att_count }}, {{ low_att_count * 10 }}, 5], // Example logic for mock-up visualization
+        backgroundColor: ['#059669', '#DC2626', '#D97706'],
+        borderRadius: 8
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+</script>
+{% endblock %}

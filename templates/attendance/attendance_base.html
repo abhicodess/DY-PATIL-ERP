@@ -1,0 +1,19 @@
+{% extends "common/base.html" %}
+{% block sb_title %}DY Patil ERP{% endblock %}
+{% block sb_sub %}Attendance{% endblock %}
+{% block av_color %}#2563EB{% endblock %}
+{% block av_letter %}A{% endblock %}
+{% block user_role %}Super Admin{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .sb-brand img { display: none !important; }
+        .sb-brand { border-bottom: none !important; }
+    </style>
+    {{ super() }}
+{% endblock %}
+
+
+{% block topbar_extras %}
+<a href="/export_attendance_excel" class="tb-icon" title="Export Attendance"><i class="fas fa-download"></i></a>
+{% endblock %}

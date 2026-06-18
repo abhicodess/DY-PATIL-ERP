@@ -1,0 +1,2046 @@
+{
+  "timetable": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "day",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "time",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "teacher",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "room",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "slot_type",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "color",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "branch",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "year",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "start_time",
+      "data_type": "time without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "end_time",
+      "data_type": "time without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "published",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    }
+  ],
+  "departments": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "short_code",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "full_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "student_alerts": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "alert_type",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "threshold",
+      "data_type": "double precision",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "is_resolved",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "date",
+      "data_type": "date",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "remark",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "time_slot",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "latitude",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "longitude",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "method",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "location_verified",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "timetable_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "lecture_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "branch",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "is_locked",
+      "data_type": "boolean",
+      "is_nullable": "NO"
+    }
+  ],
+  "marks": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "marks",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "exam_type",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "date",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "published",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "assignment_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "attendance_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "teaching_assessment",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "ut_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "mse_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    }
+  ],
+  "sms_logs": [
+    {
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "recipient",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "provider",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "provider_ref",
+      "data_type": "character varying",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "meta_data",
+      "data_type": "jsonb",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "retry_count",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "error_log",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "otp_verifications": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "phone",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "otp_code",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "is_verified",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "students": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "year",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "password",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "photo",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "contact_number",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "parent_contact",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "dob",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "gender",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "admission_year",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "phone",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "prn",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "audit_logs": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "action",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "details",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "role",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "user_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "ip_addr",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance_sessions": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "branch",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "lecture_date",
+      "data_type": "date",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "time_slot",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "start_time",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "end_time",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_by",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_role",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "method",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "is_locked",
+      "data_type": "boolean",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "lecture_type",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "academic_year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "locked_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "timetable_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    }
+  ],
+  "faculty_subject_assignments": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "class_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "leave_applications": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "reason",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "start_date",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "end_date",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance_audit": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "session_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "action",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "prev_status",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "new_status",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "details",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "timestamp",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "student_parent_mapping": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "parent_id",
+      "data_type": "uuid",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "relationship_type",
+      "data_type": "character varying",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "is_primary_contact",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    }
+  ],
+  "parent_contacts": [
+    {
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "full_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "phone_primary",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "phone_secondary",
+      "data_type": "character varying",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "notification_preferences": [
+    {
+      "column_name": "parent_id",
+      "data_type": "uuid",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "category",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "is_enabled",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    }
+  ],
+  "sms_templates": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "slug",
+      "data_type": "character varying",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "body",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "placeholders",
+      "data_type": "jsonb",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "is_active",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "category",
+      "data_type": "character varying",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "language",
+      "data_type": "character varying",
+      "is_nullable": "YES"
+    }
+  ],
+  "classrooms": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "latitude",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "longitude",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "radius",
+      "data_type": "real",
+      "is_nullable": "NO"
+    }
+  ],
+  "messages": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "sender_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "sender_role",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "receiver_role",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "from_role",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "from_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "from_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "to_role",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "to_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "to_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "body",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "is_read",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "sent_at",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "timetable_notifications": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "sender_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "sender_role",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance_summary": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "attended",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_start_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_end_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "upload_batch_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "branch",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    }
+  ],
+  "qr_sessions": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "token",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "classroom_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "start_time",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "expiry_time",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "session_end_time",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "is_active",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "requires_face",
+      "data_type": "boolean",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "latitude",
+      "data_type": "double precision",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "longitude",
+      "data_type": "double precision",
+      "is_nullable": "YES"
+    }
+  ],
+  "results": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "marks",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "exam_type",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "grade",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "result",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "published",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "assignment_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "attendance_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "teaching_assessment",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "ut_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "mse_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "tw_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "pr_or_marks",
+      "data_type": "real",
+      "is_nullable": "YES"
+    }
+  ],
+  "result_summary": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total_marks",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total_max",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "percentage",
+      "data_type": "real",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "grade",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "result",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "rank_in_class",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "published",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "cumulative_attendance": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "roll",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "acad_year",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_code",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "conducted",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "attended",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "percentage",
+      "data_type": "real",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "method",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "notifications": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "role_target",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "events": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "event_date",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "faculty_notices": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "message",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "target_year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "faculty": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "designation",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "phone",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "qualification",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "joining_date",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "password",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "photo",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance_upload_batches": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "filename",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "uploader_role",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "uploader_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_start_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_end_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "total_students",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total_subject_rows",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "avg_attendance",
+      "data_type": "numeric",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "defaulters",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "backup_path",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "restore_source_batch_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    }
+  ],
+  "attendance_upload_rows": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "batch_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "roll_no",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_code",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "lecture_type",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "attended_classes",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "total_classes",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "percentage",
+      "data_type": "numeric",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_start_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "report_end_date",
+      "data_type": "date",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    }
+  ],
+  "attendance_audit_log": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "actor_role",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "actor_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "action",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "details_json",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    }
+  ],
+  "timetable_substitutions": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "timetable_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "substitute_faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "session_date",
+      "data_type": "date",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_by",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "faculty_notes": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "content",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "note_type",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "target_year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ],
+  "attendance_disputes": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "student_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "attendance_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "reason",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "resolved_by",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "resolved_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES"
+    }
+  ],
+  "faculty_subjects": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO"
+    }
+  ],
+  "subjects": [
+    {
+      "column_name": "id",
+      "data_type": "integer",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "department",
+      "data_type": "text",
+      "is_nullable": "NO"
+    },
+    {
+      "column_name": "subject_code",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "teacher",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "semester",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "division",
+      "data_type": "text",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "faculty_id",
+      "data_type": "integer",
+      "is_nullable": "YES"
+    },
+    {
+      "column_name": "year",
+      "data_type": "text",
+      "is_nullable": "YES"
+    }
+  ]
+}

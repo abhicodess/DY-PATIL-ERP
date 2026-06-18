@@ -1,0 +1,243 @@
+
+{% extends "common/base.html" %}
+{% block title %}Attendance Portal{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block sidebar_nav %}
+<div class="sb-sec">Overview</div>
+<a href="{{ url_for('dashboard.faculty') }}" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+<div class="sb-sec">Academic</div>
+<a href="{{ url_for('faculty_att.attendance_portal') }}" class="sb-link active"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
+<a href="{{ url_for('faculty_att.session_history') }}" class="sb-link"><i class="fas fa-history"></i> Session History</a>
+<a href="{{ url_for('faculty_extra.faculty_marks') }}" class="sb-link"><i class="fas fa-pen-to-square"></i> Enter Marks</a>
+<a href="{{ url_for('faculty_att.my_students') }}" class="sb-link"><i class="fas fa-users"></i> My Students</a>
+<div class="sb-sec">Tools</div>
+<a href="/timetable" class="sb-link"><i class="fas fa-table-cells"></i> Timetable</a>
+<a href="/calendar" class="sb-link"><i class="fas fa-calendar-days"></i> Calendar</a>
+<a href="/messages" class="sb-link"><i class="fas fa-envelope"></i> Messages <span class="sb-badge">0</span></a>
+<div class="sb-sec">Account</div>
+<a href="/faculty_profile" class="sb-link"><i class="fas fa-user-circle"></i> Profile</a>
+{% endblock %}
+
+{% block page_title %}Attendance Management{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('dashboard.faculty') }}">Home</a> / Attendance{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Attendance Portal</div>
+    <div class="ph-sub">Manage your assigned subjects and marking sessions</div>
+  </div>
+</div>
+
+<div class="g6040 mb20 fu fu1">
+  <div>
+    <!-- TODAY'S SCHEDULE FROM TIMETABLE -->
+    <div class="card mb20">
+      <div class="ch">
+        <div class="ct"><i class="fas fa-clock" style="color:var(--blue)"></i> Today's Schedule</div>
+        <div class="cs">{{ today_schedule|length }} slots assigned for today</div>
+      </div>
+      <div class="cb p0">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Subject / Class</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in today_schedule %}
+            <tr>
+              <td><div style="font-weight:700;color:var(--ink)">{{ t.time }}</div></td>
+              <td>
+                <div style="font-weight:600">{{ t.subject }}</div>
+                <div style="font-size:11px;color:var(--ink4)">{{ t.branch }} - {{ t.division }}</div>
+              </td>
+              <td>
+                {% if t.attendance_status %}
+                <span class="tag t-gr">{{ t.attendance_status|capitalize }}</span>
+                {% else %}
+                <span class="tag t-nn">Pending</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if t.attendance_status == 'submitted' %}
+                <a href="{{ url_for('faculty_att.marking_session', session_id=t.session_id) }}" class="btn btn-out btn-sm"><i class="fas fa-eye"></i> View</a>
+                {% else %}
+                <form action="{{ url_for('faculty_att.create_session') }}" method="POST" style="display:inline">
+                  <input type="hidden" name="timetable_id" value="{{ t.id }}">
+                  <input type="hidden" name="subject" value="{{ t.subject }}">
+                  <input type="hidden" name="lecture_date" value="{{ today_date }}">
+                  <input type="hidden" name="time_slot" value="{{ t.time }}">
+                  <input type="hidden" name="lecture_type" value="{{ t.slot_type or 'Theory' }}">
+                  <button type="submit" class="btn btn-dark btn-sm">
+                    <i class="fas fa-pen-to-square"></i> Mark
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4"><div class="empty-state">No schedule for today.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RECENT SESSIONS -->
+    <div class="card">
+      <div class="ch"><div class="ct">Recent Sessions</div><div class="cs">Your last 5 sessions</div></div>
+      <div class="cb p0">
+        <table class="tbl">
+          <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for s in recent_sessions %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:12px">{{ s.lecture_date }}</td>
+              <td>{{ s.subject }}</td>
+              <td>
+                {% if s.status == 'submitted' %}
+                <span class="tag t-gr">Submitted</span>
+                {% elif s.status == 'draft' %}
+                <span class="tag t-am">Draft</span>
+                {% else %}
+                <span class="tag t-re">{{ s.status|capitalize }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3"><div class="empty-state">No sessions yet</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="cf">
+        <a href="/faculty/session_history" class="btn btn-out btn-sm" style="width:100%;justify-content:center">View Full History</a>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <!-- MY ASSIGNED SUBJECTS -->
+    <div class="card mb20">
+      <div class="ch">
+        <div class="ct"><i class="fas fa-book" style="color:var(--purple)"></i> My Assignments</div>
+        <div class="cs">{{ assignments|length }} subjects</div>
+      </div>
+      <div class="cb">
+        <div class="f-list">
+          {% for a in assignments %}
+          <div class="f-item fu" style="padding:12px;border-bottom:1px solid var(--border);gap:12px;align-items:center">
+            <div style="flex:1">
+              <div style="font-weight:700;color:var(--ink)">{{ a.subject_name }}</div>
+              <div style="font-size:11px;color:var(--ink4)">{{ a.department }} • Division {{ a.division }}</div>
+              <div style="font-size:11px;margin-top:2px"><span style="color:var(--blue)">{{ a.session_count }}</span> total sessions</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button onclick="openStartModal('{{ a.subject_name }}', '{{ a.department }} {{ a.division }}')" class="btn btn-out btn-sm">
+                <i class="fas fa-play"></i> Instant
+              </button>
+              <form action="{{ url_for('faculty_att.new_session') }}" method="POST" style="display:inline">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="subject" value="{{ a.subject_name }}">
+                <input type="hidden" name="division" value="{{ a.division }}">
+                <input type="hidden" name="semester" value="{{ a.semester }}">
+                <button type="submit" class="btn btn-vi btn-sm">
+                  <i class="fas fa-pen"></i> Mark Now
+                </button>
+              </form>
+            </div>
+
+          </div>
+          {% else %}
+          <div class="empty-state">No subjects assigned yet. Please contact admin.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="card p15" style="background:var(--bg)">
+      <div style="font-size:11px;color:var(--ink4);text-transform:uppercase;font-weight:700;margin-bottom:10px">Guidelines</div>
+      <ul style="font-size:12px;color:var(--ink3);padding-left:16px;margin:0">
+        <li>Marked attendance is locked once submitted.</li>
+        <li>Student rosters are synced per division.</li>
+        <li>Check "Session History" for edits.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- START SESSION MODAL -->
+<div class="modal-bg" id="startModal">
+  <div class="modal-box">
+    <div class="ch flex-sb">
+      <div class="ct">Start Attendance Session</div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('startModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form action="/faculty/create_session" method="POST">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="subject" id="modalSubjectHidden">
+      <input type="hidden" name="division" id="modalDivisionHidden">
+      <input type="hidden" name="department" id="modalDepartmentHidden">
+      <div class="cb">
+        <div class="fgrp">
+          <label>Subject</label>
+          <input type="text" id="modalSubject" readonly style="background:var(--bg)">
+        </div>
+        <div class="fgrp">
+          <label>Class / Division</label>
+          <input type="text" id="modalClass" readonly style="background:var(--bg)">
+        </div>
+        <div class="fg2">
+          <div class="fgrp">
+            <label>Date</label>
+            <input type="date" name="lecture_date" value="{{ today_date }}" required>
+          </div>
+          <div class="fgrp">
+            <label>Lecture Type</label>
+            <select name="lecture_type">
+              <option>Theory</option>
+              <option>Practical</option>
+              <option>Tutorial</option>
+              <option>Lab</option>
+            </select>
+          </div>
+        </div>
+        <div class="fgrp">
+          <label>Time Slot (Optional)</label>
+          <input type="text" name="time_slot" placeholder="e.g. 10:00 AM - 11:00 AM">
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-play"></i> Start Marking</button>
+        <button type="button" class="btn btn-out" onclick="document.getElementById('startModal').classList.remove('show')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openStartModal(sub, clsInfo) {
+  // clsInfo example: "Infromation Technology A"
+  const parts = clsInfo.split(' ');
+  const div = parts.pop();
+  const dept = parts.join(' ');
+  
+  document.getElementById('modalSubject').value = sub;
+  document.getElementById('modalSubjectHidden').value = sub;
+  document.getElementById('modalClass').value = clsInfo;
+  document.getElementById('modalDivisionHidden').value = div;
+  document.getElementById('modalDepartmentHidden').value = dept;
+  document.getElementById('startModal').classList.add('show');
+}
+document.getElementById('startModal').addEventListener('click', function(e){
+  if(e.target === this) this.classList.remove('show');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends "common/base.html" %}
+
+{% block title %}Import Cumulative Attendance{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Upload zone */
+  .upload-zone {
+    border: 2.5px dashed var(--border); border-radius: var(--r-md);
+    padding: 48px 24px; text-align: center; background: var(--white);
+    transition: border-color .2s, background .2s; cursor: pointer;
+    box-shadow: var(--sh-sm);
+  }
+  .upload-zone.drag-over { border-color: var(--blue); background: var(--blue-s); }
+  .upload-zone svg { width: 52px; height: 52px; color: var(--ink3); margin-bottom: 14px; }
+  .upload-zone p  { color: var(--ink2); font-size: .95rem; }
+  .upload-zone strong { color: var(--blue); }
+  #fileInput { display: none; }
+  
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px;
+           font-size: .78rem; font-weight: 600; margin: 2px; }
+  .badge-pdf  { background: var(--red-s); color: var(--red); }
+  .badge-xlsx { background: var(--green-s); color: var(--green); }
+
+  /* File list */
+  .file-list { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .file-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm);
+    padding: 8px 14px; font-size: .87rem;
+    box-shadow: var(--sh-sm);
+  }
+  .file-chip .rm { cursor: pointer; color: var(--red); font-weight: 700; }
+
+  /* Progress */
+  #progress { margin-top: 18px; display: none; }
+  .progress-bar-wrap { background: var(--bg2); border-radius: 20px; height: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--blue); border-radius: 20px;
+                  transition: width .3s; width: 0%; }
+
+  /* Preview table section */
+  #preview { margin-top: 30px; display: none; }
+  .preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .preview-header h2 { font-size: 1.05rem; }
+  .stats { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 14px 20px; text-align: center; min-width: 120px;
+    box-shadow: var(--sh-sm);
+  }
+  .stat-card .val { font-size: 1.6rem; font-weight: 700; color: var(--blue); }
+  .stat-card .lbl { font-size: .78rem; color: var(--ink3); margin-top: 2px; }
+
+  /* Tabs for multiple files */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 0; }
+  .tab {
+    padding: 8px 16px; border-radius: var(--r-sm) var(--r-sm) 0 0; cursor: pointer;
+    font-size: .88rem; font-weight: 500; border: 1px solid transparent;
+    color: var(--ink3); background: var(--white);
+  }
+  .tab.active { border-color: var(--border); border-bottom-color: var(--white);
+                color: var(--blue); font-weight: 700; margin-bottom: -2px; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  
+  .pct-ok     { color: var(--green); font-weight: 600; }
+  .pct-warn   { color: var(--amber); font-weight: 600; }
+  .pct-danger { color: var(--red); font-weight: 600; }
+
+  /* Meta cards */
+  .meta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .meta-chip {
+    background: var(--blue-s); border: 1px solid var(--blue-m); border-radius: 20px;
+    padding: 4px 14px; font-size: .82rem; color: var(--blue);
+  }
+
+  #commitResult { margin-top: 16px; }
+  #commitBtnWrap { margin-top: 20px; display: none; text-align: right; gap: 10px; }
+  #commitBtnWrap.show { display: flex; justify-content: flex-end; }
+</style>
+{% endblock %}
+
+{% block page_title %}Import Cumulative Attendance{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/cumulative_report">Cumulative Report</a> / Import{% endblock %}
+
+{% block content %}
+<div class="fu">
+  <!-- Upload Zone Card -->
+  <div class="card fu mb20">
+    <div class="cb">
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:inline-block;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p style="font-size:15px; margin-top:6px;"><strong>Click to upload</strong> or drag & drop files here</p>
+        <p style="margin-top:8px;">
+          <span class="badge badge-pdf">PDF</span>
+          <span class="badge badge-xlsx">XLSX</span>
+          &nbsp;— Semester Attendance Reports
+        </p>
+        <p style="margin-top:6px; font-size:.82rem; color:var(--ink3);">You can upload multiple files at once (all divisions, all branches)</p>
+        <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xls">
+      </div>
+
+      <div class="file-list" id="fileList"></div>
+
+      <div style="margin-top:18px; display:flex; gap:10px;">
+        <button class="btn btn-blue" id="parseBtn" onclick="parseFiles()" disabled>
+          <i class="fa-solid fa-magnifying-glass"></i> Parse & Preview
+        </button>
+        <button class="btn btn-out" onclick="clearAll()">Clear All</button>
+      </div>
+
+      <div id="progress">
+        <p style="font-size:.88rem; color:var(--ink3); margin-bottom:6px; margin-top:12px;" id="progressLabel">Parsing files…</p>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="errors"></div>
+
+  <!-- Preview Card -->
+  <div id="preview">
+    <div class="card fu mb20">
+      <div class="ch">
+        <div class="ct"><i class="fa-solid fa-rectangle-list"></i> Preview — Review before importing</div>
+      </div>
+      <div class="cb">
+        <div class="stats mb20" id="statsRow"></div>
+        <div class="tabs mb16" id="tabsRow"></div>
+        <div id="tabContents" class="mb20"></div>
+
+        <div id="commitBtnWrap">
+          <button class="btn btn-out" onclick="document.getElementById('preview').style.display='none'">Cancel</button>
+          <button class="btn btn-gr" id="commitBtn" onclick="commitAll()">
+            <i class="fa-solid fa-circle-check"></i> Import All to Database
+          </button>
+        </div>
+        <div id="commitResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedFiles = [];
+let parsedData    = [];   // [{filename, meta, subjects, students}]
+
+// ── Drag & Drop ──────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+document.getElementById('fileInput').addEventListener('change', e => addFiles(Array.from(e.target.files)));
+
+function addFiles(files) {
+  const allowed = files.filter(f => /\.(pdf|xlsx|xls)$/i.test(f.name));
+  selectedFiles.push(...allowed);
+  renderFileList();
+}
+
+function renderFileList() {
+  const el = document.getElementById('fileList');
+  el.innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-chip">
+      <span>${/pdf$/i.test(f.name) ? '📄' : '📊'}</span>
+      <span>${f.name}</span>
+      <span class="rm" onclick="removeFile(${i})">✕</span>
+    </div>`).join('');
+  document.getElementById('parseBtn').disabled = selectedFiles.length === 0;
+}
+
+function removeFile(i) {
+  selectedFiles.splice(i, 1);
+  renderFileList();
+}
+
+function clearAll() {
+  selectedFiles = []; parsedData = [];
+  renderFileList();
+  document.getElementById('preview').style.display = 'none';
+  document.getElementById('errors').innerHTML = '';
+}
+
+// ── Parse ─────────────────────────────────────────────────────────────────────
+async function parseFiles() {
+  if (!selectedFiles.length) return;
+  const parseBtn = document.getElementById('parseBtn');
+  if (parseBtn) { parseBtn.disabled = true; parseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Parsing…'; }
+  setProgress(true, 'Uploading and parsing files…', 20);
+
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('files', f));
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  if (csrf) fd.append('_csrf', csrf.getAttribute('content') || '');
+
+  try {
+    const res  = await fetch('/cumulative_import', { method: 'POST', body: fd });
+    if (!res.ok) {
+      document.getElementById('errors').innerHTML =
+        `<div class="alert al-err fu"><i class="fa-solid fa-circle-exclamation"></i><span>Server returned ${res.status}. Try again or use smaller files.</span></div>`;
+      setProgress(false);
+      return;
+    }
+    const data = await res.json();
+    setProgress(true, 'Building preview…', 80);
+
+    if (data.errors && data.errors.length) {
+      document.getElementById('errors').innerHTML = data.errors.map(e =>
+        `<div class="alert al-err fu"><i class="fa-solid fa-circle-exclamation"></i><span><strong>${e.file}</strong>: ${e.error}</span></div>`
+      ).join('');
+    } else {
+      document.getElementById('errors').innerHTML = '';
+    }
+
+    parsedData = data.parsed || [];
+    renderPreview();
+    setProgress(false);
+  } catch (err) {
+    setProgress(false);
+    document.getElementById('errors').innerHTML =
+      `<div class="alert al-err fu"><i class="fa-solid fa-circle-exclamation"></i><span>Server error: ${err.message}</span></div>`;
+  } finally {
+    if (parseBtn) {
+      parseBtn.disabled = selectedFiles.length === 0;
+      parseBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Parse & Preview';
+    }
+  }
+}
+
+function setProgress(show, label='', pct=0) {
+  const el = document.getElementById('progress');
+  el.style.display = show ? 'block' : 'none';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+// ── Render Preview ────────────────────────────────────────────────────────────
+function renderPreview() {
+  if (!parsedData.length) return;
+
+  const totalStudents = parsedData.reduce((a,p) => a + p.students.length, 0);
+  const totalSubjects = parsedData.reduce((a,p) => a + p.subjects.length, 0);
+  const totalRows     = parsedData.reduce((a,p) => a + p.students.length * p.subjects.length, 0);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="val">${parsedData.length}</div><div class="lbl">Files</div></div>
+    <div class="stat-card"><div class="val">${totalStudents}</div><div class="lbl">Students</div></div>
+    <div class="stat-card"><div class="val">${totalSubjects}</div><div class="lbl">Subjects / File</div></div>
+    <div class="stat-card"><div class="val">${totalRows}</div><div class="lbl">Records to Import</div></div>
+  `;
+
+  const tabsEl = document.getElementById('tabsRow');
+  const contEl = document.getElementById('tabContents');
+  tabsEl.innerHTML = ''; contEl.innerHTML = '';
+
+  parsedData.forEach((p, idx) => {
+    const id = `tab_${idx}`;
+    const tabEl = document.createElement('div');
+    tabEl.className = 'tab' + (idx === 0 ? ' active' : '');
+    tabEl.textContent = `${p.meta.department || '?'} Div ${p.meta.division || '?'} Sem ${p.meta.semester || '?'}`;
+    tabEl.onclick = () => switchTab(idx);
+    tabsEl.appendChild(tabEl);
+
+    const div = document.createElement('div');
+    div.className = 'tab-content' + (idx === 0 ? ' active' : '');
+    div.id = id;
+    div.innerHTML = buildTabContent(p);
+    contEl.appendChild(div);
+  });
+
+  document.getElementById('preview').style.display = 'block';
+  document.getElementById('commitBtnWrap').className = 'show';
+}
+
+function switchTab(idx) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-content').forEach((t,i) => t.classList.toggle('active', i===idx));
+}
+
+function buildTabContent(p) {
+  const m = p.meta;
+  const meta = `
+    <div class="meta-row">
+      <span class="meta-chip">📅 ${m.year || '—'}</span>
+      <span class="meta-chip">📚 Sem ${m.semester || '—'}</span>
+      <span class="meta-chip">🏫 ${m.department || '—'}</span>
+      <span class="meta-chip">🔤 Div ${m.division || '—'}</span>
+      <span class="meta-chip">👥 ${p.students.length} students</span>
+    </div>`;
+
+  const subj_headers = p.subjects.map(s =>
+    `<th title="${s.code}">${s.name.split(' ').slice(0,3).join(' ')}<br><small style="font-weight:400;opacity:.8;">(${s.conducted})</small></th>`
+  ).join('');
+
+  const rows = p.students.filter(s => s.roll && s.name).map(s => {
+    const cls = s.pct >= 75 ? 'pct-ok' : s.pct >= 60 ? 'pct-warn' : 'pct-danger';
+    const cells = s.attended.map((a,i) => `<td style="text-align:center">${a}</td>`).join('');
+    return `<tr>
+      <td><strong>${s.roll}</strong></td>
+      <td>${s.name}</td>
+      ${cells}
+      <td style="text-align:center;font-weight:600">${s.total}</td>
+      <td class="${cls}" style="text-align:center; font-family:var(--mono);">${s.pct}%</td>
+    </tr>`;
+  }).join('');
+
+  return meta + `
+    <div class="tbl-wrap" style="max-height:480px;overflow-y:auto; border-radius: var(--r-sm);">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Roll</th><th>Name</th>
+            ${subj_headers}
+            <th>Total</th><th>%</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Commit ────────────────────────────────────────────────────────────────────
+async function commitAll() {
+  const commitBtn = document.getElementById('commitBtn');
+  commitBtn.disabled = true;
+  commitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Importing…';
+
+  // Flatten all data into DB rows
+  const rows = [];
+  parsedData.forEach(p => {
+    p.students.forEach(s => {
+      if (!s.roll || !s.name) return;
+      p.subjects.forEach((subj, i) => {
+        const attended  = s.attended[i] || 0;
+        const conducted = subj.conducted || 0;
+        if (conducted === 0) return;
+        rows.push({
+          roll:        s.roll,
+          name:        s.name,
+          department:  p.meta.department,
+          division:    p.meta.division,
+          semester:    p.meta.semester,
+          acad_year:   p.meta.year,
+          subject:     subj.name,
+          subject_code: subj.code,
+          conducted:   conducted,
+          attended:    attended,
+        });
+      });
+    });
+  });
+
+  try {
+    var csrfTok = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const res  = await fetch('/cumulative_commit', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfTok},
+      body:    JSON.stringify({ rows }),
+    });
+    if (!res.ok) {
+      document.getElementById('commitResult').innerHTML =
+        `<div class="alert al-err fu"><i class="fa-solid fa-circle-exclamation"></i><span>Import failed (HTTP ${res.status}). Check your session and try again.</span></div>`;
+      commitBtn.disabled = false;
+      commitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Import All to Database';
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('commitResult').innerHTML =
+      `<div class="alert al-ok fu">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Import complete — <strong>${data.inserted}</strong> records saved
+        ${data.skipped ? `, ${data.skipped} skipped` : ''}.
+        <a href="/cumulative_report" style="margin-left:12px;font-weight:600;text-decoration:underline;">View Report →</a></span>
+      </div>`;
+    commitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Imported!';
+  } catch(err) {
+    document.getElementById('commitResult').innerHTML =
+      `<div class="alert al-err fu"><i class="fa-solid fa-circle-exclamation"></i><span>Import failed: ${err.message}</span></div>`;
+    commitBtn.disabled = false;
+    commitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Import All to Database';
+  }
+}
+</script>
+{% endblock %}

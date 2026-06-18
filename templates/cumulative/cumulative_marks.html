@@ -1,0 +1,80 @@
+{% extends "common/base.html" %}
+{% block title %}Cumulative Marks{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}
+{% block sb_sub %}{% if role == 'admin' %}Admin Panel{% else %}Faculty Panel{% endif %}{% endblock %}
+{% block av_color %}{% if role == 'admin' %}#2563EB{% else %}#7C3AED{% endif %}{% endblock %}
+{% block av_letter %}{% if role == 'admin' %}A{% else %}{{ session.name[0]|upper }}{% endif %}{% endblock %}
+{% block user_role %}{% if role == 'admin' %}Super Admin{% else %}Faculty{% endif %}{% endblock %}
+
+{% block page_title %}Cumulative Marks{% endblock %}
+{% block breadcrumb %}<a href="{% if role == 'admin' %}/admin{% else %}/faculty_dashboard{% endif %}">Home</a> / Cumulative Marks{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Cumulative Marks</div>
+    <div class="ph-sub">{{ total_students }} student{% if total_students != 1 %}s{% endif %} &mdash; aggregated across exams</div>
+  </div>
+  <div class="ph-actions">
+    {% if role == 'admin' %}
+    <a href="{{ url_for('faculty_extra.export_cumulative_excel', dept=dept, student=student) }}" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export Excel</a>
+    {% endif %}
+  </div>
+</div>
+<div class="card fu fu1" style="margin-bottom:16px">
+  <div class="cb" style="padding:14px 20px">
+    <form method="GET" action="{% if role == 'admin' %}{{ url_for('faculty_extra.cumulative_marks') }}{% else %}{{ url_for('faculty_extra.faculty_cumulative') }}{% endif %}" class="flex-ac gap10" style="flex-wrap:wrap">
+      {% if role == 'admin' %}
+      <select name="dept" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px">
+        <option value="">All departments</option>
+        {% for d in DEPARTMENTS %}<option value="{{ d }}" {% if dept == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <input type="text" name="student" value="{{ student }}" placeholder="Search student name…" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:220px">
+      <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-filter"></i> Apply</button>
+    </form>
+  </div>
+</div>
+<div class="card fu fu2">
+  <div class="ch"><div class="ct">Leaderboard</div><div class="cs">Sorted by percentage (highest first)</div></div>
+  <div class="cb" style="padding:0;overflow-x:auto">
+    {% if data %}
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Roll</th>
+          <th>Dept</th>
+          <th>Obtained</th>
+          <th>Total</th>
+          <th>%</th>
+          <th>Grade</th>
+          <th>Exams</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data %}
+        <tr>
+          <td class="mono" style="color:var(--ink4)">{{ loop.index }}</td>
+          <td><strong>{{ row.name }}</strong></td>
+          <td class="mono">{{ row.roll }}</td>
+          <td>{{ row.dept }}</td>
+          <td class="mono" style="font-weight:600">{{ row.obtained }}</td>
+          <td class="mono" style="color:var(--ink4)">{{ row.total }}</td>
+          <td class="mono" style="color:{% if row.pct >= 75 %}var(--green){% elif row.pct >= 50 %}var(--amber){% else %}var(--red){% endif %}">{{ row.pct }}%</td>
+          <td><span class="grade {% if row.grade == 'A+' %}g-ap{% elif row.grade in ('A', 'B+') %}g-a{% elif row.grade == 'B' %}g-b{% elif row.grade == 'C' %}g-c{% else %}g-f{% endif %}">{{ row.grade }}</span></td>
+          <td class="mono">{{ row.exams }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:48px 24px;text-align:center">
+      <i class="fas fa-chart-simple" style="font-size:36px;color:var(--ink4);margin-bottom:12px"></i>
+      <p style="color:var(--ink3);font-weight:600">No marks to show yet</p>
+      <p style="font-size:13px;color:var(--ink4);margin-top:6px">Enter or import marks, then refresh this page.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

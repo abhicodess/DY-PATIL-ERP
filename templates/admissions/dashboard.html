@@ -1,0 +1,71 @@
+{% extends "common/base.html" %}
+{% block title %}Admissions Dashboard{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admissions{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Pending Admissions</h1>
+    <p class="text-gray-500">Review and approve incoming student applications</p>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    {% if applications %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                    <th class="px-6 py-3">Applicant Name</th>
+                    <th class="px-6 py-3">Department</th>
+                    <th class="px-6 py-3">10th %</th>
+                    <th class="px-6 py-3">12th %</th>
+                    <th class="px-6 py-3">Entrance</th>
+                    <th class="px-6 py-3">Token</th>
+                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for app in applications %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-gray-700">{{ app.applicant_name }}</div>
+                        <div class="text-xs text-gray-400">Applied: {{ app.applied_at.strftime('%Y-%m-%d') if app.applied_at and hasattr(app.applied_at, 'strftime') else app.applied_at }}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold">{{ app.dept_preference }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-700">{{ app.score_10th }}%</td>
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-700">{{ app.score_12th }}%</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-bold text-blue-600">{{ app.entrance_score or 'N/A' }}</div>
+                    </td>
+                    <td class="px-6 py-4"><code class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">{{ app.token[:12] }}...</code></td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-[10px] font-bold uppercase tracking-wider">Pending Review</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end gap-2">
+                            <form action="{{ url_for('admissions.approve', id=app.id) }}" method="POST" class="inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button type="submit" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 transition-all shadow-sm shadow-green-100">
+                                    <i class="fa-solid fa-check mr-1"></i> Approve
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <div class="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-inbox text-2xl"></i>
+        </div>
+        <h3 class="font-bold text-gray-700">No Pending Applications</h3>
+        <p class="text-gray-500 max-w-xs mx-auto mt-2">New student applications will appear here once they are submitted through the portal.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

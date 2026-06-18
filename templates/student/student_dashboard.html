@@ -1,0 +1,106 @@
+{% extends "common/base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+{% block breadcrumb %}Home / Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Welcome back, {{ session.name }}!</div>
+    <div class="ph-sub">{{ session.student_branch }} &bull; Division {{ session.student_division }} &bull; {{ session.student_year }}</div>
+  </div>
+</div>
+
+<!-- Main Stats (Classic Row) -->
+<div class="sg fu fu1 mb24">
+  <div class="sc">
+    <div><div class="sv" style="color:var(--green)">{{ cum_att_percentage }}%</div><div class="sl">Overall Attendance</div></div>
+    <div class="sico ic-gr"><i class="fas fa-chart-line"></i></div>
+  </div>
+  <div class="sc">
+    <div><div class="sv">{{ cum_att_present }}/{{ cum_att_total }}</div><div class="sl">Lectures Attended</div></div>
+    <div class="sico ic-bl"><i class="fas fa-check-double"></i></div>
+  </div>
+  <div class="sc">
+    <div><div class="sv">{{ notices|length }}</div><div class="sl">New Notices</div></div>
+    <div class="sico ic-am"><i class="fas fa-bullhorn"></i></div>
+  </div>
+</div>
+
+<div class="grid g2 fu fu1">
+  <!-- Today's Classes -->
+  <div class="card">
+    <div class="ch"><div class="ct">Today's Schedule</div><div class="cs">{{ today_name }}</div></div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead><tr><th>Time</th><th>Subject</th><th>Type</th></tr></thead>
+        <tbody>
+          {% for item in timetable %}
+          <tr>
+            <td class="mono small">{{ item.time }}</td>
+            <td><strong>{{ item.subject }}</strong><div class="small t-nn">{{ item.teacher }}</div></td>
+            <td><span class="tag {% if item.slot_type=='Lab' %}t-vi{% else %}t-bl{% endif %}">{{ item.slot_type }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3"><div class="empty-state">No classes scheduled for today.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Analysis & Notes Summary -->
+  <div class="grid g1" style="height:fit-content">
+    <div class="card mb16">
+      <div class="ch"><div class="ct">Performance Status</div></div>
+      <div class="cb">
+        <div class="flex-sb flex-ac">
+          <span style="font-weight:600">Attendance Risk</span>
+          <span class="tag {% if cum_att_status=='Low' %}t-re{% else %}t-gr{% endif %}">{{ cum_att_status }}</span>
+        </div>
+        <div class="mt16">
+          <a href="/student_analysis" class="btn btn-out btn-sm w100">View Detailed Analysis</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="ch"><div class="ct">Quick Actions</div></div>
+      <div class="cb" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <a href="/student_profile" class="btn btn-faded btn-sm"><i class="fas fa-id-card"></i> Profile</a>
+        <a href="/messages" class="btn btn-faded btn-sm flex-sb" style="justify-content:space-between">
+          <span><i class="fas fa-envelope"></i> Inbox</span>
+          {% if unread_count() > 0 %}
+          <span class="badge" style="background:var(--re);color:#fff;padding:2px 6px;border-radius:10px;font-size:10px">{{ unread_count() }}</span>
+          {% endif %}
+        </a>
+        <a href="/student_notes" class="btn btn-faded btn-sm"><i class="fas fa-file-lines"></i> Notes</a>
+        <a href="/timetable" class="btn btn-faded btn-sm"><i class="fas fa-calendar-alt"></i> Timetable</a>
+        <a href="/student_notices" class="btn btn-faded btn-sm"><i class="fas fa-bullhorn"></i> Notices</a>
+        <a href="/student_settings" class="btn btn-faded btn-sm"><i class="fas fa-cog"></i> Settings</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notice Board Section -->
+<div class="card mt24 fu fu1">
+  <div class="ch"><div class="ct">Notice Board</div><div class="cs">Recent announcements</div></div>
+  <div class="cb">
+    {% for n in notices[:3] %}
+    <div class="notice mb12">
+      <div class="n-title">{{ n.title }}</div>
+      <div class="n-meta">{{ n.faculty_name }} &bull; {{ n.created_at[:16] }}</div>
+      <div class="n-body">{{ n.message[:150] }}...</div>
+    </div>
+    {% else %}
+    <div class="empty-state">No recent notices.</div>
+    {% endfor %}
+    <div class="mt16 ac">
+      <a href="/student_notices" class="btn btn-link">View All Notices <i class="fas fa-chevron-right"></i></a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

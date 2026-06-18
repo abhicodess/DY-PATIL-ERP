@@ -1,0 +1,56 @@
+{% extends "common/base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Profile{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div class="flex-ac gap16">
+    <div class="av" style="width:64px;height:64px;font-size:24px;background:var(--blue)">
+      {{ student.name[0]|upper }}
+    </div>
+    <div>
+      <div class="ph-title">{{ student.name }}</div>
+      <div class="ph-sub">{{ student.roll }} &bull; {{ student.department }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid g2 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Personal Information</div></div>
+    <div class="cb">
+      <div class="fgrp">
+        <label>Full Name</label>
+        <div class="tb-field">{{ student.name }}</div>
+      </div>
+      <div class="fgrp">
+        <label>Roll Number</label>
+        <div class="tb-field">{{ student.roll }}</div>
+      </div>
+      <div class="fgrp">
+        <label>Email Address</label>
+        <div class="tb-field">{{ student.email or 'Not provided' }}</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="ch"><div class="ct">Academic Context</div></div>
+    <div class="cb">
+      <div class="fgrp">
+        <label>Department</label>
+        <div class="tb-field">{{ student.department }}</div>
+      </div>
+      <div class="fgrp">
+        <label>Division / Section</label>
+        <div class="tb-field">{{ student.division }}</div>
+      </div>
+      <div class="fgrp">
+        <label>Academic Year</label>
+        <div class="tb-field">{{ student.year }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

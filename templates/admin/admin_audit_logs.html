@@ -1,0 +1,44 @@
+{% extends "common/base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+{% block page_title %}Audit Logs{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> > <a href="/admin_audit_logs">Audit Logs</a>{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Attendance Audit Logs</div><div class="ph-sub">View changes, bulk marks, and system resets</div></div>
+</div>
+
+<div class="card fu fu1">
+  <div class="ch"><div class="ct">Recent Activity</div></div>
+  <div class="cb p0" style="overflow-x:auto;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Date & Time</th>
+          <th>Actor Role</th>
+          <th>Actor ID</th>
+          <th>Action</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="mono" style="font-size:12px;white-space:nowrap">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '' }}</td>
+          <td><span class="tag t-{{ 'bl' if log.actor_role == 'admin' else 'vi' }}">{{ log.actor_role|capitalize }}</span></td>
+          <td class="mono">{{ log.actor_id or '—' }}</td>
+          <td><strong>{{ log.action }}</strong></td>
+          <td style="font-size:11px;color:var(--ink3);word-break:break-all;max-width:300px;">
+            {{ log.details_json }}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state" style="padding:24px"><p>No audit logs found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

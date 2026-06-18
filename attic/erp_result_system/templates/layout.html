@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional ERP Result Management</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --sidebar-width: 260px;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --text-muted: #6c757d;
+            --card-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+        
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e9ecef;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar-brand {
+            padding: 1.5rem 1.5rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #2b2b2b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .sidebar-brand i { color: var(--primary-color); font-size: 1.5rem; }
+        
+        .sidebar-menu { list-style: none; padding: 0; margin-top: 1rem; }
+        .sidebar-category {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #adb5bd;
+            letter-spacing: 0.5px;
+            margin: 1.5rem 1.5rem 0.5rem;
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.7rem 1.5rem;
+            color: #495057;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            gap: 12px;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: #f8f9fc;
+            color: var(--primary-color);
+            border-right: 3px solid var(--primary-color);
+        }
+        .sidebar-link i { font-size: 1.1rem; }
+        
+        /* Main Content Styling */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Navbar Styling */
+        .topbar {
+            background: white;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .breadcrumb { margin-bottom: 0; font-size: 0.9rem; }
+        .breadcrumb-item a { color: var(--text-muted); text-decoration: none; }
+        .breadcrumb-item.active { color: #212529; font-weight: 500; }
+        
+        .topbar-actions { display: flex; gap: 15px; align-items: center; }
+        
+        /* Content Padding */
+        .page-content { padding: 2rem; flex: 1; }
+        
+        /* Universal Card Styles */
+        .custom-card {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+        .custom-card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f3f5;
+            background: white;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+        }
+        .custom-card-body { padding: 1.5rem; }
+        
+        /* Buttons */
+        .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
+        .btn-primary:hover { background-color: #3f58d6; border-color: #3f58d6; }
+        .btn-light { background-color: #f8f9fa; border-color: #e9ecef; color: #495057; }
+        
+        /* Utility */
+        .badge-soft-success { background-color: rgba(25, 135, 84, 0.1); color: #198754; }
+        .badge-soft-danger { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+        .badge-soft-warning { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; }
+
+        /* Grade Card specifics */
+        .grade-card-wrapper {
+            background: #fff url('data:image/svg+xml;utf8,<svg opacity="0.03" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="20">DYPU</text></svg>') center/cover;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .university-header { text-align: center; border-bottom: 3px double #dee2e6; padding-bottom: 15px; margin-bottom: 25px; }
+        .university-header h2 { font-weight: 800; color: #212529; letter-spacing: 1px; }
+        
+        table.professional-table { width: 100%; border-collapse: collapse; }
+        table.professional-table th { background-color: #f8f9fa; color: #495057; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 15px; font-weight: 600; border-bottom: 2px solid #dee2e6; }
+        table.professional-table td { padding: 15px; vertical-align: middle; border-bottom: 1px solid #e9ecef; color: #333; }
+        table.professional-table tbody tr:hover { background-color: #f8f9fc; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-mortarboard-fill"></i>
+            DY Patil ERP
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-category">Overview</li>
+            <li><a href="#" class="sidebar-link"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            
+            <li class="sidebar-category">Academic</li>
+            <li><a href="#" class="sidebar-link"><i class="bi bi-people"></i> Students</a></li>
+            <li><a href="#" class="sidebar-link"><i class="bi bi-book"></i> Subjects</a></li>
+            
+            <li class="sidebar-category">Management</li>
+            <li><a href="{{ url_for('index') }}" class="sidebar-link active"><i class="bi bi-journal-text"></i> Results</a></li>
+            <li><a href="#" class="sidebar-link"><i class="bi bi-graph-up"></i> Analytics</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        
+        <!-- Topbar -->
+        <header class="topbar">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Results Management</li>
+                </ol>
+            </nav>
+            <div class="topbar-actions">
+                <button class="btn btn-light btn-sm"><i class="bi bi-download"></i> Export</button>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm ms-2" type="button"><i class="bi bi-bell"></i></button>
+                </div>
+                <div class="ms-3 d-flex align-items-center">
+                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px;">A</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="page-content">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-info-circle me-2"></i> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+        
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

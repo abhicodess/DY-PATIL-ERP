@@ -1,0 +1,24 @@
+{% extends "common/base.html" %}
+{% block title %}Study Notes{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Student Portal{% endblock %}
+{% block av_color %}#059669{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Student{% endblock %}
+
+{% block page_title %}Study Notes{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Notes{% endblock %}
+{% block topbar_extras %}{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Study Notes from Faculty</div></div>
+<div class="g3 fu fu1">
+  {% for n in notes %}
+  <div class="card">
+    <div class="ch"><div class="flex-sb"><span class="tag {% if n.note_type=="Important" %}t-re{% elif n.note_type=="Assignment" %}t-am{% else %}t-bl{% endif %}">{{ n.note_type }}</span><span style="font-size:11px;color:var(--ink4)">{{ n.created_at[:10] if n.created_at else "" }}</span></div></div>
+    <div class="cb">
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px">{{ n.title }}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:10px"><i class="fas fa-book"></i> {{ n.subject }} · <i class="fas fa-user"></i> {{ n.faculty_name }}</div>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.6">{{ n.content }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column:1/-1"><div class="empty-state"><i class="fas fa-file-lines"></i><p>No notes shared yet. Check back later.</p></div></div>
+  {% endfor %}
+</div>{% endblock %}

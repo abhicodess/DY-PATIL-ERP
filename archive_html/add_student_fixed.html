@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head><title>Add Student</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+.scan-box{background:#f8faff;border:2px dashed #b0c4de;border-radius:12px;padding:16px 18px;margin-bottom:18px;}
+.scan-box h4{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:4px;}
+.scan-box p{font-size:12px;color:#888;margin-bottom:10px;}
+.scan-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.scan-row input[type=file]{flex:1;padding:7px;border:1.5px dashed #ccc;border-radius:8px;background:#fff;font-size:13px;}
+.sbtn{padding:8px 15px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;}
+.sbtn-scan{background:linear-gradient(135deg,#0f3460,#533483);}
+.sbtn-bulk{background:#27ae60;}
+.col-hint{font-size:11px;color:#aaa;margin-top:6px;}
+.scan-res{margin-top:8px;font-size:12px;padding:8px 12px;border-radius:6px;display:none;}
+.scan-res.ok{background:#d5f5e3;color:#1e8449;} .scan-res.err{background:#fadbd8;color:#c0392b;}
+.prefilled{border-color:#27ae60 !important;background:#f0fff4;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-brand"><div class="brand-icon">🎓</div><h2>EduAdmin</h2><p>COLLEGE ERP</p></div>
+  <nav>
+    <div class="nav-section-label">Overview</div>
+    <a href="/admin"   class="nav-link"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/reports" class="nav-link"><span class="nav-icon">📊</span> Reports</a>
+    <div class="nav-section-label">Management</div>
+    <a href="/students" class="nav-link active"><span class="nav-icon">🎓</span> Students</a>
+    <a href="/faculty"  class="nav-link"><span class="nav-icon">👤</span> Faculty</a>
+    <a href="/subjects" class="nav-link"><span class="nav-icon">📚</span> Subjects</a>
+    <div class="nav-section-label">Schedule</div>
+    <a href="/timetable" class="nav-link"><span class="nav-icon">📅</span> Timetable</a>
+    <div class="nav-section-label">Attendance</div>
+    <a href="/attendance"      class="nav-link"><span class="nav-icon">✅</span> Mark Attendance</a>
+    <a href="/view_attendance" class="nav-link"><span class="nav-icon">📋</span> View Records</a>
+    <div class="nav-section-label">Account</div>
+    <a href="/admin_profile" class="nav-link"><span class="nav-icon">🔧</span> My Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="/logout">🚪 Logout</a></div>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <div><h1>Add Student</h1><div class="breadcrumb">Admin / Students / Add</div></div>
+    <div class="user-info"><div class="avatar">AD</div></div>
+  </div>
+  <div class="page-body">
+
+    <!-- Excel scan widget -->
+    <div class="scan-box">
+      <h4>📷 Scan Excel → Auto-Fill Form</h4>
+      <p>Upload an Excel file — row 1 data fills this form instantly. Use Bulk Import to add all rows at once.</p>
+      <div class="scan-row">
+        <input type="file" id="scanFile" accept=".xlsx,.xls">
+        <button class="sbtn sbtn-scan" type="button" onclick="scanExcel()">⚡ Scan &amp; Fill</button>
+        <form method="POST" action="/upload_students_excel" enctype="multipart/form-data" id="bulkForm">
+          <input type="file" name="excel_file" id="bulkFile" accept=".xlsx,.xls" style="display:none;" onchange="this.form.submit()">
+          <button type="button" class="sbtn sbtn-bulk" onclick="document.getElementById('bulkFile').click()">📥 Bulk Import All Rows</button>
+        </form>
+      </div>
+      <div class="col-hint">Excel columns (row 1 = headers): <strong>Name | Roll | Department | Year | Email | Password</strong></div>
+      <div class="scan-res" id="scanRes"></div>
+    </div>
+
+    <!-- Manual form -->
+    <div class="form-card">
+      <form method="POST" action="/save_student">
+        <div class="form-row">
+          <div><label>Full Name</label><input type="text" name="name" id="f_name" placeholder="e.g. Rahul Sharma" required></div>
+          <div><label>Roll Number</label><input type="text" name="roll" id="f_roll" placeholder="e.g. CS2024001" required></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>Department</label>
+            <select name="dept" id="f_dept" required>
+              <option value="" disabled selected>Select Department</option>
+              <option value="AIML">AIML</option>
+              <option value="AIDS">AIDS</option>
+              <option value="CS">CS</option>
+              <option value="IT">IT</option>
+            </select>
+          </div>
+          <div>
+            <label>Year</label>
+            <select name="year" id="f_year" required>
+              <option value="" disabled selected>Select Year</option>
+              <option value="1">Year 1</option><option value="2">Year 2</option>
+              <option value="3">Year 3</option><option value="4">Year 4</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div><label>Email</label><input type="email" name="email" id="f_email" placeholder="e.g. rahul@gmail.com"></div>
+          <div>
+            <label>Login Password</label>
+            <input type="text" name="password" id="f_pw" value="student123" placeholder="Default: student123">
+          </div>
+        </div>
+        <br>
+        <button class="btn" type="submit">💾 Save Student</button>
+        <a href="/students" style="margin-left:12px;color:#888;font-size:13px;">Cancel</a>
+      </form>
+    </div>
+
+    <div style="background:#ebf5fb;border-left:4px solid #2980b9;padding:12px 16px;border-radius:8px;font-size:13px;color:#1a5276;margin-top:14px;">
+      ℹ Students log in using their <strong>Roll Number</strong> as username and their password (default: <strong>student123</strong>).
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-fill from sessionStorage (set by scan on students list page)
+window.onload = function(){
+  const raw = sessionStorage.getItem('scan_student');
+  if(raw){
+    try{
+      const d = JSON.parse(raw);
+      fillForm(d);
+      sessionStorage.removeItem('scan_student');
+      show(document.getElementById('scanRes'),'ok','✅ Form auto-filled from Excel scan!');
+    }catch(e){}
+  }
+};
+
+async function scanExcel(){
+  const file = document.getElementById('scanFile').files[0];
+  const res  = document.getElementById('scanRes');
+  if(!file){ show(res,'err','Please select an Excel file first.'); return; }
+  const fd = new FormData(); fd.append('excel_scan',file); fd.append('module','student');
+  show(res,'ok','⏳ Reading Excel...');
+  try{
+    const r = await fetch('/scan_excel',{method:'POST',body:fd});
+    const j = await r.json();
+    if(j.error){ show(res,'err','❌ '+j.error); return; }
+    fillForm(j.data);
+    show(res,'ok','✅ Form filled from row 1! ('+j.total_rows+' total rows — use Bulk Import to add all)');
+  }catch(e){ show(res,'err','❌ '+e.message); }
+}
+
+function fillForm(d){
+  if(d.name)  { document.getElementById('f_name').value=d.name;  document.getElementById('f_name').classList.add('prefilled'); }
+  if(d.roll)  { document.getElementById('f_roll').value=d.roll;  document.getElementById('f_roll').classList.add('prefilled'); }
+  if(d.email) { document.getElementById('f_email').value=d.email; document.getElementById('f_email').classList.add('prefilled'); }
+  if(d.dept)  setSelect('f_dept',d.dept);
+  if(d.year)  setSelect('f_year',String(d.year));
+}
+function setSelect(id,val){ var s=document.getElementById(id); for(var i=0;i<s.options.length;i++){if(s.options[i].value.toLowerCase()===String(val).toLowerCase()){s.selectedIndex=i;return;}} }
+function show(el,type,msg){ el.style.display='block'; el.className='scan-res '+type; el.textContent=msg; }
+</script>
+</body>
+</html>

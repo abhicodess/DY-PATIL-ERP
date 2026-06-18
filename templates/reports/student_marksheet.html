@@ -1,0 +1,201 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Semester Marksheet{% endblock %}
+
+{% block report_styles %}
+.student-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #fcfcfc;
+    border: 1px solid #ddd;
+}
+.student-info-table td {
+    padding: 8px 12px;
+    border: 1px solid #eee;
+    font-size: 9.5pt;
+}
+.student-info-table td.label {
+    font-weight: bold;
+    color: #555;
+    background-color: #f7f7f7;
+    width: 18%;
+}
+.marksheet-table th {
+    background-color: #800000 !important;
+    color: white !important;
+    text-align: center !important;
+    font-size: 9pt;
+}
+.marksheet-table td {
+    text-align: center;
+}
+.marksheet-table td.left-align {
+    text-align: left;
+}
+.legend-section {
+    margin-top: 30px;
+    display: table;
+    width: 100%;
+    page-break-inside: avoid;
+}
+.legend-box {
+    display: table-cell;
+    width: 65%;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 8pt;
+    vertical-align: top;
+}
+.qr-box {
+    display: table-cell;
+    width: 35%;
+    text-align: right;
+    vertical-align: top;
+}
+.qr-img {
+    height: 90px;
+    width: 90px;
+    border: 1px solid #ddd;
+    padding: 3px;
+    border-radius: 4px;
+}
+.disclaimer-text {
+    margin-top: 15px;
+    font-size: 7.5pt;
+    color: #777;
+    text-align: center;
+    border-top: 1px dashed #ccc;
+    padding-top: 8px;
+}
+.marksheet-overall {
+    background-color: #f2f5f8 !important;
+    font-weight: bold;
+}
+{% endblock %}
+
+{% block report_header_title %}Statement of Marks{% endblock %}
+
+{% block report_meta %}
+<!-- Subtitle and simple details -->
+<div class="meta-row">
+    <div class="meta-label">Degree:</div>
+    <div class="meta-value">Bachelor of Engineering (B.E.)</div>
+    <div class="meta-label">Examination:</div>
+    <div class="meta-value">Semester End Examination</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<!-- Detailed Student Info Block -->
+<table class="student-info-table">
+    <tr>
+        <td class="label">Student Name:</td>
+        <td colspan="3"><strong>{{ student.name }}</strong></td>
+        <td class="label">PRN No:</td>
+        <td>{{ student.prn }}</td>
+    </tr>
+    <tr>
+        <td class="label">Roll Number:</td>
+        <td>{{ student.roll }}</td>
+        <td class="label">Department:</td>
+        <td>{{ student.department }}</td>
+        <td class="label">Division:</td>
+        <td>{{ student.division }}</td>
+    </tr>
+    <tr>
+        <td class="label">Semester:</td>
+        <td>{{ semester }}</td>
+        <td class="label">Academic Year:</td>
+        <td>{{ academic_year }}</td>
+        <td class="label">Status:</td>
+        <td>Regular</td>
+    </tr>
+</table>
+
+<!-- Marksheet Data Grid -->
+<table class="report-table marksheet-table">
+    <thead>
+        <tr>
+            <th style="width: 15%;">Subject Code</th>
+            <th style="width: 35%; text-align: left !important;">Subject Name</th>
+            <th style="width: 10%;">Internal</th>
+            <th style="width: 10%;">External</th>
+            <th style="width: 10%;">Total</th>
+            <th style="width: 8%;">Grade</th>
+            <th style="width: 12%;">Result</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in results %}
+        <tr>
+            <td>{{ row.subject_code }}</td>
+            <td class="left-align">{{ row.subject_name }}</td>
+            <td>{{ row.internal_marks or '-' }}</td>
+            <td>{{ row.external_marks or '-' }}</td>
+            <td><strong>{{ row.total_marks or '-' }}</strong> / {{ row.max_marks or '100' }}</td>
+            <td>{{ row.grade or '-' }}</td>
+            <td>
+                {% if row.result == 'PASS' %}
+                <span class="badge badge-green">PASS</span>
+                {% else %}
+                <span class="badge badge-red">FAIL</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        
+        <tr class="marksheet-overall">
+            <td colspan="2" class="left-align"><strong>OVERALL AGGREGATE</strong></td>
+            <td colspan="3">
+                <strong>{{ overall.total_marks }}</strong> / {{ overall.max_marks }}
+                ({{ "%.2f" | format(overall.percentage) }}%)
+            </td>
+            <td><strong>SGPA: {{ "%.2f" | format(overall.sgpa) }}</strong></td>
+            <td>
+                {% if overall.result == 'PASS' %}
+                <span class="badge badge-green" style="font-size: 9pt;">PASS</span>
+                {% elif overall.result == 'ATKT' %}
+                <span class="badge badge-amber" style="font-size: 9pt;">ATKT</span>
+                {% else %}
+                <span class="badge badge-red" style="font-size: 9pt;">FAIL</span>
+                {% endif %}
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="legend-section">
+    <div class="legend-box">
+        <strong>GRADE SCALE LEGEND:</strong>
+        <table style="width: 100%; border: none; margin-top: 5px; font-size: 7.5pt;">
+            <tr style="background: none;">
+                <td style="border: none; padding: 2px;"><strong>O</strong> (Outstanding): 90-100% (GP: 10)</td>
+                <td style="border: none; padding: 2px;"><strong>A+</strong> (Excellent): 80-89% (GP: 9)</td>
+            </tr>
+            <tr style="background: none;">
+                <td style="border: none; padding: 2px;"><strong>A</strong> (Very Good): 70-79% (GP: 8)</td>
+                <td style="border: none; padding: 2px;"><strong>B+</strong> (Good): 60-69% (GP: 7)</td>
+            </tr>
+            <tr style="background: none;">
+                <td style="border: none; padding: 2px;"><strong>B</strong> (Average): 50-59% (GP: 6)</td>
+                <td style="border: none; padding: 2px;"><strong>C</strong> (Pass): 40-49% (GP: 5)</td>
+            </tr>
+            <tr style="background: none;">
+                <td style="border: none; padding: 2px; color: red;" colspan="2"><strong>F</strong> (Fail): Below 40% (GP: 0) &bull; <strong>ATKT</strong>: Allowed To Keep Terms</td>
+            </tr>
+        </table>
+    </div>
+    <div class="qr-box">
+        {% if qr_code %}
+        <img src="data:image/png;base64,{{ qr_code }}" class="qr-img" alt="Verification QR Code"><br>
+        <span style="font-size: 7pt; color: #666; margin-right: 5px;">Scan to Verify Results</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="disclaimer-text avoid-break">
+    This is a computer-generated document. No signature is required. For official purposes, please use the certified copy issued by the University Examination Cell.
+</div>
+{% endblock %}

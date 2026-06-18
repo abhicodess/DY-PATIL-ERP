@@ -1,0 +1,172 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Grade Card Details</h3>
+        <p class="text-muted small mb-0">Detailed view of student performance</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form class="d-flex" method="GET">
+            <select name="semester" class="form-select form-select-sm" onchange="this.form.submit()">
+                {% for s in available_sems %}
+                <option value="{{ s }}" {% if s == semester %}selected{% endif %}>Semester {{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <button class="btn btn-dark shadow-sm btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+        <a href="{{ url_for('index') }}" class="btn btn-light shadow-sm btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Grade Card taking 8 columns -->
+    <div class="col-lg-8 mb-4">
+        <div class="grade-card-wrapper bg-white">
+            <div class="university-header">
+                <h2>D Y PATIL UNIVERSITY</h2>
+                <h6 class="text-muted tracking-widest uppercase" style="letter-spacing: 2px;">PUNE | AMBI</h6>
+                <div class="mt-3 badge bg-dark px-3 py-2 text-uppercase letter-spacing-1">Official Grade Card</div>
+            </div>
+            
+            <div class="row mb-4 bg-light p-3 rounded mx-0 border">
+                <div class="col-md-6">
+                    <p class="mb-1"><span class="text-muted">Candidate Name:</span> <strong class="ms-2 fs-6">{{ student.name }}</strong></p>
+                    <p class="mb-1"><span class="text-muted">PRN:</span> <strong class="ms-2">{{ student.prn }}</strong></p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-1"><span class="text-muted">Division:</span> <strong class="ms-2 badge bg-primary">{{ student.division }}</strong></p>
+                    <p class="mb-1"><span class="text-muted">Semester:</span> <strong class="ms-2 badge bg-secondary">{{ semester }}</strong></p>
+                </div>
+            </div>
+            
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered text-center align-middle mb-0">
+                    <thead style="background-color: #f1f5f9;">
+                        <tr>
+                            <th class="text-start">Course Title</th>
+                            <th>Credit</th>
+                            <th>Total (Out of 60)</th>
+                            <th>Grade Awarded</th>
+                            <th>Grade Point</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in results %}
+                        {% set grade, gp = r.grade_info %}
+                        <tr>
+                            <td class="text-start">
+                                <div class="fw-bold text-dark">{{ r.subject.subject_name }}</div>
+                                <div class="text-muted small">{{ r.subject.subject_code }}</div>
+                            </td>
+                            <td>{{ r.subject.credits }}</td>
+                            <td class="fw-bold {% if r.total_marks < 35 %}text-danger{% endif %}">{{ r.total_marks }}</td>
+                            <td><span class="badge {% if grade == 'F' %}bg-danger{% elif grade == 'A' %}bg-success{% elif grade == 'B' %}bg-primary{% else %}bg-warning text-dark{% endif %} fs-6">{{ grade }}</span></td>
+                            <td>{{ gp }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="py-4 text-muted">No result records available for this semester.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if results %}
+            <div class="d-flex flex-wrap border rounded">
+                <div class="p-3 border-end flex-grow-1 text-center bg-light rounded-start">
+                    <span class="text-muted small text-uppercase">Credits Earned</span>
+                    <h4 class="fw-bold mb-0 mt-1">{{ results|map(attribute='subject.credits')|sum }}</h4>
+                </div>
+                <div class="p-3 border-end flex-grow-1 text-center">
+                    <span class="text-muted small text-uppercase">SGPA</span>
+                    <h4 class="fw-bold mb-0 mt-1 text-primary">{{ summary.sgpa }}</h4>
+                </div>
+                <div class="p-3 border-end flex-grow-1 text-center">
+                    <span class="text-muted small text-uppercase">Percentage</span>
+                    <h4 class="fw-bold mb-0 mt-1">{{ summary.percentage }}%</h4>
+                </div>
+                <div class="p-3 flex-grow-1 text-center {% if summary.status == 'PASS' %}bg-success bg-opacity-10{% else %}bg-danger bg-opacity-10{% endif %} rounded-end">
+                    <span class="text-muted small text-uppercase">Result</span>
+                    <h4 class="fw-bold mb-0 mt-1 {% if summary.status == 'PASS' %}text-success{% else %}text-danger{% endif %}">{{ summary.status }}</h4>
+                </div>
+            </div>
+            {% endif %}
+            
+        </div>
+    </div>
+    
+    <!-- Analytics sidebar -->
+    <div class="col-lg-4">
+        <div class="custom-card shadow-sm mb-4">
+            <div class="custom-card-header">
+                Internal Assessment Breakdown
+            </div>
+            <div class="custom-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 text-center" style="font-size: 0.85rem">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-start ps-3">Sub</th>
+                                <th>Assign(5)</th>
+                                <th>Attdn(5)</th>
+                                <th>UT(20)</th>
+                                <th>MSE(20)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
+                            <tr>
+                                <td class="text-start ps-3 fw-bold">{{ r.subject.subject_code[-3:] }}</td>
+                                <td>{{ r.assignment_marks }}</td>
+                                <td>{{ r.attendance_marks }}</td>
+                                <td>{{ r.ut_marks }}</td>
+                                <td>{{ r.mse_marks }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="custom-card shadow-sm mb-4">
+            <div class="custom-card-header">Subject Performance</div>
+            <div class="custom-card-body p-3">
+                <canvas id="subjectMarksChart" height="250"></canvas>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if results %}
+<script>
+    const labels = {{ charts_data.labels | tojson }};
+    const totals = {{ charts_data.totals | tojson }};
+    
+    new Chart(document.getElementById('subjectMarksChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Marks (Out of 60)',
+                data: totals,
+                backgroundColor: 'rgba(67, 97, 238, 0.7)',
+                borderColor: 'rgba(67, 97, 238, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 60 } },
+            plugins: { legend: { display: false } }
+        }
+    });
+</script>
+{% endif %}
+
+{% endblock %}

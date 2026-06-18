@@ -1,0 +1,1658 @@
+[
+    {
+        "endpoint": "static",
+        "route": "/static/<path:filename>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "features.admin_audit_logs",
+        "route": "/admin_audit_logs",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.api_notifications",
+        "route": "/api/notifications",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.admin_notifications",
+        "route": "/admin_notifications",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.delete_notification",
+        "route": "/delete_notification/<int:nid>",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.admin_backup",
+        "route": "/admin_backup",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.api_v1_stats",
+        "route": "/api/v1/stats",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "features.api_v1_departments",
+        "route": "/api/v1/departments",
+        "blueprint": "features",
+        "exists": true
+    },
+    {
+        "endpoint": "results_bp.results_dashboard",
+        "route": "/results_dashboard",
+        "blueprint": "results_bp",
+        "exists": true
+    },
+    {
+        "endpoint": "results_bp.results_analytics",
+        "route": "/results_analytics",
+        "blueprint": "results_bp",
+        "exists": true
+    },
+    {
+        "endpoint": "results_bp.results_reportcard",
+        "route": "/results_reportcard/<roll>",
+        "blueprint": "results_bp",
+        "exists": true
+    },
+    {
+        "endpoint": "results_bp.results_export_excel",
+        "route": "/results_export_excel",
+        "blueprint": "results_bp",
+        "exists": true
+    },
+    {
+        "endpoint": "results_bp.results_chart_data",
+        "route": "/results_chart_data",
+        "blueprint": "results_bp",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_import",
+        "route": "/cumulative_import",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_commit",
+        "route": "/cumulative_commit",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_delete_row",
+        "route": "/cumulative_delete_row",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_clear_all",
+        "route": "/cumulative_clear_all",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_report",
+        "route": "/cumulative_report",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative.cumulative_export",
+        "route": "/cumulative_export",
+        "blueprint": "cumulative",
+        "exists": true
+    },
+    {
+        "endpoint": "sms.get_sms_history",
+        "route": "/api/sms/history",
+        "blueprint": "sms",
+        "exists": true
+    },
+    {
+        "endpoint": "sms.get_templates",
+        "route": "/api/sms/templates",
+        "blueprint": "sms",
+        "exists": true
+    },
+    {
+        "endpoint": "sms.get_analytics",
+        "route": "/api/sms/analytics",
+        "blueprint": "sms",
+        "exists": true
+    },
+    {
+        "endpoint": "sms.send_test_sms",
+        "route": "/api/sms/send-test",
+        "blueprint": "sms",
+        "exists": true
+    },
+    {
+        "endpoint": "otp.request_otp",
+        "route": "/api/auth/request-otp",
+        "blueprint": "otp",
+        "exists": true
+    },
+    {
+        "endpoint": "otp.verify_otp",
+        "route": "/api/auth/verify-otp",
+        "blueprint": "otp",
+        "exists": true
+    },
+    {
+        "endpoint": "parent_comm.department_broadcast",
+        "route": "/api/parent/broadcast",
+        "blueprint": "parent_comm",
+        "exists": true
+    },
+    {
+        "endpoint": "parent_comm.get_parent_mapping",
+        "route": "/api/parent/mapping/<int:student_id>",
+        "blueprint": "parent_comm",
+        "exists": true
+    },
+    {
+        "endpoint": "parent_comm.add_parent_contact",
+        "route": "/api/parent/add-parent",
+        "blueprint": "parent_comm",
+        "exists": true
+    },
+    {
+        "endpoint": "parent_comm.list_defaulters",
+        "route": "/api/parent/defaulters",
+        "blueprint": "parent_comm",
+        "exists": true
+    },
+    {
+        "endpoint": "parent_comm.notify_defaulters",
+        "route": "/api/parent/notify-defaulters",
+        "blueprint": "parent_comm",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.faculty_assignments",
+        "route": "/admin/faculty_assignments",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.auto_link_faculty",
+        "route": "/admin/auto_link_faculty",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.fix_student_divisions",
+        "route": "/admin/fix_student_divisions",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.attendance_portal",
+        "route": "/faculty/attendance_portal",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.create_session_from_slot",
+        "route": "/faculty/create_session_from_slot/<int:slot_id>",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.create_session",
+        "route": "/faculty/create_session",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.new_session",
+        "route": "/faculty/new_session",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.marking_session",
+        "route": "/faculty/marking_session/<int:session_id>",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.api_save_attendance",
+        "route": "/faculty/api/save_attendance",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.submit_session",
+        "route": "/faculty/submit_session",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.session_history",
+        "route": "/faculty/session_history",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.export_session",
+        "route": "/faculty/export_session/<int:session_id>",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.my_students",
+        "route": "/faculty/my_students",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_att.faculty_student_report",
+        "route": "/faculty/student_report/<int:student_id>",
+        "blueprint": "faculty_att",
+        "exists": true
+    },
+    {
+        "endpoint": "timetable_v2.timetable_view",
+        "route": "/timetable_v2",
+        "blueprint": "timetable_v2",
+        "exists": true
+    },
+    {
+        "endpoint": "timetable_v2.api_add_slot",
+        "route": "/api/add_time_slot",
+        "blueprint": "timetable_v2",
+        "exists": true
+    },
+    {
+        "endpoint": "timetable_v2.api_copy_day",
+        "route": "/api/copy_day",
+        "blueprint": "timetable_v2",
+        "exists": true
+    },
+    {
+        "endpoint": "admin_intel.admin_attendance_intelligence",
+        "route": "/admin/intelligence",
+        "blueprint": "admin_intel",
+        "exists": true
+    },
+    {
+        "endpoint": "admin_intel.admin_session_detail",
+        "route": "/admin/session-detail/<int:sid>",
+        "blueprint": "admin_intel",
+        "exists": true
+    },
+    {
+        "endpoint": "admin_intel.admin_faculty_logs",
+        "route": "/admin/faculty-logs",
+        "blueprint": "admin_intel",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.auth.login",
+        "route": "/api/v1/auth/login",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.auth.logout",
+        "route": "/api/v1/auth/logout",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.auth.get_current_user",
+        "route": "/api/v1/auth/me",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.faculty.get_timetable",
+        "route": "/api/v1/faculty/timetable",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.faculty.get_dashboard_summary",
+        "route": "/api/v1/faculty/dashboard/summary",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.attendance.initialize_session",
+        "route": "/api/v1/attendance/initialize",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "api.v1.attendance.submit_attendance",
+        "route": "/api/v1/attendance/submit",
+        "blueprint": "api",
+        "exists": true
+    },
+    {
+        "endpoint": "route_not_found",
+        "route": "/missing-route",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "health_check",
+        "route": "/health",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "index",
+        "route": "/",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "login",
+        "route": "/faculty_login",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "login",
+        "route": "/admin_login",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "login",
+        "route": "/login",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "logout",
+        "route": "/logout",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "backup",
+        "route": "/admin/backup",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "reset_system",
+        "route": "/admin/reset",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin",
+        "route": "/admin",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_dashboard",
+        "route": "/admin_dashboard",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "students",
+        "route": "/students",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "add_student",
+        "route": "/add_student",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_student",
+        "route": "/save_student",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "edit_student",
+        "route": "/edit_student",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_student",
+        "route": "/delete_student",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_students_excel",
+        "route": "/export_students_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_students_excel",
+        "route": "/import_students_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty",
+        "route": "/faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_students",
+        "route": "/faculty_students",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "add_faculty",
+        "route": "/add_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_faculty",
+        "route": "/save_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "edit_faculty",
+        "route": "/edit_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_faculty",
+        "route": "/delete_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_faculty_excel",
+        "route": "/export_faculty_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_faculty_excel",
+        "route": "/import_faculty_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "subjects",
+        "route": "/subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "add_subject",
+        "route": "/add_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_subject",
+        "route": "/save_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "edit_subject",
+        "route": "/edit_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_subject",
+        "route": "/delete_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_subjects_excel",
+        "route": "/export_subjects_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance",
+        "route": "/attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "mark_attendance",
+        "route": "/mark_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_attendance",
+        "route": "/save_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_bulk_attendance",
+        "route": "/save_bulk_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_bulk",
+        "route": "/attendance_bulk",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_backup",
+        "route": "/attendance_backup",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_restore",
+        "route": "/attendance_restore",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_reset",
+        "route": "/attendance_reset",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_students_by_dept",
+        "route": "/api/students_by_dept",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "view_attendance",
+        "route": "/view_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "edit_attendance",
+        "route": "/edit_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_attendance",
+        "route": "/delete_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_attendance_summary_row",
+        "route": "/delete_attendance_summary_row",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "clear_student_attendance_summary",
+        "route": "/clear_student_attendance_summary",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "clear_all_attendance_summary",
+        "route": "/clear_all_attendance_summary",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_attendance_excel",
+        "route": "/export_attendance_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_attendance_report_excel",
+        "route": "/export_attendance_report_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_roll_call",
+        "route": "/attendance_roll_call",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_attendance_profile",
+        "route": "/student/<int:student_id>/attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_logs",
+        "route": "/admin/faculty_sessions",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "audit_session_detail_legacy",
+        "route": "/admin/session/<int:sid>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_logs_legacy",
+        "route": "/admin/faculty_logs",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_insights",
+        "route": "/admin/attendance_intelligence",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_export",
+        "route": "/export_attendance_report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "broadcast_sms",
+        "route": "/api/v1/broadcast_sms",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "send_shortage_notices",
+        "route": "/send_shortage_notices",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "download_attendance_template",
+        "route": "/download_attendance_template",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_attendance_excel_v2",
+        "route": "/import_attendance_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_final_attendance_report",
+        "route": "/import_final_attendance_report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_upload_backup",
+        "route": "/attendance_upload_backup/<int:batch_id>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_upload_restore",
+        "route": "/attendance_upload_restore/<int:batch_id>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_analytics",
+        "route": "/attendance_analytics",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "consolidated_report",
+        "route": "/consolidated_report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_report",
+        "route": "/attendance_report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "timetable",
+        "route": "/timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_timetable",
+        "route": "/save_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "edit_timetable",
+        "route": "/edit_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_timetable",
+        "route": "/delete_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "clear_timetable",
+        "route": "/clear_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "clean_timetable",
+        "route": "/clean_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "duplicate_timetable",
+        "route": "/duplicate_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "move_timetable",
+        "route": "/move_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_timetable_excel",
+        "route": "/export_timetable_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_timetable_v2",
+        "route": "/import_timetable_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_add_time_slot",
+        "route": "/api/add_time_slot",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_copy_day",
+        "route": "/api/copy_day",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_update_profile",
+        "route": "/admin_update_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "check_conflicts_api",
+        "route": "/check_conflicts_api",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "reports",
+        "route": "/reports",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_profile",
+        "route": "/admin_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_dashboard",
+        "route": "/faculty_dashboard",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_attendance",
+        "route": "/faculty_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_get_students_for_subject",
+        "route": "/faculty_get_students_for_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_get_attendance",
+        "route": "/faculty_get_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_portal",
+        "route": "/faculty_portal",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_save_attendance",
+        "route": "/faculty_save_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_edit_attendance",
+        "route": "/faculty_edit_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_delete_attendance",
+        "route": "/faculty_delete_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_import_attendance",
+        "route": "/faculty_import_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_marks",
+        "route": "/faculty_marks",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_save_marks",
+        "route": "/faculty_save_marks",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_students_by_subject",
+        "route": "/faculty/api/students_by_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_delete_marks",
+        "route": "/faculty_delete_marks",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_notices",
+        "route": "/faculty_notices",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_save_notice",
+        "route": "/faculty_save_notice",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_delete_notice",
+        "route": "/faculty_delete_notice",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_notes",
+        "route": "/faculty_notes",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_save_note",
+        "route": "/faculty_save_note",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_edit_note",
+        "route": "/faculty_edit_note",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_delete_note",
+        "route": "/faculty_delete_note",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_timetable",
+        "route": "/faculty_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_profile",
+        "route": "/faculty_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_update_profile",
+        "route": "/faculty_update_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_dashboard",
+        "route": "/student_dashboard",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_profile",
+        "route": "/student_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_settings",
+        "route": "/student_settings",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_notes",
+        "route": "/student_notes",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_notices",
+        "route": "/student_notices",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_analysis",
+        "route": "/student_analysis",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_attendance",
+        "route": "/student_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_marks",
+        "route": "/student_marks",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_timetable",
+        "route": "/student_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_update_profile",
+        "route": "/student_update_profile",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "upload_photo",
+        "route": "/upload_photo/<role>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_attendance_excel_admin",
+        "route": "/import_attendance_excel_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_import_attendance_v2",
+        "route": "/faculty_import_attendance_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_faculty_details",
+        "route": "/import_faculty_details",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_students_v2",
+        "route": "/import_students_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_subjects_v2",
+        "route": "/import_subjects_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_marks_v2",
+        "route": "/import_marks_v2",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "fix_students",
+        "route": "/fix_students",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "fix_faculty",
+        "route": "/fix_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "bulk_delete_subjects",
+        "route": "/bulk_delete_subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "fix_subjects",
+        "route": "/fix_subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "fix_attendance",
+        "route": "/fix_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_students_smart",
+        "route": "/import_students_smart",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_faculty_smart",
+        "route": "/import_faculty_smart",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "forgot_password",
+        "route": "/forgot_password",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "reset_password",
+        "route": "/reset_password",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "bulk_delete_students",
+        "route": "/bulk_delete_students",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "bulk_delete_faculty",
+        "route": "/bulk_delete_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_marks_excel",
+        "route": "/export_marks_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_marks_admin",
+        "route": "/export_marks_admin",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "search",
+        "route": "/search",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "search_faculty",
+        "route": "/search_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "shortage_report",
+        "route": "/shortage_report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "trigger_shortage_alert",
+        "route": "/trigger_shortage_alert",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_shortage_excel",
+        "route": "/export_shortage_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "report_card",
+        "route": "/report_card/<int:student_id>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "report_card_student",
+        "route": "/report_card_student",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "results_reportcard",
+        "route": "/results_reportcard/<roll>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_results",
+        "route": "/admin_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_save_result",
+        "route": "/admin_save_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_edit_result",
+        "route": "/admin_edit_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_delete_result",
+        "route": "/admin_delete_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_publish_results",
+        "route": "/admin_publish_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_unpublish_results",
+        "route": "/admin_unpublish_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_import_results",
+        "route": "/admin_import_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_results_excel",
+        "route": "/export_results_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_import_sem7",
+        "route": "/admin_import_sem7",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_results",
+        "route": "/faculty_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_leaves",
+        "route": "/faculty_leaves",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_apply_leave",
+        "route": "/faculty_apply_leave",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_leave_requests",
+        "route": "/admin/faculty_leave_requests",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_approve_faculty_leave",
+        "route": "/admin/approve_faculty_leave",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_save_result",
+        "route": "/faculty_save_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_edit_result",
+        "route": "/faculty_edit_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_delete_result",
+        "route": "/faculty_delete_result",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_results",
+        "route": "/student_results",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_results_download",
+        "route": "/student_results_download",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_leave",
+        "route": "/student_leave",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_leaves",
+        "route": "/admin_leaves",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "update_leave",
+        "route": "/update_leave",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "analytics_dashboard",
+        "route": "/analytics",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "messages_inbox",
+        "route": "/messages",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "messages_sent",
+        "route": "/messages/sent",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "messages_compose",
+        "route": "/messages/compose",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "messages_delete",
+        "route": "/messages/delete",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "analytics",
+        "route": "/analytics",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "calendar_view",
+        "route": "/calendar",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "save_event",
+        "route": "/save_event",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_event",
+        "route": "/delete_event",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "extract_subjects_from_timetable",
+        "route": "/extract_subjects_from_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_subjects_from_tt",
+        "route": "/import_subjects_from_tt",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "delete_all_subjects",
+        "route": "/delete_all_subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "download_subjects_template",
+        "route": "/download_subjects_template",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "messages_search",
+        "route": "/messages/search",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "scan_excel",
+        "route": "/scan_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "check_att_duplicate",
+        "route": "/check_att_duplicate",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "cumulative_marks",
+        "route": "/cumulative_marks",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "faculty_cumulative",
+        "route": "/faculty_cumulative",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_cumulative_excel",
+        "route": "/export_cumulative_excel",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "timetable_share",
+        "route": "/timetable_share",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "timetable_send_all",
+        "route": "/timetable_send_all",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "assign_subjects",
+        "route": "/assign_subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "assign_subject_to_faculty",
+        "route": "/assign_subject_to_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "unassign_subject",
+        "route": "/unassign_subject",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "auto_assign_subjects",
+        "route": "/auto_assign_subjects",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "send_classlist",
+        "route": "/send_classlist",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_faculty_assignments_get",
+        "route": "/admin/faculty_assignments",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_faculty_assignments_post",
+        "route": "/admin/faculty_assignments",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "auto_link_faculty",
+        "route": "/admin/auto_link_faculty",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_management",
+        "route": "/attendance_management",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_dashboard",
+        "route": "/attendance_dashboard",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "attendance_dashboard_data",
+        "route": "/attendance_dashboard_data",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_attendance_dashboard",
+        "route": "/student_attendance_dashboard",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "import_final_pdf",
+        "route": "/import_final_pdf",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "start_qr_attendance",
+        "route": "/api/start_qr_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "mark_qr_attendance",
+        "route": "/api/mark_qr_attendance",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_student_notifications",
+        "route": "/api/student_notifications",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "export_timetable_pdf",
+        "route": "/export_timetable_pdf",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_faculty_workload",
+        "route": "/api/faculty_workload",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_timetable_analytics",
+        "route": "/api/timetable_analytics",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_faculty_send_timetable",
+        "route": "/api/faculty_send_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_admin_send_timetable",
+        "route": "/api/admin_send_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "student_notifications",
+        "route": "/student_notifications",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_attendance_mark",
+        "route": "/attendance/mark",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_attendance_summary",
+        "route": "/attendance/summary",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_attendance_report",
+        "route": "/attendance/report",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_student_prediction",
+        "route": "/api/student_prediction",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "request_correction",
+        "route": "/request_correction",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "admin_audit_logs",
+        "route": "/admin_audit_logs",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "share_timetable",
+        "route": "/share/timetable/<int:fid>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_mark_read",
+        "route": "/api/messages/mark_read/<int:mid>",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_send_timetable",
+        "route": "/api/send_timetable",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_export_students",
+        "route": "/api/students/export",
+        "blueprint": null,
+        "exists": true
+    },
+    {
+        "endpoint": "api_save_slot",
+        "route": "/api/save_timetable_slot",
+        "blueprint": null,
+        "exists": true
+    }
+]

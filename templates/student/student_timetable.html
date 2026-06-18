@@ -1,0 +1,66 @@
+{% extends "common/base.html" %}
+
+{% block page_title %}My Timetable{% endblock %}
+
+{% block content %}
+<div class="ph">
+    <div class="ph-title">
+        <div class="ct">Weekly Schedule</div>
+        <div class="ph-sub">{{ student.department }} - Division {{ student.division }}</div>
+    </div>
+</div>
+
+<div class="cf mb20">
+    <div class="alert al-info">
+        <i class="fas fa-circle-info"></i> This is your current weekly timetable as published by the department.
+    </div>
+</div>
+
+<div class="grid g1">
+    <div class="card">
+        <div class="cb p0">
+            <div style="overflow-x: auto;">
+                <table class="tbl" style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Time</th>
+                            {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                            <th>{{ day }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot in time_slots %}
+                        <tr>
+                            <td class="mono small" style="background: var(--bg-hover);">{{ slot }}</td>
+                            {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                            <td>
+                                {% set slot_entries = grid[day].get(slot, []) %}
+                                {% for item in slot_entries %}
+                                    <div class="tt-slot {{ 'lab' if item.slot_type == 'Practical' else 'theory' }}" 
+                                         style="border-left: 4px solid {{ item.color or 'var(--vi)' }}; padding: 8px; background: rgba(124, 58, 237, 0.05); border-radius: 4px;">
+                                        <div style="font-weight: 600; font-size: 0.9rem;">{{ item.subject }}</div>
+                                        <div class="small t-nn">{{ item.teacher }}</div>
+                                        <div class="small t-nn"><i class="fas fa-location-dot"></i> {{ item.room }}</div>
+                                        <div class="tag t-vi small mt4">{{ item.slot_type }}</div>
+                                    </div>
+                                {% else %}
+                                <div style="color: var(--t-nn); font-style: italic; font-size: 0.8rem;">-</div>
+                                {% endfor %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.tt-slot { margin-bottom: 5px; transition: transform 0.2s; cursor: default; }
+.tt-slot:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: rgba(124, 58, 237, 0.1) !important; }
+.mt4 { margin-top: 4px; display: inline-block; }
+</style>
+{% endblock %}

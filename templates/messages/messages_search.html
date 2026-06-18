@@ -1,0 +1,96 @@
+{% extends "common/base.html" %}
+{% block title %}Find People{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Messages{% endblock %}
+{% block av_color %}{% if session.role=="faculty" %}#7C3AED{% elif session.role=="student" %}#059669{% else %}#2563EB{% endif %}{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}
+{% block user_role %}{{ session.role|title }}{% endblock %}
+{% block sidebar_nav %}
+<div class="sb-sec">Messages</div>
+<a href="/messages" class="sb-link"><i class="fas fa-inbox"></i> Inbox</a>
+<a href="/messages/sent" class="sb-link"><i class="fas fa-paper-plane"></i> Sent</a>
+<a href="/messages/compose" class="sb-link"><i class="fas fa-pen-to-square"></i> Compose</a>
+<a href="/messages/search" class="sb-link active"><i class="fas fa-magnifying-glass"></i> Find People</a>
+{% endblock %}
+{% block page_title %}Find People{% endblock %}
+{% block breadcrumb %}<a href="/messages">Messages</a> / Find People{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Find & Message</div></div>
+<div class="card mb16 fu fu1">
+  <div class="cb">
+    <form method="GET" action="/messages/search">
+      <div class="toolbar">
+        <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:8px 14px;max-width:480px">
+          <i class="fas fa-magnifying-glass" style="color:var(--ink4);font-size:13px"></i>
+          <input type="text" name="q" value="{{ q }}" placeholder="Search by student name, roll number, faculty name, or email…"
+                 style="border:none;background:none;font-size:13px;outline:none;width:100%;font-family:var(--font)" autofocus>
+        </div>
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i> Search</button>
+      </div>
+    </form>
+    <div style="font-size:12px;color:var(--ink4);margin-top:6px">
+      <i class="fas fa-lightbulb"></i> Search by: student PRN Number (e.g. <strong>SOE2022B</strong>), name (e.g. <strong>Riya</strong>), faculty email, or department
+    </div>
+  </div>
+</div>
+
+{% if q %}
+  {% if results %}
+  <div class="card fu fu2"><div class="cb p0">
+    <div class="cb" style="padding-bottom:0"><span style="font-size:12px;font-weight:600;color:var(--ink3)">{{ results|length }} people found for "{{ q }}"</span></div>
+    <table class="tbl">
+      <thead><tr><th>Person</th><th>Role</th><th>ID / Roll</th><th>Department</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td><div class="flex-ac gap8">
+            <div class="av av-sm" style="background:{% if r.role=='student' %}#059669{% else %}#7C3AED{% endif %}">{{ r.name[0]|upper }}</div>
+            <strong>{{ r.name }}</strong>
+          </div></td>
+          <td><span class="tag {% if r.role=='student' %}t-gr{% else %}t-vi{% endif %}">{{ r.role|title }}</span></td>
+          <td class="mono" style="font-size:12px;color:var(--ink3)">{{ r.identifier }}</td>
+          <td><span class="tag t-bl">{{ r.extra }}</span></td>
+          <td>
+            <a href="/messages/compose?to_role={{ r.role }}&to_id={{ r.id }}" class="btn btn-dark btn-sm">
+              <i class="fas fa-paper-plane"></i> Send Message
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+  {% else %}
+  <div class="card fu fu2"><div class="cb">
+    <div class="empty-state" style="padding:40px">
+      <i class="fas fa-user-slash"></i>
+      <p>No one found for "{{ q }}"</p>
+      <p style="font-size:12px;margin-top:6px">Try searching by PRN Number, name, or email</p>
+    </div>
+  </div></div>
+  {% endif %}
+{% else %}
+<div class="g2 fu fu2">
+  <div class="card">
+    <div class="ch"><div class="ct">Search Examples</div></div>
+    <div class="cb">
+      <div class="notice"><div class="n-title">By PRN Number</div><div class="n-body">Type the student's PRN Number — e.g. <code>SOE2022B0308001</code> or just <code>SOE2022</code></div></div>
+      <div class="notice"><div class="n-title">By Name</div><div class="n-body">Type first or last name — e.g. <code>Riya</code> or <code>Sharma</code></div></div>
+      <div class="notice"><div class="n-title">By Faculty Email</div><div class="n-body">Type email prefix — e.g. <code>nirmala</code> or <code>@dypatil</code></div></div>
+      <div class="notice"><div class="n-title">By Department</div><div class="n-body">Type dept name — e.g. <code>AIDS</code> or <code>AIML</code></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Recent Contacts</div></div>
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>Role</th><th>Action</th></tr></thead>
+        <tbody>
+          {% set sent = [] %}
+          <tr><td colspan="3"><div class="empty-state" style="padding:24px"><p>Send your first message to see contacts here</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

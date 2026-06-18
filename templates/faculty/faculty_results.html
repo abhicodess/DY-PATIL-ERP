@@ -1,0 +1,215 @@
+{% extends "common/base.html" %}
+{% block title %}My Results{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#059669{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}My Results{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Results{% endblock %}
+{% block content %}
+
+{% if request.args.get('success') %}<div class="notice notice-ok mb16"><i class="fas fa-check-circle"></i> Result saved successfully.</div>{% endif %}
+{% if request.args.get('updated') %}<div class="notice notice-ok mb16"><i class="fas fa-check-circle"></i> Result updated.</div>{% endif %}
+{% if request.args.get('error') %}<div class="notice notice-err mb16"><i class="fas fa-exclamation-circle"></i> {{ request.args.get('error')|replace('_',' ')|title }}</div>{% endif %}
+
+<div class="ph fu">
+  <div>
+    <div class="ph-title">My Results</div>
+    <div class="ph-sub">Results you have entered for your subjects</div>
+  </div>
+  <div class="ph-actions">
+    <button class="btn btn-dark btn-sm" onclick="openModal('addModal')"><i class="fas fa-plus"></i> Add Result</button>
+  </div>
+</div>
+
+<div class="card fu fu1 mb16">
+  <div class="ch"><div class="ct">Filter</div></div>
+  <div class="cb">
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div>
+        <div style="font-size:11px;color:var(--ink4);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Subject</div>
+        <select name="subject" class="form-sel">
+          <option value="">All My Subjects</option>
+          {% for s in my_subjects %}<option value="{{ s.name }}" {% if subj_filt==s.name %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--ink4);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Semester</div>
+        <select name="semester" class="form-sel">
+          <option value="">All Semesters</option>
+          {% for s in SEMESTERS %}<option value="{{ s }}" {% if sem_filt==s %}selected{% endif %}>Sem {{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i> Filter</button>
+      {% if subj_filt or sem_filt %}<a href="/faculty_results" class="btn btn-out btn-sm"><i class="fas fa-times"></i> Clear</a>{% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card fu fu2">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Results</div>
+      <div class="cs">{{ results|length }} record{% if results|length!=1 %}s{% endif %}{% if subj_filt or sem_filt %} — filtered{% endif %}</div>
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr><th>#</th><th>Student</th><th>Subject</th><th>Sem</th><th>Marks</th><th>%</th><th>Grade</th><th>Result</th><th>Exam Type</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% if not results %}
+        <tr><td colspan="11"><div class="empty-state"><i class="fas fa-trophy"></i><p>No results yet. Click <strong>Add Result</strong> to start.</p></div></td></tr>
+        {% endif %}
+        {% for r in results %}
+        {% set p = (r.marks/r.total*100)|round(1) if r.total else 0 %}
+        <tr>
+          <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="av av-sm" style="background:{% if loop.index0%5==0%}#2563EB{%elif loop.index0%5==1%}#7C3AED{%elif loop.index0%5==2%}#059669{%elif loop.index0%5==3%}#D97706{%else%}#0891B2{%endif%}">{{ r.student_name[0]|upper }}</div>
+              <div>
+                <div style="font-weight:600;font-size:13px">{{ r.student_name }}</div>
+                <div style="font-size:11px;color:var(--ink4)">{{ r.roll or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:13px">{{ r.subject }}</td>
+          <td><span class="tag t-bl">{{ r.semester }}</span></td>
+          <td style="font-weight:600">{{ r.marks|int if r.marks==r.marks|int else r.marks }}<span style="color:var(--ink4);font-weight:400">/{{ r.total|int }}</span></td>
+          <td>
+            <div style="font-weight:600;font-size:13px">{{ p }}%</div>
+            <div class="prog-track" style="margin-top:4px;width:40px">
+              <div class="prog-bar {% if p>=60 %}pb-gr{% elif p>=40 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ p }}%"></div>
+            </div>
+          </td>
+          <td>
+            {% set gc = '#1a7a4a' if p>=90 else ('#059669' if p>=75 else ('#0891B2' if p>=60 else ('#2563EB' if p>=50 else ('#D97706' if p>=40 else '#DC2626')))) %}
+            <div style="width:26px;height:26px;border-radius:50%;background:{{ gc }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ r.grade or '?' }}</div>
+          </td>
+          <td>{% if r.result=='Pass' %}<span class="tag t-gr">Pass</span>{% else %}<span class="tag t-re">Fail</span>{% endif %}</td>
+          <td style="font-size:12px;color:var(--ink3)">{{ r.exam_type or '—' }}</td>
+          <td>{% if r.published %}<span class="tag t-bl"><i class="fas fa-lock" style="font-size:10px"></i> Live</span>{% else %}<span class="tag t-am">Draft</span>{% endif %}</td>
+          <td>
+            {% if not r.published %}
+            <div class="flex-ac gap4">
+              <button class="icon-btn" title="Edit Component Details" onclick="openEdit({{ r.id }}, '{{ r.subject|replace("'","\\'") }}', '{{ r.semester }}', {{ r.assignment_marks|default(0) }}, {{ r.attendance_marks|default(0) }}, {{ r.teacher_assessment|default(0) }}, {{ r.ut_marks|default(0) }}, {{ r.mse_marks|default(0) }}, {{ r.tw_marks|default(0) }}, {{ r.pr_or_marks|default(0) }}, '{{ r.exam_type|replace("'","\\'") }}')"><i class="fas fa-pen"></i></button>
+              <form method="post" action="/faculty_delete_result" style="display:inline">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="result_id" value="{{ r.id }}">
+                <button type="submit" class="icon-btn icon-btn-red" title="Delete" onclick="return confirm('Delete this result?')"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+            {% else %}
+            <span style="font-size:11px;color:var(--ink4)">Published — locked</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── Add Modal ───────────────────────────────────────────── #}
+<div id="addModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('addModal')">
+  <div class="modal-bx">
+    <div class="modal-hd"><span>Add Result</span><button class="modal-cls" onclick="closeModal('addModal')"><i class="fas fa-times"></i></button></div>
+    <form method="post" action="/faculty_save_result">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="form-grid2">
+        <div class="fg">
+          <label class="fl">Student Name *</label>
+          <input type="text" name="student_name" required class="form-inp" list="stu-list" placeholder="Type to search…">
+          <datalist id="stu-list">{% for s in students %}<option value="{{ s.name }}">{{ s.roll }}</option>{% endfor %}</datalist>
+        </div>
+        <div class="fg">
+          <label class="fl">Subject *</label>
+          <input type="text" name="subject" required class="form-inp" list="subj-list">
+          <datalist id="subj-list">{% for s in my_subjects %}<option value="{{ s.name }}">{% endfor %}</datalist>
+        </div>
+        <div class="fg"><label class="fl">Semester</label><select name="semester" class="form-sel">{% for s in SEMESTERS %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}</select></div>
+        <div class="fg"><label class="fl">Exam Type</label><select name="exam_type" class="form-sel"><option>Semester Exam</option><option>Unit Test 1</option><option>Unit Test 2</option><option>Practical</option><option>Internal</option></select></div>
+      </div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-chart-pie"></i> Marks Breakdown (60 Marks Aggregate)</div>
+          <div class="form-grid2">
+            <div class="fg"><label class="fl">Assignment</label><input type="number" name="assignment_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Attendance</label><input type="number" name="attendance_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Teacher Assessment</label><input type="number" name="teacher_assessment" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Unit Test / UT</label><input type="number" name="ut_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Mid-Sem / MSE</label><input type="number" name="mse_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Term Work / TW</label><input type="number" name="tw_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+            <div class="fg" style="grid-column: span 2;"><label class="fl">Practical / PR / OR</label><input type="number" name="pr_or_marks" step="0.01" min="0" value="0" class="form-inp"></div>
+          </div>
+      </div>
+      <input type="hidden" name="total" value="60">
+      <div class="modal-ft">
+        <button type="button" class="btn btn-out btn-sm" onclick="closeModal('addModal')">Cancel</button>
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Modal ──────────────────────────────────────────── #}
+<div id="editModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('editModal')">
+  <div class="modal-bx">
+    <div class="modal-hd"><span>Edit Result</span><button class="modal-cls" onclick="closeModal('editModal')"><i class="fas fa-times"></i></button></div>
+    <form method="post" action="/faculty_edit_result">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="result_id" id="edit_id">
+      <div class="form-grid2">
+        <div class="fg" style="grid-column:span 2"><label class="fl">Subject</label><input type="text" name="subject" id="edit_subject" class="form-inp" list="subj-list"></div>
+        <div class="fg"><label class="fl">Semester</label><select name="semester" id="edit_semester" class="form-sel">{% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}</select></div>
+        <div class="fg"><label class="fl">Exam Type</label><select name="exam_type" id="edit_examtype" class="form-sel"><option>Semester Exam</option><option>Unit Test 1</option><option>Unit Test 2</option><option>Practical</option><option>Internal</option></select></div>
+      </div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-sliders"></i> Internal Marks Scaling (60 Marks Aggregate)</div>
+          <div class="form-grid2">
+            <div class="fg"><label class="fl">Assign</label><input type="number" name="assignment_marks" id="edit_assign" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">Attndn</label><input type="number" name="attendance_marks" id="edit_attend" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">T. Assess</label><input type="number" name="teacher_assessment" id="edit_ta" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">UT Mark</label><input type="number" name="ut_marks" id="edit_ut" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">MSE Mark</label><input type="number" name="mse_marks" id="edit_mse" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg"><label class="fl">TW</label><input type="number" name="tw_marks" id="edit_tw" step="0.01" min="0" class="form-inp"></div>
+            <div class="fg" style="grid-column: span 2;"><label class="fl">PR / OR</label><input type="number" name="pr_or_marks" id="edit_pr_or" step="0.01" min="0" class="form-inp"></div>
+          </div>
+      </div>
+      <input type="hidden" name="total" value="60">
+      <div class="modal-ft">
+        <button type="button" class="btn btn-out btn-sm" onclick="closeModal('editModal')">Cancel</button>
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function openModal(id){document.getElementById(id).style.display='flex';}
+function closeModal(id){document.getElementById(id).style.display='none';}
+function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
+  document.getElementById('edit_id').value = id;
+  document.getElementById('edit_subject').value = subject;
+  
+  // Set the precise values out of 60 dynamically mapped fields
+  document.getElementById('edit_assign').value = assign;
+  document.getElementById('edit_attend').value = attend;
+  document.getElementById('edit_ta').value = ta;
+  document.getElementById('edit_ut').value = ut;
+  document.getElementById('edit_mse').value = mse;
+  document.getElementById('edit_tw').value = tw;
+  document.getElementById('edit_pr_or').value = pr_or;
+  
+  var ss = document.getElementById('edit_semester');
+  for(var o of ss.options) o.selected = (o.value === String(semester));
+  var es = document.getElementById('edit_examtype');
+  for(var o of es.options) o.selected = (o.value === examtype);
+  
+  openModal('editModal');
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.modal-ov').forEach(function(m){m.style.display='none';});});
+</script>
+{% endblock %}

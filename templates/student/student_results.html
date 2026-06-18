@@ -1,0 +1,138 @@
+{% extends "common/base.html" %}
+{% block title %}My Results{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Student Portal{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ student.name[0]|upper }}{% endblock %}{% block user_role %}Student{% endblock %}
+
+{% block page_title %}My Results{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Results{% endblock %}
+{% block topbar_extras %}
+{% if sem_summary %}
+<a href="/student_results_download" class="tb-icon" title="Download Results"><i class="fas fa-download"></i></a>
+{% endif %}
+{% endblock %}
+{% block content %}
+
+<div class="ph fu">
+  <div>
+    <div class="ph-title">My Academic Results</div>
+    <div class="ph-sub">{{ student.name }} &bull; {{ student.roll }} &bull; {{ student.department or '' }}</div>
+  </div>
+  {% if sem_summary %}
+  <div class="ph-actions">
+    <a href="/student_results_download" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Download</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if not sem_summary %}
+
+<div class="card fu fu1">
+  <div class="cb">
+    <div class="empty-state" style="padding:48px">
+      <i class="fas fa-trophy"></i>
+      <p>No results published yet.</p>
+      <p style="font-size:13px;color:var(--ink4)">Your results will appear here once your faculty and admin have entered and published them.</p>
+    </div>
+  </div>
+</div>
+
+{% else %}
+
+{# ── Overall summary cards ─────────────────────────────── #}
+<div class="sg fu fu1">
+  <div class="sc"><div><div class="sv">{{ overall_pct }}%</div><div class="sl">Overall Score</div><div class="sdelta {% if overall_pct>=60 %}up{% else %}down{% endif %}">{{ overall_grade }} Grade</div></div><div class="sico ic-vi"><i class="fas fa-chart-line"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ overall_obtained|int }}</div><div class="sl">Marks Obtained</div><div class="sdelta up">Out of {{ overall_total|int }}</div></div><div class="sico ic-bl"><i class="fas fa-pen-to-square"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ sem_summary|length }}</div><div class="sl">Semesters</div><div class="sdelta up">Results available</div></div><div class="sico ic-gr"><i class="fas fa-layer-group"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ sem_summary|selectattr('result','equalto','Pass')|list|length }}</div><div class="sl">Semesters Passed</div><div class="sdelta {% if sem_summary|selectattr('result','equalto','Fail')|list|length==0 %}up{% else %}down{% endif %}">{% if sem_summary|selectattr('result','equalto','Fail')|list|length==0 %}All clear{% else %}{{ sem_summary|selectattr('result','equalto','Fail')|list|length }} with fail{% endif %}</div></div><div class="sico ic-am"><i class="fas fa-circle-check"></i></div></div>
+</div>
+
+{# ── Semester-wise results ─────────────────────────────── #}
+{% for sem in sem_summary %}
+{% set p = sem.pct %}
+<div class="card fu fu2" style="margin-bottom:16px">
+  <div class="ch flex-sb" style="cursor:pointer" onclick="toggleSem('sem{{ loop.index }}','chev{{ loop.index }}')">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="sico ic-{% if p>=60 %}gr{% elif p>=40 %}am{% else %}re{% endif %}" style="width:40px;height:40px;border-radius:10px;font-size:15px;flex-shrink:0">
+        <i class="fas fa-graduation-cap"></i>
+      </div>
+      <div>
+        <div class="ct">Semester {{ sem.semester }}</div>
+        <div class="cs">{{ sem.subjects }} subject{% if sem.subjects!=1 %}s{% endif %} &bull; {{ sem.obtained|int }}/{{ sem.total|int }} marks &bull; {{ sem.pct }}%</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      {% if sem.rank %}<span class="tag t-am"><i class="fas fa-trophy" style="font-size:10px"></i> Rank {{ sem.rank }}</span>{% endif %}
+      {% if sem.result=='Pass' %}<span class="tag t-gr">Pass</span>{% else %}<span class="tag t-re">Fail</span>{% endif %}
+      <div>
+        <div class="prog-track" style="width:80px">
+          <div class="prog-bar {% if p>=60 %}pb-gr{% elif p>=40 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ p }}%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--ink4);text-align:right;margin-top:2px">{{ p }}%</div>
+      </div>
+      <i id="chev{{ loop.index }}" class="fas fa-chevron-down" style="color:var(--ink4);font-size:13px;transition:transform .2s"></i>
+    </div>
+  </div>
+  <div id="sem{{ loop.index }}" class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr><th>Subject</th><th>Exam Type</th><th>Marks</th><th>%</th><th>Grade</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        {% for r in sem.rows %}
+        {% set rp = (r.marks/r.total*100)|round(1) if r.total else 0 %}
+        {% set rgc = '#1a7a4a' if rp>=90 else ('#059669' if rp>=75 else ('#0891B2' if rp>=60 else ('#2563EB' if rp>=50 else ('#D97706' if rp>=40 else '#DC2626')))) %}
+        <tr>
+          <td style="font-weight:600;font-size:13px">{{ r.subject }}</td>
+          <td style="font-size:12px;color:var(--ink3)">{{ r.exam_type or '—' }}</td>
+          <td style="font-weight:600">{{ r.marks|int if r.marks==r.marks|int else r.marks }}<span style="color:var(--ink4);font-weight:400">/{{ r.total|int }}</span></td>
+          <td>
+            <div style="font-weight:600;font-size:13px">{{ rp }}%</div>
+            <div class="prog-track" style="margin-top:4px;width:48px">
+              <div class="prog-bar {% if rp>=60 %}pb-gr{% elif rp>=40 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ rp }}%"></div>
+            </div>
+          </td>
+          <td><div style="width:26px;height:26px;border-radius:50%;background:{{ rgc }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ r.grade or '?' }}</div></td>
+          <td>{% if r.result=='Pass' %}<span class="tag t-gr">Pass</span>{% else %}<span class="tag t-re">Fail</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        {# Semester totals row #}
+        <tr style="background:#F9FAFB;border-top:2px solid #E5E7EB">
+          <td colspan="2" style="text-align:right;font-size:11px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.05em">Semester Total</td>
+          <td style="font-weight:700">{{ sem.obtained|int }}<span style="color:var(--ink4);font-weight:400">/{{ sem.total|int }}</span></td>
+          <td style="font-weight:700">{{ sem.pct }}%</td>
+          <td>
+            {% set gc = '#1a7a4a' if p>=90 else ('#059669' if p>=75 else ('#0891B2' if p>=60 else ('#2563EB' if p>=50 else ('#D97706' if p>=40 else '#DC2626')))) %}
+            <div style="width:26px;height:26px;border-radius:50%;background:{{ gc }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ sem.grade }}</div>
+          </td>
+          <td>{% if sem.result=='Pass' %}<span class="tag t-gr">Pass</span>{% else %}<span class="tag t-re">Fail</span>{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{# ── Download nudge ───────────────────────────────────────  #}
+<div class="card fu" style="margin-bottom:16px">
+  <div class="cb" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div class="ct">Download Your Result Card</div>
+      <div class="cs">Save a copy of all your results as an Excel file</div>
+    </div>
+    <a href="/student_results_download" class="btn btn-dark btn-sm"><i class="fas fa-file-excel"></i> Download .xlsx</a>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleSem(id, chevId){
+  var el=document.getElementById(id);
+  var ch=document.getElementById(chevId);
+  var hidden=el.style.display==='none';
+  el.style.display=hidden?'':'none';
+  ch.style.transform=hidden?'':'rotate(-90deg)';
+}
+</script>
+{% endblock %}

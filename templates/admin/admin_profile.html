@@ -1,0 +1,33 @@
+{% extends "common/base.html" %}
+{% block title %}Admin Profile{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Profile{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">Admin Profile</div></div>
+<div class="g4060 fu fu1">
+  <div class="card" style="overflow:hidden">
+    <div class="prof-cover"></div>
+    <div class="prof-av-row">
+      <div class="av av-lg" style="background:#2563EB;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.15)">A</div>
+      <div style="padding-bottom:4px"><div class="prof-name">Administrator</div><div class="prof-sub">Super Admin</div></div>
+    </div>
+    <div class="cb">
+      <div class="prof-chips"><span class="tag t-bl">Admin</span><span class="tag t-gr">Active</span></div>
+      <div class="divider"></div>
+      <div class="info-row"><div class="info-k">Username</div><div class="info-v">admin</div></div>
+      <div class="info-row"><div class="info-k">Role</div><div class="info-v">Super Administrator</div></div>
+      <div class="info-row"><div class="info-k">Access</div><div class="info-v">Full System</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Change Password</div></div>
+    <form method="POST" action="/admin_update_profile"><div class="cb">
+      <div class="fgrp"><label>Current Password</label><input type="password" name="old_pw" placeholder="Current password"></div>
+      <div class="fgrp"><label>New Password</label><input type="password" name="new_pw" placeholder="New password (min 6 chars)"></div>
+      <div class="fgrp"><label>Confirm New Password</label><input type="password" name="cnf_pw" placeholder="Repeat new password"></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-key"></i> Update Password</button></div></form>
+  </div>
+</div>{% endblock %}

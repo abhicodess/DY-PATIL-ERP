@@ -1,0 +1,147 @@
+{% extends "common/base.html" %}
+{% block title %}Student Profile | {{ student.name }}{% endblock %}
+
+{% block content %}
+<style>
+    .prof-header { padding: 40px; background: white; border-bottom: 1px solid #f1f5f9; }
+    .prof-identity { display: flex; align-items: center; gap: 24px; }
+    .prof-avatar { width: 80px; height: 80px; border-radius: 20px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; color: #2563eb; }
+
+    .prof-grid { display: grid; grid-template-columns: 1fr 350px; gap: 32px; padding: 40px; }
+    
+    .card { background: white; border-radius: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.02); overflow: hidden; }
+    .card-header { padding: 24px 32px; border-bottom: 1px solid #f1f5f9; font-weight: 800; display: flex; align-items: center; justify-content: space-between; }
+
+    .score-banner { padding: 24px; background: #f8fafc; border-radius: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px; }
+    .score-circle { width: 64px; height: 64px; border-radius: 50%; border: 4px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+
+    .trend-list { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+    .trend-item { display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px; border: 1px solid #f1f5f9; }
+    .trend-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+
+    .bg-p { background: #f0fdf4; color: #16a34a; }
+    .bg-a { background: #fff1f2; color: #e11d48; }
+
+    .c-safe { color: #16a34a; }
+    .c-warn { color: #ea580c; }
+    .c-danger { color: #e11d48; }
+</style>
+
+<div class="prof-header">
+    <div class="flex-ac-sb">
+        <div class="prof-identity">
+            <div class="prof-avatar">{{ student.name[0]|upper }}</div>
+            <div>
+                <h1 class="h2">{{ student.name }}</h1>
+                <p class="text-secondary">Roll: {{ student.roll }} • PRN: {{ student.prn|default('N/A') }} • {{ student.department }} Track</p>
+            </div>
+        </div>
+        <div class="flex-ac gap12">
+            <div class="meta-box" style="text-align: right;">
+                <span class="meta-label">Overall Attendance</span>
+                <span class="h3 {% if overall_pct >= 75 %}c-safe{% elif overall_pct >= 60 %}c-warn{% else %}c-danger{% endif %}">{{ overall_pct }}%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="prof-grid">
+    <div class="main-col">
+        <!-- 1. Subject Breakdown -->
+        <div class="card mb32">
+            <div class="card-header">Subject Intelligence</div>
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th class="t-c">Sessions</th>
+                        <th class="t-c">Attended</th>
+                        <th width="200">Consistency</th>
+                        <th class="t-r">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects_data %}
+                    <tr>
+                        <td><span style="font-weight:700; color:#1e293b;">{{ s.subject }}</span></td>
+                        <td class="t-c mono">{{ s.total }}</td>
+                        <td class="t-c mono">{{ s.present }}</td>
+                        <td>
+                            <div class="pg-track" style="height:6px;">
+                                <div class="pg-bar" style="width: {{ s.pct }}%; background: var(--p-blue);"></div>
+                            </div>
+                        </td>
+                        <td class="t-r font-bold {% if s.pct < 75 %}c-danger{% else %}c-safe{% endif %}">
+                            {{ s.pct }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. Recent Timeline -->
+        <div class="card">
+            <div class="card-header">Recent Activity Timeline</div>
+            <div class="trend-list">
+                {% for h in recent_history %}
+                <div class="trend-item">
+                    <div class="trend-icon {% if h.status == 'Present' %}bg-p{% else %}bg-a{% endif %}">
+                        <i class="fas {% if h.status == 'Present' %}fa-check{% else %}fa-times{% endif %}"></i>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-weight:700; font-size:14px;">{{ h.subject }}</div>
+                        <div style="font-size:11px; color:#64748b;">Marked by {{ h.faculty_name }}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-weight:600; font-size:13px;">{{ h.date }}</div>
+                        <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:{% if h.status == 'Present' %}#16a34a{% else %}#e11d48{% endif %}">{{ h.status }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="side-col">
+        <!-- Risk Analysis -->
+        <div class="card mb24" style="padding:24px;">
+            <div class="card-title mb16">Risk Scoring</div>
+            <div class="score-banner">
+                <div class="score-circle" style="border-color: {% if overall_pct >= 75 %}#dcfce7{% else %}#fee2e2{% endif %}; color: {% if overall_pct >= 75 %}#16a34a{% else %}#e11d48{% endif %}">
+                    {{ (100 - overall_pct)|round|int }}
+                </div>
+                <div>
+                    <div style="font-weight:800; font-size:14px;">Anomaly Score</div>
+                    <div style="font-size:12px; color:#64748b;">Lower is safer</div>
+                </div>
+            </div>
+            <div class="flex-column gap8">
+                <div class="flex-ac-sb">
+                    <span style="font-size:12px; color:#94a3b8;">Vs Global Avg</span>
+                    <span style="font-weight:700; font-size:12px;">{{ global_avg }}%</span>
+                </div>
+                <div class="flex-ac-sb">
+                    <span style="font-size:12px; color:#94a3b8;">Deviation</span>
+                    <span style="font-weight:700; font-size:12px; color:{{ 'text-danger' if overall_pct < global_avg else 'text-success' }}">
+                        {{ (overall_pct - global_avg)|round(1) }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card" style="padding:24px;">
+            <div class="card-title mb16">Intervention</div>
+            <div class="flex-column gap12">
+                <button class="btn btn-out btn-block" style="text-align:left">
+                    <i class="fas fa-paper-plane mr8"></i> Send Parent Alert
+                </button>
+                <button class="btn btn-out btn-block" style="text-align:left">
+                    <i class="fas fa-calendar-alt mr8"></i> Schedule Counseling
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

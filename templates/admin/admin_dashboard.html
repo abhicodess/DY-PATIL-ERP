@@ -1,0 +1,145 @@
+{% extends "common/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a>{% endblock %}
+{% block topbar_extras %}
+<a href="/export_students_excel" class="tb-icon" title="Export"><i class="fa-solid fa-download"></i></a>
+<a href="/admin/backup" class="tb-icon" title="Backup"><i class="fa-solid fa-database"></i></a>
+{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Good morning, Admin 👋</div><div class="ph-sub">Here's your college overview</div></div>
+  <div class="ph-actions">
+    <a href="/export_students_excel" class="btn btn-out btn-sm"><i class="fa-solid fa-download"></i> Export</a>
+    <a href="/admin/backup" class="btn btn-dark btn-sm"><i class="fa-solid fa-database"></i> Backup</a>
+    <form action="/admin/reset" method="POST" style="display:inline-flex;margin:0;">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-danger btn-sm" onclick="return confirm('Are you sure? This will delete ALL data! A backup will be created first.')">
+        <i class="fa-solid fa-triangle-exclamation"></i> Reset System
+      </button>
+    </form>
+    <a href="/add_student" class="btn btn-dark btn-sm"><i class="fa-solid fa-plus"></i> Add Student</a>
+  </div>
+</div>
+
+{% if last_backup %}
+<div class="alert al-info fu"><i class="fa-solid fa-clock"></i><span>Last backup: {{ last_backup }}</span></div>
+{% endif %}
+
+<div class="sg fu fu1">
+  <div class="sc"><div><div class="sv">{{ ts }}</div><div class="sl">Total Students</div><div class="sdelta up"><i class="fa-solid fa-users"></i> Enrolled</div></div><div class="sico ic-bl"><i class="fa-solid fa-users"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ tf }}</div><div class="sl">Faculty Members</div><div class="sdelta up">Active</div></div><div class="sico ic-vi"><i class="fa-solid fa-chalkboard-user"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ defaulters_count }}</div><div class="sl">Low Attendance</div><div class="sdelta down" style="color:var(--re5)"><i class="fa-solid fa-triangle-exclamation"></i> Defaulters</div></div><div class="sico ic-re"><i class="fa-solid fa-user-slash"></i></div></div>
+  <div class="sc"><div><div class="sv">{{ total_messages }}</div><div class="sl">Total Messages</div><div class="sdelta up"><i class="fa-solid fa-envelope"></i> Sent</div></div><div class="sico ic-am"><i class="fa-solid fa-message"></i></div></div>
+</div>
+
+<div class="g6040 mb16 fu fu2">
+  <div class="card">
+    <div class="ch"><div class="ct">Weekly Attendance</div><div class="cs">Present students — last 7 days</div></div>
+    <div class="cb"><div style="height:210px"><canvas id="chartWeek"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Students by Year</div><div class="cs">Academic level distribution</div></div>
+    <div class="cb">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        {% for yr in ["I","II","III","IV"] %}
+        <div class="prog-row">
+          <div class="prog-hd"><span class="prog-lbl">Year {{ yr }}</span><span class="prog-pct">{{ year_map.get(yr,0) }} Students</span></div>
+          <div class="prog-track"><div class="prog-bar pb-bl" style="width:{{ (year_map.get(yr,0)/ts*100)|round|int if ts>0 else 0 }}%"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="g2 mb16 fu fu3">
+  <div class="card">
+    <div class="ch"><div class="ct">Faculty by Department</div><div class="cs">Staffing breakdown</div></div>
+    <div class="cb">
+      <div style="display:flex;align-items:center;gap:24px">
+        <div style="width:120px;height:120px;flex-shrink:0"><canvas id="chartFacDept"></canvas></div>
+        <div style="flex:1">
+          {% for i in range(fac_dept_labels|length) %}
+          <div class="prog-row">
+            <div class="prog-hd"><span class="prog-lbl">{{ fac_dept_labels[i] }}</span><span class="prog-pct">{{ fac_dept_counts[i] }}</span></div>
+            <div class="prog-track"><div class="prog-bar {% if i%4==0 %}pb-bl{% elif i%4==1 %}pb-vi{% elif i%4==2 %}pb-gr{% else %}pb-am{% endif %}" style="width:{{ (fac_dept_counts[i]/tf*100)|round|int if tf>0 else 0 }}%"></div></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Attendance % by Department</div><div class="cs">Current semester</div></div>
+    <div class="cb">
+      {% for dept,p in dept_att_pct %}
+      <div class="prog-row">
+        <div class="prog-hd"><span class="prog-lbl">{{ dept }}</span><span class="prog-pct">{{ p }}%</span></div>
+        <div class="prog-track"><div class="prog-bar {% if p>=85 %}pb-gr{% elif p>=75 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ p }}%"></div></div>
+      </div>
+      {% else %}<p style="color:var(--ink4);font-size:13px">No attendance data yet.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="g4060 mb16 fu fu4">
+  <div class="card">
+    <div class="ch"><div class="ct">Quick Actions</div></div>
+    <div class="cb">
+      <div class="qa-grid">
+        <a href="/add_student" class="qa-item"><div class="qa-ico ic-bl"><i class="fa-solid fa-user-plus"></i></div><div class="qa-lbl">Add Student</div></a>
+        <a href="/add_faculty" class="qa-item"><div class="qa-ico ic-vi"><i class="fa-solid fa-user-tie"></i></div><div class="qa-lbl">Add Faculty</div></a>
+        <a href="/attendance_dashboard" class="qa-item"><div class="qa-ico ic-gr"><i class="fa-solid fa-calendar-check"></i></div><div class="qa-lbl">Attendance</div></a>
+        <a href="/timetable" class="qa-item"><div class="qa-ico ic-te"><i class="fa-solid fa-table-cells"></i></div><div class="qa-lbl">Timetable</div></a>
+        <a href="/admin_results" class="qa-item"><div class="qa-ico ic-re"><i class="fa-solid fa-trophy"></i></div><div class="qa-lbl">Results</div></a>
+        <a href="/admin_audit_logs" class="qa-item"><div class="qa-ico ic-nn"><i class="fa-solid fa-shield-halved"></i></div><div class="qa-lbl">Audit Logs</div></a>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch flex-sb pb0">
+      <div><div class="ct">Recent Students</div><div class="cs">Last 5 added</div></div>
+      <a href="/students" class="btn btn-ghost btn-sm">View all <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+    <div class="cb p0">
+      <table class="tbl">
+        <thead><tr><th>Student</th><th>Dept</th><th>Year</th></tr></thead>
+        <tbody>
+          {% for s in recent_students %}
+          <tr>
+            <td><div class="flex-ac gap8">
+              <div class="av av-sm" style="background:{% if loop.index0%5==0%}#2563EB{%elif loop.index0%5==1%}#7C3AED{%elif loop.index0%5==2%}#059669{%elif loop.index0%5==3%}#D97706{%else%}#0891B2{%endif%}">{{ s.name[0]|upper }}</div>
+              {{ s.name }}
+            </div></td>
+            <td><span class="tag t-bl">{{ s.department }}</span></td>
+            <td>{{ s.year }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3"><div class="empty-state" style="padding:24px"><i class="fa-solid fa-users"></i><p>No students yet</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+var tick={color:'#9CA3AF',font:{family:"'Plus Jakarta Sans',sans-serif",size:11}};
+var grid={color:'#F3F4F6'};
+var wEl=document.getElementById('chartWeek');
+if(wEl) new Chart(wEl,{type:'bar',data:{labels:{{ week_labels|tojson }},datasets:[{data:{{ week_present|tojson }},backgroundColor:'#DBEAFE',borderColor:'#2563EB',borderWidth:2,borderRadius:6,hoverBackgroundColor:'#2563EB'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid:grid,beginAtZero:true}}}});
+var dEl=document.getElementById('chartDept');
+if(dEl) new Chart(dEl,{type:'doughnut',data:{labels:{{ dept_labels|tojson }},datasets:[{data:{{ dept_counts|tojson }},backgroundColor:['#2563EB','#7C3AED','#059669','#D97706'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'65%'}});
+var fEl=document.getElementById('chartFacDept');
+if(fEl) new Chart(fEl,{type:'doughnut',data:{labels:{{ fac_dept_labels|tojson }},datasets:[{data:{{ fac_dept_counts|tojson }},backgroundColor:['#2563EB','#7C3AED','#059669','#D97706'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'65%'}});
+var mEl=document.getElementById('chartMarks');
+if(mEl) new Chart(mEl,{type:'bar',data:{labels:{{ marks_exams|tojson if marks_exams else [] }},datasets:[{data:{{ marks_avg|tojson if marks_avg else [] }},backgroundColor:['#DBEAFE','#F5F3FF','#ECFDF5','#FFFBEB'],borderColor:['#2563EB','#7C3AED','#059669','#D97706'],borderWidth:2,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:tick,grid:{display:false}},y:{ticks:tick,grid:grid,beginAtZero:true}}}});
+
+</script>
+{% endblock %}

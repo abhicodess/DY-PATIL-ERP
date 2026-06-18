@@ -1,0 +1,201 @@
+{% extends "common/base.html" %}
+
+{% block title %}Admissions Dashboard{% endblock %}
+
+{% block page_title %}Admissions Management{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin">Dashboard</a> / <a href="{{ url_for('admissions.dashboard') }}">Admissions</a>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div>
+    <div class="ph-title">Applications Dashboard</div>
+    <div class="ph-sub">Manage student admission applications, verify documents, and build merit lists.</div>
+  </div>
+  <div class="ph-actions">
+    <a href="{{ url_for('admissions.export_applications', department=filters.department, category=filters.category, status=filters.status, date_start=filters.date_start, date_end=filters.date_end) }}" class="btn btn-out">
+      <i class="fa-solid fa-file-excel"></i> Export to Excel
+    </a>
+    <a href="{{ url_for('admissions.merit_list') }}" class="btn btn-blue">
+      <i class="fa-solid fa-ranking-star"></i> Merit Lists Setup
+    </a>
+  </div>
+</div>
+
+<!-- Stats Section -->
+<div class="sg">
+  <div class="sc">
+    <div>
+      <div class="sv">{{ stats.total }}</div>
+      <div class="sl">Total Applications</div>
+    </div>
+    <div class="sico ic-bl">
+      <i class="fa-solid fa-file-signature"></i>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div>
+      <div class="sv">{{ stats.under_review }}</div>
+      <div class="sl">Under Review</div>
+    </div>
+    <div class="sico ic-am">
+      <i class="fa-solid fa-eye"></i>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div>
+      <div class="sv">{{ stats.merit_listed }}</div>
+      <div class="sl">Merit Listed</div>
+    </div>
+    <div class="sico ic-vi">
+      <i class="fa-solid fa-ranking-star"></i>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div>
+      <div class="sv">{{ stats.selected }}</div>
+      <div class="sl">Selected / Placed</div>
+    </div>
+    <div class="sico ic-gr">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+  </div>
+</div>
+
+<div class="sc mb20">
+  <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+    <div>
+      <div class="sv" style="font-size:20px;">{{ stats.seats_remaining }}</div>
+      <div class="sl" style="margin-top:0;">Total Available Seats Remaining (Across All Branches & Social Categories)</div>
+    </div>
+    <a href="{{ url_for('admissions.seat_matrix') }}" class="btn btn-out btn-sm">View Seat Matrix Layout</a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb20">
+  <div class="cb" style="padding:15px 20px;">
+    <form method="GET" action="{{ url_for('admissions.dashboard') }}" style="display:grid; grid-template-columns: repeat(5, 1fr) auto; gap:12px; align-items:end;">
+      <div>
+        <label style="font-size:10px; font-weight:700; color:var(--ink4); text-transform:uppercase; display:block; margin-bottom:4px;">Department</label>
+        <select name="department" class="form-control" style="padding: 6px 12px; font-size:12px;">
+          <option value="">All Departments</option>
+          <option value="AIML" {% if filters.department == 'AIML' %}selected{% endif %}>AIML</option>
+          <option value="AIDS" {% if filters.department == 'AIDS' %}selected{% endif %}>AIDS</option>
+          <option value="CS" {% if filters.department == 'CS' %}selected{% endif %}>CS</option>
+          <option value="IT" {% if filters.department == 'IT' %}selected{% endif %}>IT</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:10px; font-weight:700; color:var(--ink4); text-transform:uppercase; display:block; margin-bottom:4px;">Category</label>
+        <select name="category" class="form-control" style="padding: 6px 12px; font-size:12px;">
+          <option value="">All Categories</option>
+          <option value="OPEN" {% if filters.category == 'OPEN' %}selected{% endif %}>OPEN</option>
+          <option value="OBC" {% if filters.category == 'OBC' %}selected{% endif %}>OBC</option>
+          <option value="SC" {% if filters.category == 'SC' %}selected{% endif %}>SC</option>
+          <option value="ST" {% if filters.category == 'ST' %}selected{% endif %}>ST</option>
+          <option value="NT" {% if filters.category == 'NT' %}selected{% endif %}>NT</option>
+          <option value="EWS" {% if filters.category == 'EWS' %}selected{% endif %}>EWS</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:10px; font-weight:700; color:var(--ink4); text-transform:uppercase; display:block; margin-bottom:4px;">Status</label>
+        <select name="status" class="form-control" style="padding: 6px 12px; font-size:12px;">
+          <option value="">All Statuses</option>
+          <option value="PENDING" {% if filters.status == 'PENDING' %}selected{% endif %}>Pending</option>
+          <option value="UNDER_REVIEW" {% if filters.status == 'UNDER_REVIEW' %}selected{% endif %}>Under Review</option>
+          <option value="MERIT_LISTED" {% if filters.status == 'MERIT_LISTED' %}selected{% endif %}>Merit Listed</option>
+          <option value="SELECTED" {% if filters.status == 'SELECTED' %}selected{% endif %}>Selected</option>
+          <option value="WAITLISTED" {% if filters.status == 'WAITLISTED' %}selected{% endif %}>Waitlisted</option>
+          <option value="REJECTED" {% if filters.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:10px; font-weight:700; color:var(--ink4); text-transform:uppercase; display:block; margin-bottom:4px;">From Date</label>
+        <input type="date" name="date_start" class="form-control" style="padding: 5px 12px; font-size:12px;" value="{{ filters.date_start or '' }}">
+      </div>
+
+      <div>
+        <label style="font-size:10px; font-weight:700; color:var(--ink4); text-transform:uppercase; display:block; margin-bottom:4px;">To Date</label>
+        <input type="date" name="date_end" class="form-control" style="padding: 5px 12px; font-size:12px;" value="{{ filters.date_end or '' }}">
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="btn btn-dark btn-sm" style="padding: 8px 16px;"><i class="fa-solid fa-filter"></i> Filter</button>
+        <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-out btn-sm" style="padding: 8px 12px;"><i class="fa-solid fa-arrow-rotate-right"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Table Card -->
+<div class="card">
+  <div class="ch">
+    <div class="ct">Applications Ledger</div>
+    <div class="cs">List of all incoming applications and their processing states.</div>
+  </div>
+  <div class="cb" style="padding:0;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Applicant Name</th>
+          <th>Department</th>
+          <th>Category</th>
+          <th>Merit Score</th>
+          <th>Submitted At</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if applications %}
+          {% for app in applications %}
+            <tr>
+              <td style="font-family:var(--mono); font-weight:600;">{{ app.token }}</td>
+              <td style="font-weight:600;">{{ app.applicant_name }}</td>
+              <td>{{ app.applied_department }}</td>
+              <td>{{ app.category }}</td>
+              <td>{{ app.merit_score if app.merit_score else 'N/A' }}</td>
+              <td>{{ app.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td>
+                {% set sc_val = app.status %}
+                {% if sc_val == 'PENDING' %}
+                  <span class="tag t-am">Pending</span>
+                {% elif sc_val == 'UNDER_REVIEW' %}
+                  <span class="tag t-bl">Under Review</span>
+                {% elif sc_val == 'MERIT_LISTED' %}
+                  <span class="tag t-vi">Merit Listed</span>
+                {% elif sc_val == 'SELECTED' %}
+                  <span class="tag t-gr">Selected</span>
+                {% elif sc_val == 'WAITLISTED' %}
+                  <span class="tag t-nn">Waitlisted</span>
+                {% else %}
+                  <span class="tag t-re">Rejected</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('admissions.admin_detail', app_id=app.id) }}" class="btn btn-out btn-sm" style="padding: 4px 8px;">
+                  <i class="fa-solid fa-circle-info"></i> Details
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align:center; padding:30px; color:var(--ink4);">No applications match the criteria.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

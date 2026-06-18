@@ -1,0 +1,165 @@
+{% extends "common/base.html" %}
+
+{% block title %}Merit List & Seat Allocation{% endblock %}
+
+{% block page_title %}Admissions Merit Lists{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin">Dashboard</a> / <a href="{{ url_for('admissions.dashboard') }}">Admissions</a> / Merit Lists
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div>
+    <div class="ph-title">Merit List Setup</div>
+    <div class="ph-sub">Rank applicants and dispatch offers of admission based on merit score and seat limits.</div>
+  </div>
+  <div class="ph-actions">
+    <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-out">
+      <i class="fa-solid fa-arrow-left"></i> Back to Ledger
+    </a>
+  </div>
+</div>
+
+<div class="g4060">
+  <!-- Left Side: Selection Parameters & Seats Details -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <!-- Selector Card -->
+    <div class="card">
+      <div class="ch">
+        <div class="ct">Generate Merit List</div>
+        <div class="cs">Select branch and category parameters.</div>
+      </div>
+      <div class="cb">
+        <form method="POST" action="{{ url_for('admissions.merit_list') }}" style="display:flex; flex-direction:column; gap:12px;">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          
+          <div>
+            <label style="font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; margin-bottom:6px; display:block;">Academic Year</label>
+            <select name="academic_year" class="form-control" required>
+              <option value="2026" {% if selected_year == '2026' %}selected{% endif %}>2026-27</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; margin-bottom:6px; display:block;">Applied Department</label>
+            <select name="department" class="form-control" required>
+              <option value="AIML" {% if selected_department == 'AIML' %}selected{% endif %}>Artificial Intelligence & ML (AIML)</option>
+              <option value="AIDS" {% if selected_department == 'AIDS' %}selected{% endif %}>Artificial Intelligence & DS (AIDS)</option>
+              <option value="CS" {% if selected_department == 'CS' %}selected{% endif %}>Computer Science (CS)</option>
+              <option value="IT" {% if selected_department == 'IT' %}selected{% endif %}>Information Technology (IT)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; margin-bottom:6px; display:block;">Social Category</label>
+            <select name="category" class="form-control" required>
+              <option value="OPEN" {% if selected_category == 'OPEN' %}selected{% endif %}>OPEN</option>
+              <option value="OBC" {% if selected_category == 'OBC' %}selected{% endif %}>OBC</option>
+              <option value="SC" {% if selected_category == 'SC' %}selected{% endif %}>SC</option>
+              <option value="ST" {% if selected_category == 'ST' %}selected{% endif %}>ST</option>
+              <option value="NT" {% if selected_category == 'NT' %}selected{% endif %}>NT</option>
+              <option value="EWS" {% if selected_category == 'EWS' %}selected{% endif %}>EWS</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-blue" style="justify-content:center; margin-top:6px;">
+            <i class="fa-solid fa-gears"></i> Compile Provisional Merit List
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Seat Matrix Availability Card -->
+    <div class="card">
+      <div class="ch">
+        <div class="ct">Seat Quota Allocation Matrix</div>
+        <div class="cs">Seat capacity for {{ selected_department }} (Category: {{ selected_category }}) in Year {{ selected_year }}</div>
+      </div>
+      <div class="cb" style="display:flex; flex-direction:column; gap:16px;">
+        {% if seat_info %}
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; text-align:center;">
+            <div style="background:var(--bg); padding:12px; border-radius:8px;">
+              <span style="font-size:10px; text-transform:uppercase; color:var(--ink4); font-weight:600;">Total Quota</span>
+              <div style="font-size:20px; font-weight:700; color:var(--ink); margin-top:4px;">{{ seat_info.total_seats }}</div>
+            </div>
+            <div style="background:var(--green-s); padding:12px; border-radius:8px;">
+              <span style="font-size:10px; text-transform:uppercase; color:var(--green); font-weight:600;">Filled</span>
+              <div style="font-size:20px; font-weight:700; color:var(--green); margin-top:4px;">{{ seat_info.filled_seats }}</div>
+            </div>
+            <div style="background:var(--blue-s); padding:12px; border-radius:8px;">
+              <span style="font-size:10px; text-transform:uppercase; color:var(--blue); font-weight:600;">Available</span>
+              <div style="font-size:20px; font-weight:700; color:var(--blue); margin-top:4px;">{{ seat_info.available_seats }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div style="text-align:center; padding:15px; background:var(--red-s); color:var(--red); border-radius:8px; font-size:12px; font-weight:500;">
+            <i class="fa-solid fa-triangle-exclamation"></i> Seat quota limits not initialized in seat_matrix database table for this configuration.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Merit List Table & Actions -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div class="card">
+      <div class="ch" style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid var(--border); padding-bottom:14px;">
+        <div>
+          <div class="ct">Merit List Ranks ({{ selected_department }} — {{ selected_category }})</div>
+          <div class="cs">Applicants ordered by merit scores descending.</div>
+        </div>
+        
+        {% if merit_list and merit_list[0].status == 'PROVISIONAL' %}
+          <form method="POST" action="{{ url_for('admissions.finalize_merit_list_route') }}" style="margin:0;">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="department" value="{{ selected_department }}">
+            <input type="hidden" name="category" value="{{ selected_category }}">
+            <input type="hidden" name="academic_year" value="{{ selected_year }}">
+            <button type="submit" class="btn btn-gr" style="box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);">
+              <i class="fa-solid fa-stamp"></i> Finalize List & Dispatch Offers
+            </button>
+          </form>
+        {% endif %}
+      </div>
+
+      <div class="cb" style="padding:0;">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Applicant Name</th>
+              <th>Token</th>
+              <th>Merit Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if merit_list %}
+              {% for row in merit_list %}
+                <tr>
+                  <td style="font-weight:700; color:var(--violet);">#{{ row.rank }}</td>
+                  <td style="font-weight:600;">{{ row.applicant_name }}</td>
+                  <td style="font-family:var(--mono);">{{ row.token }}</td>
+                  <td style="font-weight:600; font-family:var(--mono);">{{ row.merit_score }}</td>
+                  <td>
+                    {% if row.status == 'PROVISIONAL' %}
+                      <span class="tag t-am">Provisional</span>
+                    {% else %}
+                      <span class="tag t-gr">Final / Active</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" style="text-align:center; padding:30px; color:var(--ink4);">No rankings computed yet for this selection. Compile list first.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

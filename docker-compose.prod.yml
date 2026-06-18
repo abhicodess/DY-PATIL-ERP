@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  app:
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      - FLASK_ENV=production
+    ports: !reset [] # Remove port 8000 exposure in production
+
+  db:
+    ports: !reset [] # No port exposure for DB in prod
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    command: postgres -c shared_buffers=512MB -c max_connections=200
+
+  redis:
+    ports: !reset [] # No port exposure for Redis in prod
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  nginx:
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/app/static:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M

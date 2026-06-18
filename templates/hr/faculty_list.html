@@ -1,0 +1,146 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Payroll List{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}HR & Payroll{% endblock %}
+
+{% block content %}
+<div class="fu">
+    <!-- Page Header -->
+    <div class="ph">
+        <div>
+            <h1 class="ph-title">Faculty Payroll Management</h1>
+            <p class="ph-sub">Manage faculty records and generate monthly payslips</p>
+        </div>
+    </div>
+
+    <!-- Faculty Directory Card -->
+    <div class="card">
+        <div class="ch" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h2 class="ct">Faculty Directory</h2>
+            <div class="toolbar" style="margin-bottom: 0; padding: 0;">
+                <input type="text" id="searchInput" placeholder="Search faculty..." class="tb-field" onkeyup="filterFaculty()">
+            </div>
+        </div>
+        <div class="cb" style="padding: 0;">
+            <div style="overflow-x: auto;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Faculty Name</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Qualification</th>
+                            <th>Contact</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for faculty in faculties %}
+                        <tr class="faculty-row">
+                            <td>
+                                <div class="flex-ac gap10">
+                                    <div class="av av-sm text-white" style="background: var(--blue);">
+                                        {{ faculty.name[0] if faculty.name else '?' }}
+                                    </div>
+                                    <span style="font-weight: 700;">{{ faculty.name }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="tag t-nn">{{ faculty.department or '-' }}</span>
+                            </td>
+                            <td>{{ faculty.designation or '-' }}</td>
+                            <td class="mono" style="font-size: 11px; opacity: 0.8;">{{ faculty.qualification or '-' }}</td>
+                            <td>
+                                <div style="font-size: 13px;">{{ faculty.email }}</div>
+                                <div style="font-size: 10px; color: var(--ink4); text-transform: uppercase;">{{ faculty.phone or '-' }}</div>
+                            </td>
+                            <td style="text-align: right;">
+                                <button onclick="openPayslipModal('{{ faculty.id }}', '{{ faculty.name }}')" class="btn btn-blue btn-sm">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i> Generate Payslip
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payslip Modal -->
+<div id="payslipModal" class="modal-bg">
+    <div class="modal-box">
+        <div class="ch" style="display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--border);">
+            <h3 class="ct">Generate Payslip</h3>
+            <button onclick="closePayslipModal()" class="btn btn-ghost btn-sm" style="padding: 4px 8px;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form action="{{ url_for('hr.generate_payslip') }}" method="POST" class="cb">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="faculty_id" id="modal_faculty_id">
+            
+            <div class="fgrp">
+                <label>Faculty Member</label>
+                <input type="text" id="modal_faculty_name" readonly style="background: var(--bg2); color: var(--ink3);">
+            </div>
+            
+            <div class="fg2">
+                <div class="fgrp">
+                    <label>Month</label>
+                    <select name="month">
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </div>
+                <div class="fgrp">
+                    <label>Year</label>
+                    <input type="number" name="year" value="2025">
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+                <button type="button" onclick="closePayslipModal()" class="btn btn-out">Cancel</button>
+                <button type="submit" class="btn btn-blue">Generate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPayslipModal(id, name) {
+    document.getElementById('modal_faculty_id').value = id;
+    document.getElementById('modal_faculty_name').value = name;
+    document.getElementById('payslipModal').classList.add('show');
+}
+
+function closePayslipModal() {
+    document.getElementById('payslipModal').classList.remove('show');
+}
+
+function filterFaculty() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var rows = document.getElementsByClassName("faculty-row");
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var text = row.innerText || row.textContent;
+        if (text.toLowerCase().indexOf(filter) > -1) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    }
+}
+</script>
+{% endblock %}

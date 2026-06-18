@@ -1,0 +1,90 @@
+{% extends "common/base.html" %}
+{% block title %}Shortage & Defaulter Report{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Attendance{% endblock %}
+{% block av_color %}#EF4444{% endblock %}{% block av_letter %}S{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+
+{% block page_title %}Shortage & Defaulter Report{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Shortage Report</div>
+    <div class="ph-sub">Students below {{ threshold }}% attendance</div>
+  </div>
+  <div class="ph-actions">
+    <form method="POST" action="/send_shortage_notices" onsubmit="return confirm('Send SMS/Email alerts to {{ defaulters|length }} parents?')">
+      <input type="hidden" name="threshold" value="{{ threshold }}">
+      <input type="hidden" name="department" value="{{ dept }}">
+      <button type="submit" class="btn btn-danger"><i class="fas fa-envelope-open-text"></i> Notify All Parents</button>
+    </form>
+  </div>
+</div>
+
+<div class="card mb16">
+  <div class="cb">
+    <form method="GET" action="/shortage_report" class="flex-ac gap12">
+      <div style="width:200px">
+        <label class="lbl">Threshold %</label>
+        <input type="number" name="threshold" value="{{ threshold }}" class="inp" min="1" max="100">
+      </div>
+      <div style="flex:1">
+        <label class="lbl">Department</label>
+        <select name="dept" class="inp" onchange="this.form.submit()">
+          <option value="">All Departments</option>
+          {% for d in DEPARTMENTS %}
+          <option value="{{ d }}" {% if dept==d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="padding-top:20px">
+        <button type="submit" class="btn btn-dark">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch">
+    <div class="ct">Defaulter List</div>
+    <div class="cs">{{ defaulters|length }} students identified</div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Roll</th>
+          <th>Student Name</th>
+          <th>Department</th>
+          <th>Attendance</th>
+          <th>Contact</th>
+          <th>Parent Contact</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in defaulters %}
+        <tr>
+          <td><span class="tag t-re">{{ s.roll }}</span></td>
+          <td><b>{{ s.name }}</b></td>
+          <td>{{ s.department }} - {{ s.year }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="prog-track" style="width:60px;height:8px"><div class="prog-bar pb-re" style="width:{{ s.percentage }}%"></div></div>
+              <span class="text-re"><b>{{ s.percentage }}%</b></span>
+            </div>
+          </td>
+          <td>{{ s.contact_number }}</td>
+          <td>{{ s.parent_contact }}</td>
+          <td>
+            <button class="btn btn-out btn-sm" onclick="alert('Notification sent to {{ s.name }} (Parent: {{ s.parent_contact }})')">Notify</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state"><i class="fas fa-check-circle" style="color:var(--gr-main)"></i><p>No defaulters found below {{ threshold }}%!</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

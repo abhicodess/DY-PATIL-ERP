@@ -1,0 +1,206 @@
+{% extends "common/base.html" %}
+{% block title %}Assign Subjects{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Assign Subjects{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Assign Subjects{% endblock %}
+{% block topbar_extras %}{% endblock %}
+
+{% block content %}
+
+<!-- HEADER -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Assign Subjects to Faculty</div>
+    <div class="ph-sub">Link each subject to a faculty account so they can mark attendance</div>
+  </div>
+  <div class="ph-actions">
+    <form method="POST" action="/auto_assign_subjects" onsubmit="return confirm('Auto-match subjects to faculty by name? This will update teacher names to exactly match faculty DB names.')">
+      <button type="submit" class="btn btn-out btn-sm"><i class="fas fa-wand-magic-sparkles"></i> Auto-Match All</button>
+    </form>
+  </div>
+</div>
+
+<!-- ALERTS -->
+{% if request.args.get('assigned') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Subject assigned successfully.</span></div>{% endif %}
+{% if request.args.get('unassigned') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Subject unassigned.</span></div>{% endif %}
+{% if request.args.get('auto_matched') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('auto_matched') }} subjects auto-matched to faculty accounts.</span></div>{% endif %}
+{% if request.args.get('classlist_sent') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Student list for <strong>{{ request.args.get('count') }} students</strong> sent to <strong>{{ request.args.get('to') }}</strong> via messages.</span></div>{% endif %}
+{% if request.args.get('error') == 'no_faculty_account' %}<div class="alert al-warn fu"><i class="fas fa-triangle-exclamation"></i><span>Faculty not found in faculty accounts. Make sure their name in Subjects matches exactly with their Faculty account name.</span></div>{% endif %}
+
+<!-- HOW IT WORKS -->
+<div class="card mb16 fu" style="border-left:4px solid var(--blue)">
+  <div class="cb">
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px"><i class="fas fa-circle-info" style="color:var(--blue)"></i> How Faculty Attendance Works — 3 Steps</div>
+    <div class="g3">
+      <div style="background:var(--blue-s);border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:6px">Step 1 — Assign Subject</div>
+        <p style="font-size:12px;line-height:1.7;color:var(--ink2)">Set the subject's <strong>Teacher</strong> field to the faculty's exact name (e.g. <code>Prof.Shakil Tamboli</code>). This page does that automatically.</p>
+      </div>
+      <div style="background:var(--green-s);border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">Step 2 — Send Student List</div>
+        <p style="font-size:12px;line-height:1.7;color:var(--ink2)">Send the class student list to the faculty's Messages inbox so they know which students to mark.</p>
+      </div>
+      <div style="background:var(--violet-s);border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--violet);margin-bottom:6px">Step 3 — Faculty Marks</div>
+        <p style="font-size:12px;line-height:1.7;color:var(--ink2)">Faculty logs in → <strong>Mark Attendance</strong> → selects their subject from dropdown → marks P/A/L/M for each student.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="g4060 fu fu1">
+
+  <!-- LEFT: Faculty list -->
+  <div class="card">
+    <div class="ch"><div class="ct">Faculty Members</div><div class="cs">{{ faculty|length }} total — click to assign subjects</div></div>
+    <div class="cb" style="padding:8px">
+      {% for f in faculty %}
+      <a href="/assign_subjects?fac_id={{ f.id }}"
+         style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;text-decoration:none;transition:background .12s;{% if selected_fac|string==f.id|string %}background:var(--blue-s);{% endif %}">
+        <div class="av av-sm" style="background:#7C3AED;flex-shrink:0">{{ f.name[0]|upper }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:{% if selected_fac|string==f.id|string %}700{% else %}600{% endif %};color:{% if selected_fac|string==f.id|string %}var(--blue){% else %}var(--ink){% endif %};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.name }}</div>
+          <div style="font-size:10px;color:var(--ink4)">{{ f.department or f.email }}</div>
+        </div>
+        {% if selected_fac|string==f.id|string %}
+        <i class="fas fa-chevron-right" style="color:var(--blue);font-size:11px"></i>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- RIGHT: Subject assignment -->
+  <div>
+    {% if fac_info %}
+
+    <!-- Faculty profile -->
+    <div class="card mb12">
+      <div class="cb">
+        <div class="flex-ac gap12" style="margin-bottom:14px">
+          <div class="av" style="background:#7C3AED;width:44px;height:44px;font-size:18px">{{ fac_info.name[0]|upper }}</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--ink)">{{ fac_info.name }}</div>
+            <div style="font-size:12px;color:var(--ink3)">{{ fac_info.email }}</div>
+            <div style="font-size:11px;color:var(--ink4)">{{ fac_info.department }}</div>
+          </div>
+        </div>
+
+        <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px">
+          <i class="fas fa-book" style="color:var(--violet)"></i> Currently assigned subjects ({{ fac_subjects|length }})
+        </div>
+
+        {% if fac_subjects %}
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          {% for s in fac_subjects %}
+          <div class="flex-ac gap8" style="background:var(--green-s);padding:8px 12px;border-radius:8px;border:1px solid var(--border)">
+            <i class="fas fa-check-circle" style="color:var(--green);font-size:12px;flex-shrink:0"></i>
+            <span style="font-size:13px;font-weight:600;flex:1">{{ s.name }}</span>
+            <span class="mono" style="font-size:10px;color:var(--ink3)">{{ s.subject_code or '' }}</span>
+            <form method="POST" action="/unassign_subject" style="display:inline">
+              <input type="hidden" name="subject_id" value="{{ s.id }}">
+              <input type="hidden" name="fac_id"     value="{{ fac_info.id }}">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Unassign" onclick="return confirm('Remove this subject from {{ fac_info.name }}?')">
+                <i class="fas fa-xmark" style="color:var(--red)"></i>
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert al-warn" style="margin-bottom:12px">
+          <i class="fas fa-triangle-exclamation"></i>
+          <span style="font-size:12px">No subjects assigned yet. Assign from the list below.</span>
+        </div>
+        {% endif %}
+
+        <!-- Send student list buttons -->
+        {% if fac_subjects %}
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px"><i class="fas fa-paper-plane" style="color:var(--green)"></i> Send Student List to Faculty Inbox</div>
+          {% for s in fac_subjects %}
+          <form method="POST" action="/send_classlist" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+            <input type="hidden" name="subject"   value="{{ s.name }}">
+            <input type="hidden" name="dept"      value="{{ s.department or '' }}">
+            <span style="font-size:12px;flex:1">{{ s.name[:30] }}</span>
+            <button type="submit" class="btn btn-gr btn-sm">
+              <i class="fas fa-paper-plane"></i> Send List
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Assign new subjects -->
+    <div class="card">
+      <div class="ch"><div class="ct">Assign a Subject</div><div class="cs">Pick from unassigned subjects</div></div>
+      <div class="cb p0" style="padding-top:0">
+        {% for s in subjects %}
+        {% if not s.teacher or fac_info.name not in (s.teacher or '') %}
+        <div class="flex-ac gap8" style="padding:10px 18px;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ s.name[:35] }}</div>
+            <div style="font-size:10px;color:var(--ink4)">
+              {% if s.teacher %}<span style="color:var(--amber)">Currently: {{ s.teacher[:25] }}</span>{% else %}<span style="color:var(--green)">Unassigned</span>{% endif %}
+              {% if s.subject_code %} · {{ s.subject_code }}{% endif %}
+            </div>
+          </div>
+          <form method="POST" action="/assign_subject_to_faculty">
+            <input type="hidden" name="subject_id"   value="{{ s.id }}">
+            <input type="hidden" name="faculty_name" value="{{ fac_info.name }}">
+            <input type="hidden" name="fac_id"       value="{{ fac_info.id }}">
+            <button type="submit" class="btn btn-vi btn-sm">
+              <i class="fas fa-link"></i> Assign
+            </button>
+          </form>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {% else %}
+    <!-- No faculty selected -->
+    <div class="card"><div class="cb">
+      <div class="empty-state" style="padding:60px">
+        <i class="fas fa-hand-pointer" style="font-size:36px;color:var(--ink4)"></i>
+        <p style="font-size:15px;font-weight:600;margin-top:14px">Select a faculty from the left</p>
+        <p style="font-size:13px;margin-top:6px;color:var(--ink3)">Then assign subjects and send student lists</p>
+      </div>
+    </div></div>
+
+    <!-- All subjects overview -->
+    <div class="card mt12">
+      <div class="ch flex-sb">
+        <div><div class="ct">All Subjects Overview</div><div class="cs">{{ total_subjects }} subjects</div></div>
+      </div>
+      <div class="cb p0" style="padding-top:0">
+        <table class="tbl">
+          <thead><tr><th>Subject</th><th>Assigned Teacher</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for s in subjects %}
+            <tr>
+              <td><strong>{{ s.name[:30] }}</strong></td>
+              <td style="font-size:12px;color:var(--ink3)">{{ s.teacher or '—' }}</td>
+              <td>
+                {% if s.teacher %}
+                <span class="tag t-gr"><i class="fas fa-check-circle"></i> Assigned</span>
+                {% else %}
+                <span class="tag t-re"><i class="fas fa-circle-xmark"></i> Unassigned</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends "attendance/attendance_base.html" %}
+
+{% block title %}{{ student.name if student else 'My' }} — Records{% endblock %}
+{% block page_title %}Attendance Records{% endblock %}
+{% block breadcrumb %}
+  <a href="/student_dashboard">Home</a> /
+  {% if is_admin_view is defined and is_admin_view %}
+    <a href="/attendance_dashboard">Attendance</a> /
+    <a href="/student_attendance_dashboard?student_id={{ student.id }}">{{ student.name }}</a> /
+    Records
+  {% else %}
+    <a href="/student_attendance_dashboard">My Attendance</a> / Records
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div class="flex-ac gap8" style="gap:16px">
+    {% if student %}
+    <div class="av" style="width:44px;height:44px;font-size:16px;background:#2563EB;flex-shrink:0">
+      {{ student.name[0]|upper }}
+    </div>
+    <div>
+      <div class="ph-title">{{ student.name }}</div>
+      <div class="ph-sub">{{ student.roll }} &bull; {{ student.department }}</div>
+    </div>
+    {% else %}
+    <div><div class="ph-title">My Attendance Records</div></div>
+    {% endif %}
+  </div>
+  <div class="ph-actions">
+    <button class="btn btn-out btn-sm" onclick="togglePrediction()"><i class="fas fa-wand-magic-sparkles"></i> Predict Path</button>
+    <a href="/student_dashboard" class="btn btn-dark btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </div>
+</div>
+
+<!-- Attendance Health & Prediction Banner -->
+<div id="predictionBanner" class="card fu mb16" style="display:none; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0;">
+  <div class="ch pb0 flex-sb">
+    <div>
+      <div class="ct">Smart Attendance Predictor</div>
+      <div class="cs">AI-driven insights based on current trends</div>
+    </div>
+    <div id="healthBadge" class="tag">Loading...</div>
+  </div>
+  <div class="cb">
+    <div class="sg fu fu1" style="box-shadow:none; padding:0; background:transparent; border:none;">
+      <div class="sc" style="background:#fff">
+        <div>
+          <div class="sv" id="stat-pct">--%</div>
+          <div class="sl">Overall Attendance</div>
+        </div>
+      </div>
+      <div class="sc" style="background:#fff">
+        <div>
+          <div class="sv" id="stat-needed">--</div>
+          <div class="sl">Lectures Needed</div>
+          <div class="sdelta up" style="font-size:10px">To reach 75% target</div>
+        </div>
+      </div>
+    </div>
+    <div id="subjectPredictions" style="margin-top:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+      <!-- Dynamic list -->
+    </div>
+  </div>
+</div>
+
+<!-- Subject summary cards -->
+{% if subjects %}
+<div class="sg fu fu1" style="margin-bottom:16px">
+  {% for s in subjects[:4] %}
+  <div class="sc">
+    <div>
+      <div class="sv" style="font-size:22px;color:{% if s.percentage>=75 %}#059669{% elif s.percentage>=50 %}#D97706{% else %}#DC2626{% endif %}">
+        {{ s.percentage }}%
+      </div>
+      <div class="sl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="{{ s.subject }}">
+        {{ s.subject[:18] }}{% if s.subject|length > 18 %}…{% endif %}
+      </div>
+      <div class="sdelta {% if s.status=='Good' %}up{% elif s.status=='Average' %}{% else %}dn{% endif %}">
+        {{ s.attended }}/{{ s.total }} lec
+      </div>
+    </div>
+    <div class="sico {% if s.percentage>=75 %}ic-gr{% elif s.percentage>=50 %}ic-am{% else %}ic-re{% endif %}">
+      <i class="fas fa-book"></i>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if subjects|length > 4 %}
+<!-- Remaining subjects as progress rows -->
+<div class="card fu" style="margin-bottom:16px">
+  <div class="ch"><div class="ct">All Subjects</div><div class="cs">{{ subjects|length }} total</div></div>
+  <div class="cb">
+    {% for s in subjects %}
+    <div class="prog-row">
+      <div class="prog-hd">
+        <span class="prog-lbl">{{ s.subject }}</span>
+        <span class="prog-pct">
+          <span class="tag {% if s.percentage>=75 %}t-gr{% elif s.percentage>=50 %}t-am{% else %}t-re{% endif %}">
+            {{ s.percentage }}%
+          </span>
+        </span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-bar {% if s.percentage>=75 %}pb-gr{% elif s.percentage>=50 %}pb-am{% else %}pb-re{% endif %}"
+             style="width:{{ s.percentage }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Filters -->
+<div class="card fu fu2">
+  <div class="ch"><div class="ct">Filter Records</div></div>
+  <div class="cb">
+    <form method="GET" action="/student_attendance">
+      {% if request.args.get('student_id') %}
+      <input type="hidden" name="student_id" value="{{ request.args.get('student_id') }}">
+      {% endif %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Subject</label>
+          <select name="subject_filter" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Subjects</option>
+            {% if subjects %}{% for s in subjects %}
+            <option {% if request.args.get('subject_filter')==s.subject %}selected{% endif %}>{{ s.subject }}</option>
+            {% endfor %}{% endif %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Status</label>
+          <select name="status_filter" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Status</option>
+            {% for st in ['Present','Absent','Leave','Late','Medical'] %}
+            <option {% if request.args.get('status_filter')==st %}selected{% endif %}>{{ st }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">From Date</label>
+          <input type="date" name="from_date" value="{{ request.args.get('from_date','') }}"
+                 style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">To Date</label>
+          <input type="date" name="to_date" value="{{ request.args.get('to_date','') }}"
+                 style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-magnifying-glass"></i> Filter</button>
+        <a href="/student_attendance{% if request.args.get('student_id') %}?student_id={{ request.args.get('student_id') }}{% endif %}"
+           class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Records table -->
+<div class="card fu fu3">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Attendance Log</div>
+      {% if records is defined %}<div class="cs">{{ records|length }} records</div>{% endif %}
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Time Slot</th>
+          <th>Faculty</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+          {% for r in records %}
+          <tr>
+            <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+            <td style="font-size:12px;font-weight:600;color:var(--ink2)">{{ r.date }}</td>
+            <td style="font-size:12px;font-weight:600">{{ r.subject }}</td>
+            <td>
+              {% if r.status == 'Present' %}<span class="tag t-gr"><i class="fas fa-check" style="font-size:9px"></i> Present</span>
+              {% elif r.status == 'Absent' %}<span class="tag t-re"><i class="fas fa-times" style="font-size:9px"></i> Absent</span>
+              {% elif r.status == 'Leave' %}<span class="tag t-am">Leave</span>
+              {% elif r.status == 'Late' %}<span class="tag t-bl">Late</span>
+              {% elif r.status == 'Medical' %}<span class="tag t-vi">Medical</span>
+              {% else %}<span class="tag">{{ r.status }}</span>{% endif %}
+            </td>
+            <td style="font-size:12px;color:var(--ink3)">{{ r.time_slot or '—' }}</td>
+            <td style="font-size:12px;color:var(--ink3)">{{ r.faculty or '—' }}</td>
+            <td style="font-size:12px;color:var(--ink4)">
+              <div class="flex-ac gap8">
+                {{ r.remark or '—' }}
+                {% if r.status == 'Absent' %}
+                <button class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:10px" onclick="openCorrectionModal('{{ r.id }}', '{{ r.subject }}', '{{ r.date }}')">
+                  <i class="fas fa-circle-question" title="Request Correction"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="7">
+            <div class="empty-state"><i class="fas fa-inbox"></i><p>No records found.</p></div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Correction Modal -->
+<div id="correctionModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:100; display:flex; align-items:center; justify-content:center;">
+  <div class="card" style="width:100%; max-width:400px; margin:16px;">
+    <div class="ch">
+      <div class="ct">Request Correction</div>
+      <div class="cs" id="cor-info">Subject on Date</div>
+    </div>
+    <div class="cb">
+      <form action="/request_correction" method="POST">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="record_id" id="cor-id">
+        <div class="fgrp">
+          <label>Reason for correction *</label>
+          <textarea name="reason" class="tb-field" style="width:100%; height:100px; padding:10px;" placeholder="e.g. I was present but marked absent by mistake / I was on medical leave..." required></textarea>
+        </div>
+        <div class="flex-ac gap8 mt12">
+          <button type="submit" class="btn btn-vi flex1">Submit Request</button>
+          <button type="button" class="btn btn-out" onclick="closeCorrectionModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePrediction() {
+  const panel = document.getElementById('predictionBanner');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    loadPrediction();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function loadPrediction() {
+  try {
+    const res = await fetch('/api/student_prediction');
+    const data = await res.json();
+    
+    document.getElementById('stat-pct').textContent = data.overall_percentage + '%';
+    document.getElementById('stat-needed').textContent = data.overall_needed;
+    
+    const badge = document.getElementById('healthBadge');
+    badge.textContent = data.health;
+    badge.className = 'tag ' + (data.health === 'Safe' ? 't-gr' : (data.health === 'Warning' ? 't-am' : 't-re'));
+    
+    const list = document.getElementById('subjectPredictions');
+    list.innerHTML = '';
+    data.subjects.forEach(s => {
+      const card = document.createElement('div');
+      card.style = 'padding:12px; background:#fff; border:1px solid #e2e8f0; border-radius:10px;';
+      card.innerHTML = `
+        <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:4px">${s.subject}</div>
+        <div class="flex-sb flex-ac">
+          <div style="font-size:18px; font-weight:700; color:${s.percentage >= 75 ? '#059669' : '#dc2626'}">${s.percentage}%</div>
+          <div style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:${s.needed > 0 ? '#fef2f2' : '#f0fdf4'}; color:${s.needed > 0 ? '#991b1b' : '#166534'}">
+            ${s.needed > 0 ? 'Need ' + s.needed + ' more' : 'Safe'}
+          </div>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  } catch(e) { console.error(e); }
+}
+
+function openCorrectionModal(id, sub, date) {
+  document.getElementById('cor-id').value = id;
+  document.getElementById('cor-info').textContent = sub + ' on ' + date;
+  document.getElementById('correctionModal').style.display = 'flex';
+}
+
+function closeCorrectionModal() {
+  document.getElementById('correctionModal').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  closeCorrectionModal();
+});
+</script>
+{% endblock %}

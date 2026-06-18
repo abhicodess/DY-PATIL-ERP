@@ -1,0 +1,653 @@
+{% extends "attendance/attendance_base.html" %}
+
+
+{% block title %}{{ student.name }} — Attendance{% endblock %}
+{% block page_title %}Student Attendance{% endblock %}
+{% block breadcrumb %}
+  <a href="/admin">Home</a> /
+  {% if is_admin_view %}<a href="/attendance_dashboard">Attendance</a> / {{ student.name }}{% else %}My Attendance{% endif %}
+{% endblock %}
+{% block head %}
+<style>
+  /* Screen styles: Hide sidebar for non-admins only */
+  {% if not is_admin_view %}
+    .sidebar, .sb-toggle, .topbar { display: none !important; }
+    .shell { display: block !important; }
+    .main { margin-left: 0 !important; width: 100% !important; max-width: 1100px; margin: 0 auto !important; padding: 20px !important; }
+  {% endif %}
+  
+  .report-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; border-bottom: 2px solid var(--ink); margin-bottom: 24px; }
+  .report-logo img { height: 75px; }
+  .report-title { text-align: right; }
+  .report-title h1 { font-size: 22px; font-weight: 800; color: var(--ink); margin: 0; }
+  .report-title p { font-size: 13px; color: var(--ink3); margin: 4px 0 0; font-weight: 600; }
+
+  @media print {
+    /* Always hide navigation elements on print */
+    .sidebar, .sb-toggle, .topbar, .ph-actions, .breadcrumb, .alert-bar, .tb-icon, .btn, form { display: none !important; }
+    body { background: #fff !important; }
+    .main { margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+    .card { border: 1px solid #eee !important; box-shadow: none !important; margin-bottom: 20px !important; page-break-inside: avoid; }
+    .ph { display: none !important; }
+    .report-header { display: flex !important; }
+  }
+
+  /* Professional PDF Report Styling */
+  #officialReport { display: none; background: #fff; color: #000; font-family: 'Times New Roman', serif; }
+  .pdf-shell { padding: 40px; border: 1px solid #eee; }
+  .pdf-brand { border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+  .pdf-brand img { height: 80px; }
+  .pdf-brand h1 { font-size: 24px; margin: 0; color: #1e293b; text-align: right; }
+  .pdf-brand p { font-size: 14px; margin: 5px 0 0; color: #64748b; text-align: right; }
+  
+  .pdf-meta-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+  .pdf-meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 14px; }
+  .pdf-label { font-weight: bold; background: #f8fafc; color: #1e293b; width: 30%; }
+  
+  .pdf-attendance-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+  .pdf-attendance-table th { background: #1e293b; color: #fff; padding: 10px; font-size: 13px; text-align: left; }
+  .pdf-attendance-table td { padding: 10px; border: 1px solid #e2e8f0; font-size: 13px; }
+  
+  .pdf-footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .pdf-sig-box { width: 200px; border-top: 1px solid #000; text-align: center; padding-top: 10px; font-size: 14px; font-weight: bold; }
+  .pdf-gen-on { font-size: 11px; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Formal Report Header -->
+<div class="report-header">
+    <div class="report-logo">
+        <img src="/static/images/dypatil_logo.png" alt="University Logo">
+    </div>
+    <div class="report-title">
+        <h1>ATTENDANCE ANALYTICS REPORT</h1>
+        <p>Academic Year 2025-26 • DY Patil University Ambi, Pune</p>
+    </div>
+</div>
+
+<!-- Student profile header -->
+<div class="ph fu">
+  <div class="flex-ac gap8" style="gap:16px">
+    <div class="av" style="width:52px;height:52px;font-size:20px;background:#2563EB;flex-shrink:0">
+      {{ student.name[0]|upper }}
+    </div>
+    <div>
+      <div class="ph-title">{{ student.name }}</div>
+      <div class="ph-sub">
+        {{ student.prn or student.roll }} &bull; {{ student.department }} &bull; Year {{ student.year }}
+        {% if student.division %} &bull; Div {{ student.division }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="ph-actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <div class="btn-group" style="display:inline-flex;gap:4px">
+      <button onclick="downloadPDFReport()" class="btn btn-dark btn-sm" title="Download Professional PDF Report">
+        <i class="fas fa-file-pdf"></i> Download Report
+      </button>
+      <button onclick="window.print()" class="btn btn-out btn-sm" title="Print Attendance Report">
+        <i class="fas fa-print"></i> Print
+      </button>
+      <button onclick="exportToExcel()" class="btn btn-out btn-sm" title="Export as Excel">
+        <i class="fas fa-file-excel"></i> Export
+      </button>
+    </div>
+    <a href="/student_attendance{% if is_admin_view %}?student_id={{ student.id }}{% endif %}" class="btn btn-out btn-sm">
+      <i class="fas fa-list"></i> Full Records
+    </a>
+    {% if is_admin_view %}
+    <a href="/attendance_dashboard" class="btn btn-dark btn-sm">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+    {% if has_v2_data %}
+    <form method="POST" action="/clear_student_attendance_summary" style="display:inline"
+          onsubmit="return confirm('Remove ALL PDF-imported subject totals for this student? Daily attendance records are not affected.')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="student_id" value="{{ student.id }}">
+      <input type="hidden" name="redirect" value="/student_attendance_dashboard?student_id={{ student.id }}">
+      <button type="submit" class="btn btn-out btn-sm" style="border-color:#FECACA;color:#B91C1C">
+        <i class="fas fa-broom"></i> Clear imported summary
+      </button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Status banner -->
+{% if cum.status == 'Good' %}
+<div class="alert-bar alert-bar-gr fu" style="margin-bottom:16px">
+  <i class="fas fa-circle-check"></i>
+  <strong>Attendance is Good!</strong> {{ cum.percentage }}% overall ({{ cum.attended }}/{{ cum.total }} lectures).
+  {% if cum.can_miss > 0 %}You can miss up to <strong>{{ cum.can_miss }}</strong> more lectures and stay above 75%.{% endif %}
+</div>
+{% elif cum.status == 'Average' %}
+<div class="alert-bar alert-bar-am fu" style="margin-bottom:16px">
+  <i class="fas fa-circle-exclamation"></i>
+  <strong>Attendance is Average.</strong> {{ cum.percentage }}% overall ({{ cum.attended }}/{{ cum.total }} lectures).
+  {% if cum.shortage > 0 %}Attend <strong>{{ cum.shortage }}</strong> more consecutive lectures to reach 75%.{% endif %}
+</div>
+{% else %}
+<div class="alert-bar alert-bar-re fu" style="margin-bottom:16px">
+  <i class="fas fa-circle-xmark"></i>
+  <strong>Attendance is Low!</strong> {{ cum.percentage }}% overall ({{ cum.attended }}/{{ cum.total }} lectures).
+  {% if cum.shortage > 0 %}You need <strong>{{ cum.shortage }}</strong> more classes to reach 75%.{% endif %}
+</div>
+{% endif %}
+
+<!-- Stat cards -->
+<div class="sg fu fu1">
+  <div class="sc">
+    <div>
+      <div class="sv">{{ cum.total }}</div>
+      <div class="sl">Total Lectures</div>
+      <div class="sdelta up"><i class="fas fa-calendar"></i> Conducted</div>
+    </div>
+    <div class="sico ic-bl"><i class="fas fa-calendar"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#059669">{{ cum.attended }}</div>
+      <div class="sl">Attended</div>
+      <div class="sdelta up"><i class="fas fa-check"></i> Present</div>
+    </div>
+    <div class="sico ic-gr"><i class="fas fa-check"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#DC2626">{{ cum.absent }}</div>
+      <div class="sl">Absent</div>
+      <div class="sdelta dn"><i class="fas fa-times"></i> Missed</div>
+    </div>
+    <div class="sico ic-re"><i class="fas fa-times"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:{% if cum.percentage>85 %}#059669{% elif cum.percentage>=75 %}#D97706{% else %}#DC2626{% endif %}">
+        {{ cum.percentage }}%
+      </div>
+      <div class="sl">Overall %</div>
+      <div class="sdelta {% if cum.status=='Good' %}up{% elif cum.status=='Average' %}{% else %}dn{% endif %}">
+        {{ cum.status }}
+      </div>
+    </div>
+    <div class="sico {% if cum.percentage>85 %}ic-gr{% elif cum.percentage>=75 %}ic-am{% else %}ic-re{% endif %}">
+      <i class="fas fa-percent"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction chart -->
+<div class="g6040 mb16 fu fu2">
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><i class="fas fa-wand-magic-sparkles" style="color:#2563EB"></i> AI Attendance Prediction</div>
+      <div class="cs">Next 20 lectures — best & worst case scenarios</div>
+    </div>
+    <div class="cb"><div style="height:230px"><canvas id="chartPrediction"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Prediction Summary</div><div class="cs">Based on current attendance</div></div>
+    <div class="cb">
+      <div class="prog-row">
+        <div class="prog-hd">
+          <span class="prog-lbl">Current Attendance</span>
+          <span class="prog-pct">{{ cum.percentage }}%</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-bar {% if cum.percentage>85 %}pb-gr{% elif cum.percentage>=75 %}pb-am{% else %}pb-re{% endif %}"
+               style="width:{{ cum.percentage }}%"></div>
+        </div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-hd">
+          <span class="prog-lbl">If attends all 20</span>
+          <span class="prog-pct" style="color:{% if prediction_curve[-1]>=75 %}#059669{% else %}#D97706{% endif %}">
+            {{ prediction_curve[-1] if prediction_curve else cum.percentage }}%
+          </span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-bar pb-bl"
+               style="width:{{ prediction_curve[-1] if prediction_curve else cum.percentage }}%"></div>
+        </div>
+      </div>
+      <div style="margin:16px 0 12px;border-top:1px solid var(--border);padding-top:12px">
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr>
+            <td style="color:var(--ink3);padding:5px 0">Can reach 75%?</td>
+            <td style="text-align:right;font-weight:700">
+              {% if can_reach %}
+              <span style="color:#059669"><i class="fas fa-check-circle"></i> Yes (in {{ lectures_needed }} lectures)</span>
+              {% elif lectures_needed == 0 %}
+              <span style="color:#059669"><i class="fas fa-circle-check"></i> Already above 75%</span>
+              {% else %}
+              <span style="color:#DC2626"><i class="fas fa-circle-xmark"></i> Not in 20 lectures</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink3);padding:5px 0">Consecutive needed</td>
+            <td style="text-align:right;font-weight:700;color:{% if lectures_needed==0 %}#059669{% else %}#D97706{% endif %}">
+              {{ lectures_needed if lectures_needed > 0 else '—' }}
+            </td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink3);padding:5px 0">Can safely miss</td>
+            <td style="text-align:right;font-weight:700;color:{% if cum.can_miss>0 %}#059669{% else %}#DC2626{% endif %}">
+              {{ cum.can_miss }}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--ink4);line-height:1.6">
+        <i class="fas fa-circle-info" style="color:#2563EB"></i>
+        <strong style="color:#2563EB">Blue</strong> = attend all &nbsp;
+        <strong style="color:#D97706">Orange</strong> = attend none &nbsp;
+        <strong style="color:#DC2626">Red dashed</strong> = 75% line
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Heatmap & History Logs -->
+<div class="g6040 mb16 fu fu5">
+  <!-- Heatmap -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><i class="fas fa-calendar-days" style="color:#2563EB"></i> Attendance Heatmap (Last 30 Days)</div>
+      <div class="cs">Daily attendance history calendar grid</div>
+    </div>
+    <div class="cb">
+      <!-- Heatmap Grid -->
+      <div class="heatmap-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; max-width: 320px; margin: 0 auto;">
+        {% for day in heatmap_data %}
+          <div class="heatmap-day" 
+               style="aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; position: relative; cursor: pointer;
+                      {% if day.status == 'present' %} background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0;
+                      {% elif day.status == 'late' %} background-color: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;
+                      {% elif day.status == 'absent' %} background-color: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5;
+                      {% elif day.status == 'weekend' %} background-color: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB;
+                      {% else %} background-color: #F9FAFB; color: #9CA3AF; border: 1px dashed #E5E7EB; {% endif %}"
+               title="{{ day.display_date }}: {{ day.status|capitalize }}">
+            {{ day.date.split('-')[2] }}
+          </div>
+        {% endfor %}
+      </div>
+      <!-- Heatmap Legend -->
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 16px; font-size: 11px; flex-wrap: wrap;">
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background:#D1FAE5; border:1px solid #A7F3D0; border-radius:3px"></span> Present</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background:#FEF3C7; border:1px solid #FDE68A; border-radius:3px"></span> Late</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background:#FEE2E2; border:1px solid #FCA5A5; border-radius:3px"></span> Absent</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background:#F3F4F6; border:1px solid #E5E7EB; border-radius:3px"></span> Weekend</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background:#F9FAFB; border:1px dashed #E5E7EB; border-radius:3px"></span> Off Day</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance History Table -->
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><i class="fas fa-history" style="color:#2563EB"></i> Attendance Logs (Recent)</div>
+      <div class="cs">Last 15 sessions attended or missed</div>
+    </div>
+    <div class="cb p0" style="max-height: 250px; overflow-y: auto;">
+      <table class="tbl" style="margin: 0; width: 100%;">
+        <thead>
+          <tr>
+            <th style="padding: 8px 12px; font-size: 12px;">Date</th>
+            <th style="padding: 8px 12px; font-size: 12px;">Subject</th>
+            <th style="padding: 8px 12px; font-size: 12px;">Faculty</th>
+            <th style="padding: 8px 12px; font-size: 12px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if history_records %}
+            {% for rec in history_records %}
+            <tr>
+              <td style="padding: 8px 12px; font-size:12px; white-space:nowrap">{{ rec.date }}</td>
+              <td style="padding: 8px 12px; font-size:12px; font-weight:600">{{ rec.subject }}</td>
+              <td style="padding: 8px 12px; font-size:11px; color:var(--ink3)">{{ rec.faculty_name or '—' }}</td>
+              <td style="padding: 8px 12px;">
+                <span class="tag {% if rec.status == 'Present' %}t-gr{% elif rec.status == 'Late' %}t-am{% else %}t-re{% endif %}" style="font-size: 10px; padding: 2px 6px;">
+                  {{ rec.status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="4" style="padding: 8px 12px;"><div class="empty-state" style="padding:20px 0"><i class="fas fa-history"></i><p>No recent attendance history.</p></div></td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Subject breakdown -->
+<div class="card fu fu3">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Subject-wise Attendance</div>
+      <div class="cs">{{ subjects|length }} subjects</div>
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Subject</th>
+          <th>Attended / Total</th>
+          <th>%</th>
+          <th>Progress</th>
+          <th>Status</th>
+          <th>Action Needed</th>
+          {% if is_admin_view and has_v2_data %}<th style="width:72px">Admin</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if subjects %}
+          {% for s in subjects %}
+          <tr>
+            <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+            <td style="font-weight:600;font-size:13px">{{ s.subject }}</td>
+            <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
+            <td>
+              <span class="tag {% if s.percentage>85 %}t-gr{% elif s.percentage>=75 %}t-am{% else %}t-re{% endif %}">
+                {{ s.percentage }}%
+              </span>
+            </td>
+            <td style="min-width:120px">
+              <div style="background:#F3F4F6;border-radius:99px;height:8px;overflow:hidden">
+                <div style="height:100%;border-radius:99px;background:{% if s.percentage>85 %}#059669{% elif s.percentage>=75 %}#D97706{% else %}#DC2626{% endif %};width:{{ [s.percentage,100]|min }}%"></div>
+              </div>
+            </td>
+            <td>
+              <span style="font-size:12px;font-weight:600;color:{% if s.status=='Good' %}#059669{% elif s.status=='Average' %}#D97706{% else %}#DC2626{% endif %}">
+                {{ s.status }}
+              </span>
+            </td>
+            <td style="font-size:12px">
+              {% if s.shortage > 0 %}
+                <span style="color:#DC2626"><i class="fas fa-arrow-up" style="font-size:10px"></i> Need {{ s.shortage }} more</span>
+              {% elif s.can_miss > 0 %}
+                <span style="color:#059669"><i class="fas fa-arrow-down" style="font-size:10px"></i> Can miss {{ s.can_miss }}</span>
+              {% else %}
+                <span style="color:var(--ink4)">—</span>
+              {% endif %}
+            </td>
+            {% if is_admin_view and has_v2_data %}
+            <td>
+              {% if s.summary_row_id %}
+              <form method="POST" action="/delete_attendance_summary_row" style="display:inline"
+                    onsubmit="return confirm('Delete this imported subject row from the summary?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="student_id" value="{{ student.id }}">
+                <input type="hidden" name="summary_id" value="{{ s.summary_row_id }}">
+                <input type="hidden" name="redirect" value="/student_attendance_dashboard?student_id={{ student.id }}">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Remove this subject from imported summary" style="color:#DC2626">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+              {% else %}
+              <span style="font-size:11px;color:var(--ink4)">—</span>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="{% if is_admin_view and has_v2_data %}8{% else %}7{% endif %}"><div class="empty-state"><i class="fas fa-book"></i><p>No subject data.</p></div></td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Subject bar chart -->
+{% if subjects %}
+<div class="card fu fu4">
+  <div class="ch"><div class="ct">Subject-wise Chart</div><div class="cs">Attendance % per subject</div></div>
+  <div class="cb"><div style="height:180px"><canvas id="chartSubjects"></canvas></div></div>
+</div>
+{% endif %}
+
+<!-- HIDDEN OFFICIAL REPORT TEMPLATE FOR PDF GENERATION -->
+<div id="officialReport">
+  <div class="pdf-shell">
+    <div class="pdf-brand">
+      <img src="/static/images/dypatil_logo.png" alt="University Logo">
+      <div>
+        <h1>OFFICIAL ATTENDANCE RECORD</h1>
+        <p>DY Patil University Ambi, Pune • Academic Year 2025-26</p>
+      </div>
+    </div>
+    
+    <table class="pdf-meta-table">
+      <tr>
+        <td class="pdf-label">Student Name</td>
+        <td>{{ student.name }}</td>
+        <td class="pdf-label">PRN Number</td>
+        <td>{{ student.prn or student.roll }}</td>
+      </tr>
+      <tr>
+        <td class="pdf-label">Department</td>
+        <td>{{ student.department }}</td>
+        <td class="pdf-label">Year / Div</td>
+        <td>{{ student.year }} / {{ student.division or '—' }}</td>
+      </tr>
+      <tr>
+        <td class="pdf-label">Overall Attendance</td>
+        <td style="font-weight: bold; color: {% if cum.percentage>=75 %}#166534{% else %}#991b1b{% endif %}">{{ cum.percentage }}%</td>
+        <td class="pdf-label">Report Date</td>
+        <td>{{ today }}</td>
+      </tr>
+    </table>
+
+    <h3 style="margin-bottom: 12px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Subject-wise Breakdown</h3>
+    <table class="pdf-attendance-table">
+      <thead>
+        <tr>
+          <th>Subject Name</th>
+          <th style="text-align: center;">Lectures Attended</th>
+          <th style="text-align: center;">Total Lectures</th>
+          <th style="text-align: right;">Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subjects %}
+        <tr>
+          <td>{{ s.subject }}</td>
+          <td style="text-align: center;">{{ s.attended }}</td>
+          <td style="text-align: center;">{{ s.total }}</td>
+          <td style="text-align: right; font-weight: bold;">{{ s.percentage }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background: #f8fafc; font-weight: bold;">
+          <td>Total Cumulative</td>
+          <td style="text-align: center;">{{ cum.attended }}</td>
+          <td style="text-align: center;">{{ cum.total }}</td>
+          <td style="text-align: right;">{{ cum.percentage }}%</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="pdf-footer">
+      <div>
+        <p class="pdf-gen-on">Generated electronically via DY Patil ERP • Verify at erp.dypatil.edu</p>
+        <p style="font-size: 10px; color: #64748b; margin-top: 5px;">This is a computer-generated document and may not require a physical signature for internal use.</p>
+      </div>
+      <div style="display: flex; gap: 40px;">
+        <div class="pdf-sig-box">Class Coordinator</div>
+        <div class="pdf-sig-box">Head of Department</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+var tick = {color:'#9CA3AF',font:{family:"'Plus Jakarta Sans',sans-serif",size:11}};
+var grid = {color:'#F3F4F6'};
+
+function exportToExcel() {
+  const table = document.querySelector('.tbl');
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Subject-wise Attendance" });
+  XLSX.writeFile(wb, "Attendance_Report_{{ student.name }}_{{ today }}.xlsx");
+}
+
+function downloadPDFReport() {
+  const element = document.getElementById('officialReport');
+  element.style.display = 'block'; // Show temporarily
+  
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: 'Official_Attendance_Report_{{ student.name }}.pdf',
+    image: { type: 'jpeg', quality: 1.0 },
+    html2canvas: { scale: 3, useCORS: true, letterRendering: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save().then(() => {
+    element.style.display = 'none'; // Hide back
+  });
+}
+
+// ─── Prediction Chart ───────────────────────────────────────────────────────
+// All data comes from Jinja2 template variables — safe JSON serialization
+var currentPct  = {{ cum.percentage | float }};
+var attended    = {{ cum.attended   | int }};
+var totalLec    = {{ cum.total      | int }};
+var bestCurve   = {{ prediction_curve | tojson }};  // list of 20 floats from backend
+
+// Compute worst case (attend ZERO future lectures)
+var worstCurve = [];
+for (var i = 1; i <= 20; i++) {
+  var t = totalLec + i;
+  worstCurve.push(t > 0 ? parseFloat((attended / t * 100).toFixed(1)) : 0);
+}
+
+// Labels: "Now", "+1" … "+20"
+var predLabels = ['Now'];
+for (var j = 1; j <= 20; j++) { predLabels.push('+' + j); }
+
+// Prepend current to both curves
+var bestData  = [currentPct].concat(bestCurve);
+var worstData = [currentPct].concat(worstCurve);
+var line75    = Array(21).fill(75);
+
+// Y-axis range — show meaningful area
+var yMin = Math.max(0,  Math.min(worstData[worstData.length-1], currentPct) - 5);
+var yMax = Math.min(100, Math.max(bestData[bestData.length-1], 80) + 3);
+
+var pEl = document.getElementById('chartPrediction');
+if(pEl) new Chart(pEl, {
+  type: 'line',
+  data: {
+    labels: predLabels,
+    datasets: [
+      {
+        label: 'Best (attend all)',
+        data: bestData,
+        borderColor: '#2563EB',
+        backgroundColor: 'rgba(37,99,235,0.06)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointBackgroundColor: '#2563EB',
+        borderWidth: 2.5
+      },
+      {
+        label: 'Worst (attend none)',
+        data: worstData,
+        borderColor: '#D97706',
+        backgroundColor: 'rgba(217,119,6,0)',
+        fill: false,
+        tension: 0.35,
+        pointRadius: 2,
+        borderWidth: 2,
+        borderDash: [5, 3]
+      },
+      {
+        label: '75% Requirement',
+        data: line75,
+        borderColor: '#DC2626',
+        borderWidth: 1.5,
+        borderDash: [8, 4],
+        pointRadius: 0,
+        fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      y: {
+        min: yMin, max: yMax,
+        ticks: {...tick, callback: function(v){ return v + '%'; }},
+        grid: grid
+      },
+      x: {
+        ticks: tick,
+        grid: {display: false}
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { ...tick, boxWidth: 16, padding: 12 }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Subject bar chart
+{% if subjects %}
+var sEl = document.getElementById('chartSubjects');
+if(sEl) new Chart(sEl, {
+  type: 'bar',
+  data: {
+    labels: {{ subj_labels | tojson }},
+    datasets: [{
+      data: {{ subj_pcts | tojson }},
+      backgroundColor: ({{ subj_pcts | tojson }}).map(function(p){
+        return p>85?'#ECFDF5': p>=75?'#FFFBEB':'#FEF2F2';
+      }),
+      borderColor: ({{ subj_pcts | tojson }}).map(function(p){
+        return p>85?'#059669': p>=75?'#D97706':'#DC2626';
+      }),
+      borderWidth: 2,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: tick, grid: { display: false } },
+      y: {
+        beginAtZero: true, max: 100,
+        ticks: { ...tick, callback: function(v){ return v + '%'; } },
+        grid: grid
+      }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

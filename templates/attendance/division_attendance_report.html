@@ -1,0 +1,137 @@
+{% extends "attendance/attendance_base.html" %}
+{% block title %}Division-wise Attendance Report{% endblock %}
+{% block page_title %}Division Attendance{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a> / Division Attendance{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Division Attendance Report</div>
+    <div class="ph-sub">Aggregate average attendance per department division for a selected date range</div>
+  </div>
+  <div class="ph-actions">
+    <a href="/admin/reports/division_attendance/export?{{ request.query_string.decode() }}" class="btn btn-out btn-sm">
+      <i class="fas fa-download"></i> Export Excel
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card fu fu1">
+  <div class="ch"><div class="ct">Filter Range & Classes</div></div>
+  <div class="cb">
+    <form method="GET" action="/admin/reports/division_attendance">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Start Date</label>
+          <input type="date" name="start_date" value="{{ start_date }}" style="width:100%;padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">End Date</label>
+          <input type="date" name="end_date" value="{{ end_date }}" style="width:100%;padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Department</label>
+          <select name="department" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Departments</option>
+            {% for d in departments %}<option {% if selected_dept==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Division</label>
+          <select name="division" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Divisions</option>
+            {% for d in divisions %}<option {% if selected_div==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-magnifying-glass"></i> Generate</button>
+        <a href="/admin/reports/division_attendance" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if records is defined %}
+<!-- Stats -->
+<div class="sg fu fu2" style="margin-bottom:16px">
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#2563EB">{{ records|length }}</div>
+      <div class="sl">Divisions Analyzed</div>
+      <div class="sdelta">Active classes</div>
+    </div>
+    <div class="sico ic-bl"><i class="fas fa-school"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#059669">
+        {% if records %}
+          {{ (records|map(attribute='percentage')|sum / records|length)|round(1) }}%
+        {% else %}
+          0%
+        {% endif %}
+      </div>
+      <div class="sl">Average Attendance</div>
+      <div class="sdelta">Across analyzed classes</div>
+    </div>
+    <div class="sico ic-gr"><i class="fas fa-percent"></i></div>
+  </div>
+</div>
+
+<!-- Report Table -->
+<div class="card fu fu3">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Division Wise Average Attendance</div>
+      <div class="cs">From {{ start_date }} to {{ end_date }}</div>
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Department</th>
+          <th>Division</th>
+          <th>Attended (Sum of student counts)</th>
+          <th>Total Lectures (Sum of student counts)</th>
+          <th>Average Attendance</th>
+          <th>Progress Bar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if records %}
+          {% for r in records %}
+          <tr>
+            <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+            <td><span class="tag t-bl">{{ r.department }}</span></td>
+            <td><span class="tag t-vi">Div {{ r.division }}</span></td>
+            <td style="font-size:12px">{{ r.attended }}</td>
+            <td style="font-size:12px">{{ r.total }}</td>
+            <td>
+              <span class="tag {% if r.percentage>85 %}t-gr{% elif r.percentage>=75 %}t-am{% else %}t-re{% endif %}">
+                {{ r.percentage }}%
+              </span>
+            </td>
+            <td style="min-width:150px">
+              <div style="background:#F3F4F6;border-radius:99px;height:8px;overflow:hidden">
+                <div style="height:100%;border-radius:99px;background:{% if r.percentage>85 %}#059669{% elif r.percentage>=75 %}#D97706{% else %}#DC2626{% endif %};width:{{ [r.percentage,100]|min }}%;transition:.3s"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-state"><i class="fas fa-folder-open"></i><p>No attendance records found for this date range and criteria.</p></div>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,553 @@
+{% extends "common/base.html" %}
+
+{% block title %}Apply for Admission{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Public View Layout adjustments */
+  body {
+    background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%) !important;
+    color: #F8FAFC !important;
+    min-height: 100vh;
+  }
+  .sidebar, .topbar, .sb-toggle {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 40px 16px !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .shell {
+    display: block !important;
+  }
+
+  /* Form Container Glassmorphism */
+  .apply-container {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 650px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .apply-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .apply-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #FFF;
+    margin-bottom: 8px;
+    background: linear-gradient(to right, #60A5FA, #A78BFA);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .apply-header p {
+    color: #94A3B8;
+    font-size: 13px;
+  }
+
+  /* Progress Bar */
+  .progress-container {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 35px;
+    padding: 0 10px;
+  }
+
+  .progress-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 3px;
+    background: #334155;
+    width: 100%;
+    z-index: 1;
+    transform: translateY(-50%);
+  }
+
+  .progress-line-active {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(to right, #3B82F6, #8B5CF6);
+    width: 0%;
+    z-index: 1;
+    transform: translateY(-50%);
+    transition: width 0.3s ease;
+  }
+
+  .step-node {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #1E293B;
+    border: 2px solid #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #94A3B8;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+  }
+
+  .step-node.active {
+    border-color: #3B82F6;
+    background: #3B82F6;
+    color: #FFF;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  }
+
+  .step-node.completed {
+    border-color: #8B5CF6;
+    background: #8B5CF6;
+    color: #FFF;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+  }
+
+  /* Form Steps formatting */
+  .form-step {
+    display: none;
+  }
+
+  .form-step.active {
+    display: block;
+    animation: fadeIn 0.4s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #E2E8F0;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-control, select, input[type="text"], input[type="email"], input[type="date"], input[type="number"] {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .form-control:focus, select:focus {
+    border-color: #6366F1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 500px) {
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Doc Upload Styling */
+  .upload-box {
+    border: 2px dashed #475569;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.4);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 12px;
+  }
+
+  .upload-box:hover {
+    border-color: #6366F1;
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  .upload-box i {
+    font-size: 20px;
+    color: #94A3B8;
+    margin-bottom: 8px;
+  }
+
+  .upload-box span {
+    display: block;
+    font-size: 12px;
+    color: #CBD5E1;
+  }
+
+  .upload-box input[type="file"] {
+    display: none;
+  }
+
+  .file-selected-name {
+    font-size: 11px;
+    color: #10B981;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .btn-nav-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+  }
+
+  .status-link-btn {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .status-link-btn a {
+    color: #60A5FA;
+    font-size: 12px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  .status-link-btn a:hover {
+    color: #818CF8;
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="apply-container">
+  <div class="apply-header">
+    <h1>DY Patil College ERP</h1>
+    <p>Enterprise Admission System — Academic Session 2026</p>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-line"></div>
+    <div class="progress-line-active" id="progressLine"></div>
+    <div class="step-node active" id="node1">1</div>
+    <div class="step-node" id="node2">2</div>
+    <div class="step-node" id="node3">3</div>
+  </div>
+
+  <form id="applyForm" action="{{ url_for('admissions.apply') }}" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <!-- STEP 1: Personal Details -->
+    <div class="form-step active" id="step1">
+      <div class="form-group">
+        <label for="applicant_name">Full Name (as per HSC marksheet)</label>
+        <input type="text" id="applicant_name" name="applicant_name" required placeholder="Enter your full name">
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="applicant_email">Email Address</label>
+          <input type="email" id="applicant_email" name="applicant_email" required placeholder="name@example.com">
+        </div>
+        <div class="form-group">
+          <label for="applicant_phone">Mobile Number</label>
+          <input type="text" id="applicant_phone" name="applicant_phone" required placeholder="10-digit mobile number">
+        </div>
+      </div>
+
+      <div class="grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap:16px;">
+        <div class="form-group">
+          <label for="date_of_birth">Date of Birth</label>
+          <input type="date" id="date_of_birth" name="date_of_birth" required>
+        </div>
+        <div class="form-group">
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender" required>
+            <option value="">Select</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category" name="category" required>
+            <option value="">Select</option>
+            <option value="OPEN">OPEN</option>
+            <option value="OBC">OBC</option>
+            <option value="SC">SC</option>
+            <option value="ST">ST</option>
+            <option value="NT">NT</option>
+            <option value="EWS">EWS</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="domicile_state">Domicile State</label>
+        <input type="text" id="domicile_state" name="domicile_state" required placeholder="e.g. Maharashtra">
+      </div>
+    </div>
+
+    <!-- STEP 2: Academic Details -->
+    <div class="form-step" id="step2">
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="ssc_percentage">SSC Percentage (%)</label>
+          <input type="number" step="0.01" min="0" max="100" id="ssc_percentage" name="ssc_percentage" required placeholder="e.g. 85.50">
+        </div>
+        <div class="form-group">
+          <label for="hsc_percentage">HSC Percentage (%)</label>
+          <input type="number" step="0.01" min="0" max="100" id="hsc_percentage" name="hsc_percentage" required placeholder="e.g. 78.20">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="entrance_score">Entrance Exam Score (0-100)</label>
+          <input type="number" step="0.01" min="0" max="100" id="entrance_score" name="entrance_score" required placeholder="MHT-CET / JEE Score">
+        </div>
+        <div class="form-group">
+          <label for="bonus_score">Sports/Cultural Bonus (0-10)</label>
+          <input type="number" step="0.1" min="0" max="10" id="bonus_score" name="bonus_score" value="0">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="applied_department">Choice of Department</label>
+          <select id="applied_department" name="applied_department" required>
+            <option value="">Select Department</option>
+            <option value="AIML">Artificial Intelligence & Machine Learning</option>
+            <option value="AIDS">Artificial Intelligence & Data Science</option>
+            <option value="CS">Computer Science</option>
+            <option value="IT">Information Technology</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="applied_year">Applied Year</label>
+          <select id="applied_year" name="applied_year" required>
+            <option value="2026">2026-27</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Documents Upload -->
+    <div class="form-step" id="step3">
+      <p style="font-size:11px; color:#A78BFA; margin-bottom:15px;">Supported formats: PDF, JPG, PNG (Max 2MB per file)</p>
+      
+      <div class="grid-2">
+        <div class="form-group">
+          <label>SSC Marksheet *</label>
+          <div class="upload-box" onclick="triggerInput('SSC_MARKSHEET')">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span id="label_SSC_MARKSHEET">Select File</span>
+            <input type="file" id="file_SSC_MARKSHEET" name="SSC_MARKSHEET" required onchange="fileSelected('SSC_MARKSHEET')">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>HSC Marksheet *</label>
+          <div class="upload-box" onclick="triggerInput('HSC_MARKSHEET')">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span id="label_HSC_MARKSHEET">Select File</span>
+            <input type="file" id="file_HSC_MARKSHEET" name="HSC_MARKSHEET" required onchange="fileSelected('HSC_MARKSHEET')">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Leaving Certificate *</label>
+          <div class="upload-box" onclick="triggerInput('LEAVING_CERTIFICATE')">
+            <i class="fa-solid fa-address-card"></i>
+            <span id="label_LEAVING_CERTIFICATE">Select File</span>
+            <input type="file" id="file_LEAVING_CERTIFICATE" name="LEAVING_CERTIFICATE" required onchange="fileSelected('LEAVING_CERTIFICATE')">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Domicile Certificate *</label>
+          <div class="upload-box" onclick="triggerInput('DOMICILE')">
+            <i class="fa-solid fa-house"></i>
+            <span id="label_DOMICILE">Select File</span>
+            <input type="file" id="file_DOMICILE" name="DOMICILE" required onchange="fileSelected('DOMICILE')">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Passport Size Photo *</label>
+          <div class="upload-box" onclick="triggerInput('PHOTO')">
+            <i class="fa-solid fa-image"></i>
+            <span id="label_PHOTO">Select File</span>
+            <input type="file" id="file_PHOTO" name="PHOTO" required onchange="fileSelected('PHOTO')">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Signature *</label>
+          <div class="upload-box" onclick="triggerInput('SIGNATURE')">
+            <i class="fa-solid fa-signature"></i>
+            <span id="label_SIGNATURE">Select File</span>
+            <input type="file" id="file_SIGNATURE" name="SIGNATURE" required onchange="fileSelected('SIGNATURE')">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Caste Certificate (Optional)</label>
+        <div class="upload-box" onclick="triggerInput('CASTE_CERTIFICATE')">
+          <i class="fa-solid fa-id-card"></i>
+          <span id="label_CASTE_CERTIFICATE">Select File</span>
+          <input type="file" id="file_CASTE_CERTIFICATE" name="CASTE_CERTIFICATE" onchange="fileSelected('CASTE_CERTIFICATE')">
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="btn-nav-container">
+      <button type="button" class="btn btn-out" id="prevBtn" onclick="nextPrev(-1)" style="display: none;">Previous</button>
+      <button type="button" class="btn btn-blue" id="nextBtn" onclick="nextPrev(1)" style="margin-left: auto;">Next</button>
+    </div>
+  </form>
+
+  <div class="status-link-btn">
+    <a href="{{ url_for('admissions.status', token='LOOKUP') }}">Already applied? Check Status here</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let currentStep = 0;
+  showStep(currentStep);
+
+  function showStep(n) {
+    const steps = document.getElementsByClassName("form-step");
+    steps[n].classList.add("active");
+    
+    // Manage Buttons
+    if (n === 0) {
+      document.getElementById("prevBtn").style.display = "none";
+    } else {
+      document.getElementById("prevBtn").style.display = "inline-flex";
+    }
+
+    if (n === (steps.length - 1)) {
+      document.getElementById("nextBtn").innerHTML = 'Submit Application';
+      document.getElementById("nextBtn").className = "btn btn-gr";
+    } else {
+      document.getElementById("nextBtn").innerHTML = 'Next';
+      document.getElementById("nextBtn").className = "btn btn-blue";
+    }
+
+    // Update Progress nodes
+    updateProgress(n);
+  }
+
+  function nextPrev(n) {
+    const steps = document.getElementsByClassName("form-step");
+    
+    // Validate current step fields before going forward
+    if (n === 1 && !validateStepForm()) return false;
+
+    steps[currentStep].classList.remove("active");
+    currentStep = currentStep + n;
+
+    if (currentStep >= steps.length) {
+      document.getElementById("applyForm").submit();
+      return false;
+    }
+
+    showStep(currentStep);
+  }
+
+  function validateStepForm() {
+    const steps = document.getElementsByClassName("form-step");
+    const inputs = steps[currentStep].getElementsByTagName("input");
+    const selects = steps[currentStep].getElementsByTagName("select");
+    
+    let valid = true;
+
+    for (let i = 0; i < inputs.length; i++) {
+      if (inputs[i].hasAttribute("required") && inputs[i].value.trim() === "") {
+        inputs[i].style.borderColor = "#EF4444";
+        valid = false;
+      } else {
+        inputs[i].style.borderColor = "#334155";
+      }
+    }
+
+    for (let i = 0; i < selects.length; i++) {
+      if (selects[i].hasAttribute("required") && selects[i].value === "") {
+        selects[i].style.borderColor = "#EF4444";
+        valid = false;
+      } else {
+        selects[i].style.borderColor = "#334155";
+      }
+    }
+
+    return valid;
+  }
+
+  function updateProgress(n) {
+    const nodes = [document.getElementById("node1"), document.getElementById("node2"), document.getElementById("node3")];
+    const progressLine = document.getElementById("progressLine");
+
+    // Line fill percentage
+    const widthPct = n * 50;
+    progressLine.style.width = widthPct + "%";
+
+    nodes.forEach((node, idx) => {
+      if (idx < n) {
+        node.className = "step-node completed";
+      } else if (idx === n) {
+        node.className = "step-node active";
+      } else {
+        node.className = "step-node";
+      }
+    });
+  }
+
+  function triggerInput(id) {
+    document.getElementById("file_" + id).click();
+  }
+
+  function fileSelected(id) {
+    const fileInput = document.getElementById("file_" + id);
+    const label = document.getElementById("label_" + id);
+    if (fileInput.files.length > 0) {
+      const fileName = fileInput.files[0].name;
+      label.innerHTML = `<span class="file-selected-name"><i class="fa-solid fa-circle-check"></i> ${fileName}</span>`;
+    }
+  }
+</script>
+{% endblock %}

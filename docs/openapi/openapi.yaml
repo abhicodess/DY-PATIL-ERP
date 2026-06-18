@@ -1,0 +1,869 @@
+components:
+  responses:
+    DEFAULT_ERROR:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: Default error response
+    ForbiddenError:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorSchema'
+      description: Insufficient role permissions
+    TenantMismatchError:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorSchema'
+      description: JWT tenant does not match request subdomain
+    UNPROCESSABLE_ENTITY:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      description: Unprocessable Entity
+    UnauthorizedError:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorSchema'
+      description: JWT missing or invalid
+  schemas:
+    AttendanceRecord:
+      properties:
+        remark:
+          default: ''
+          type: string
+        status:
+          enum:
+          - Present
+          - Absent
+          - Late
+          - Excused
+          - Leave
+          type: string
+        student_id:
+          type: integer
+      required:
+      - status
+      - student_id
+      type: object
+    AttendanceSubmit:
+      properties:
+        date:
+          format: date
+          type: string
+        division:
+          type: string
+        records:
+          items:
+            $ref: '#/components/schemas/AttendanceRecord'
+          type: array
+        semester:
+          type: string
+        subject:
+          type: string
+        time_slot:
+          type: string
+      required:
+      - date
+      - division
+      - records
+      - semester
+      - subject
+      - time_slot
+      type: object
+    AttendanceSummary:
+      properties:
+        attended:
+          type: integer
+        percentage:
+          type: number
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        subject:
+          type: string
+        total:
+          type: integer
+      type: object
+    CSRFResponse:
+      properties:
+        csrf_token:
+          type: string
+      required:
+      - csrf_token
+      type: object
+    Error:
+      properties:
+        code:
+          description: Error code
+          type: integer
+        errors:
+          description: Errors
+          type: object
+        message:
+          description: Error message
+          type: string
+        status:
+          description: Error name
+          type: string
+      type: object
+    Error1:
+      properties:
+        code:
+          example: STUDENT_NOT_FOUND
+          type: string
+        details:
+          default: null
+          type:
+          - object
+          - 'null'
+        error:
+          example: Not found
+          type: string
+      type: object
+    ErrorSchema:
+      properties:
+        code:
+          example: STUDENT_NOT_FOUND
+          type: string
+        details:
+          default: null
+          type:
+          - object
+          - 'null'
+        error:
+          example: Not found
+          type: string
+      type: object
+    Login:
+      properties:
+        password:
+          type: string
+        role:
+          enum:
+          - admin
+          - faculty
+          - student
+          type: string
+        username:
+          type: string
+      required:
+      - password
+      - role
+      - username
+      type: object
+    LoginResponse:
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserProfile'
+      required:
+      - access_token
+      - refresh_token
+      - user
+      type: object
+    PaginatedResponse:
+      properties:
+        data:
+          items:
+            type: object
+          type: array
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+        page:
+          type: integer
+        pages:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+      type: object
+    PaginationMetadata:
+      properties:
+        first_page:
+          type: integer
+        last_page:
+          type: integer
+        next_page:
+          type: integer
+        page:
+          type: integer
+        previous_page:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+      type: object
+    RefreshResponse:
+      properties:
+        access_token:
+          type: string
+      required:
+      - access_token
+      type: object
+    ResultResponse:
+      properties:
+        external_marks:
+          type: number
+        grade:
+          type: string
+        id:
+          type: integer
+        internal_marks:
+          type: number
+        is_published:
+          type: boolean
+        semester:
+          type: string
+        student_id:
+          type: integer
+        subject_id:
+          type: integer
+        total:
+          type: number
+      type: object
+    StudentCreate:
+      properties:
+        address:
+          maxLength: 500
+          type: string
+        department:
+          enum:
+          - CS
+          - IT
+          - ENTC
+          - MECH
+          - CIVIL
+          - AIDS
+          - AIML
+          type: string
+        division:
+          enum:
+          - A
+          - B
+          - C
+          - D
+          type: string
+        dob:
+          format: date
+          type: string
+        email:
+          format: email
+          type: string
+        name:
+          maxLength: 100
+          minLength: 2
+          type: string
+        parent_phone:
+          pattern: ^\+?[0-9]{10,13}$
+          type: string
+        phone:
+          pattern: ^\+?[0-9]{10,13}$
+          type: string
+        roll:
+          example: CS2024001
+          type: string
+        semester:
+          maximum: 8
+          minimum: 1
+          type: integer
+        year:
+          maximum: 4
+          minimum: 1
+          type: integer
+      required:
+      - department
+      - division
+      - dob
+      - email
+      - name
+      - roll
+      - semester
+      - year
+      type: object
+    StudentResponse:
+      properties:
+        attendance_pct:
+          default: 0.0
+          description: Current month attendance %
+          type: number
+        created_at:
+          format: date-time
+          type: string
+        department:
+          type: string
+        division:
+          type: string
+        email:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        roll:
+          type: string
+        semester:
+          type: integer
+        year:
+          type: integer
+      type: object
+    StudentUpdate:
+      properties:
+        address:
+          type: string
+        email:
+          format: email
+          type: string
+        name:
+          maxLength: 100
+          minLength: 2
+          type: string
+        phone:
+          type: string
+      type: object
+    UserProfile:
+      properties:
+        department:
+          type:
+          - string
+          - 'null'
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+      type: object
+  securitySchemes:
+    BearerAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
+info:
+  title: DY Patil University ERP API
+  version: v1
+openapi: 3.1.0
+paths:
+  /api/changelog:
+    get:
+      description: Returns the full machine-readable release history and migration
+        guide links.
+      responses:
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      summary: Get API changelog
+      tags:
+      - Changelog
+  /api/v1/attendance/:
+    get:
+      parameters:
+      - description: Page number (1-indexed)
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+      - description: Results per page, max 100
+        in: query
+        name: per_page
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          type: integer
+      - in: query
+        name: student_id
+        required: false
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: start_date
+        required: false
+        schema:
+          format: date
+          type: string
+      - in: query
+        name: end_date
+        required: false
+        schema:
+          format: date
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+          description: OK
+        '422':
+          $ref: '#/components/responses/UNPROCESSABLE_ENTITY'
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get list of attendance records
+      tags:
+      - Attendance
+  /api/v1/attendance/defaulters:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AttendanceSummary'
+                type: array
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get list of defaulters below threshold
+      tags:
+      - Attendance
+  /api/v1/attendance/session:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceSubmit'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSummary'
+          description: OK
+        '422':
+          $ref: '#/components/responses/UNPROCESSABLE_ENTITY'
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Create a new attendance session
+      tags:
+      - Attendance
+  /api/v1/attendance/session/initialize:
+    post:
+      responses:
+        '200':
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Initialize attendance session from timetable
+      tags:
+      - Attendance
+  /api/v1/attendance/session/{session_id}:
+    get:
+      responses:
+        '200':
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get session details by ID
+      tags:
+      - Attendance
+    parameters:
+    - in: path
+      name: session_id
+      required: true
+      schema:
+        minimum: 0
+        type: integer
+  /api/v1/attendance/student/{student_id}:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSummary'
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get student attendance summary and history
+      tags:
+      - Attendance
+    parameters:
+    - in: path
+      name: student_id
+      required: true
+      schema:
+        minimum: 0
+        type: integer
+  /api/v1/attendance/submit:
+    post:
+      responses:
+        '200':
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Submit or update attendance
+      tags:
+      - Attendance
+  /api/v1/auth/csrf:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CSRFResponse'
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      summary: Get CSRF token
+      tags:
+      - Authentication
+  /api/v1/auth/login:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: OK
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Invalid credentials
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Validation error
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      summary: Generate access and refresh tokens
+      tags:
+      - Authentication
+  /api/v1/auth/logout:
+    post:
+      responses:
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Revoke current token
+      tags:
+      - Authentication
+  /api/v1/auth/me:
+    get:
+      responses:
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get current user details
+      tags:
+      - Authentication
+  /api/v1/auth/refresh:
+    post:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Refresh access token
+      tags:
+      - Authentication
+  /api/v1/auth/token:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      responses:
+        '422':
+          $ref: '#/components/responses/UNPROCESSABLE_ENTITY'
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      summary: Legacy token endpoint
+      tags:
+      - Authentication
+  /api/v1/students/:
+    get:
+      description: Returns a paginated list of students. Faculty can only see their
+        own division. Admin sees all.
+      parameters:
+      - in: query
+        name: sort_by
+        required: false
+        schema:
+          default: created_at
+          type: string
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: desc
+          enum:
+          - asc
+          - desc
+          type: string
+      - description: Page number (1-indexed)
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+      - description: Results per page, max 100
+        in: query
+        name: per_page
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          type: integer
+      - in: query
+        name: department
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: year
+        required: false
+        schema:
+          type: integer
+      - in: query
+        name: division
+        required: false
+        schema:
+          type: string
+      - description: Search by name or roll number
+        in: query
+        name: search
+        required: false
+        schema:
+          type: string
+      - description: Filter by min attendance %
+        in: query
+        name: min_attendance
+        required: false
+        schema:
+          type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+          description: OK
+        '422':
+          $ref: '#/components/responses/UNPROCESSABLE_ENTITY'
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: List students
+      tags:
+      - Students
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+          description: Created
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Roll number already exists
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Validation error
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Create student
+      tags:
+      - Students
+  /api/v1/students/{student_id}:
+    delete:
+      responses:
+        '204':
+          description: No Content
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Not Found
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Soft-delete student
+      tags:
+      - Students
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+          description: OK
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1'
+          description: Student not found
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get student by ID
+      tags:
+      - Students
+    parameters:
+    - in: path
+      name: student_id
+      required: true
+      schema:
+        minimum: 0
+        type: integer
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+          description: OK
+        '422':
+          $ref: '#/components/responses/UNPROCESSABLE_ENTITY'
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Partially update student
+      tags:
+      - Students
+  /api/v1/students/{student_id}/attendance:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSummary'
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get student attendance summary
+      tags:
+      - Students
+    parameters:
+    - in: path
+      name: student_id
+      required: true
+      schema:
+        minimum: 0
+        type: integer
+  /api/v1/students/{student_id}/results:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ResultResponse'
+                type: array
+          description: OK
+        default:
+          $ref: '#/components/responses/DEFAULT_ERROR'
+      security:
+      - BearerAuth: []
+      summary: Get student results
+      tags:
+      - Students
+    parameters:
+    - in: path
+      name: student_id
+      required: true
+      schema:
+        minimum: 0
+        type: integer
+tags:
+- description: Authentication and Session endpoints
+  name: auth_api_v1
+- description: Student management endpoints
+  name: students_api_v1
+- description: Attendance management endpoints
+  name: attendance_api_v1
+- description: API Changelog endpoints
+  name: changelog

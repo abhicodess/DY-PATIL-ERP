@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: 'flask_apps'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app1:8000', 'app2:8000', 'app3:8000']

@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Import Exam Results</h3>
+        <p class="text-muted small mb-0">Upload wide-format excel files to process records automatically</p>
+    </div>
+    <div>
+        <a href="{{ url_for('index') }}" class="btn btn-light shadow-sm"><i class="bi bi-arrow-left"></i> Back to Results</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="custom-card shadow-sm border-0 h-100">
+            <div class="custom-card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                        <i class="bi bi-cloud-arrow-up fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold">Upload Excel Sheet</h5>
+                    <p class="text-muted small">Upload your spreadsheet containing the student marks. The system will automatically map the subjects & columns per PRN.</p>
+                </div>
+
+                <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Target Semester</label>
+                        <select name="semester" class="form-select" required>
+                            <option value="">Select Semester...</option>
+                            <option value="I">Semester I</option>
+                            <option value="II">Semester II</option>
+                            <option value="III">Semester III</option>
+                            <option value="IV">Semester IV</option>
+                            <option value="V">Semester V</option>
+                            <option value="VI">Semester VI</option>
+                            <option value="VII">Semester VII</option>
+                            <option value="VIII">Semester VIII</option>
+                        </select>
+                    </div>
+
+                    <div class="border rounded p-4 text-center cursor-pointer mb-4 bg-light border-dashed" style="border-style: dashed !important; border-width: 2px !important; border-color: #dee2e6 !important;">
+                        <i class="bi bi-file-earmark-excel text-success fs-1 mb-2 d-block"></i>
+                        <input class="form-control mb-2" type="file" name="file" accept=".xls,.xlsx" required>
+                        <span class="text-muted small">Only .xlsx or .xls files allowed</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 py-2 fw-bold"><i class="bi bi-upload me-2"></i> Process & Import File</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="custom-card shadow-sm border-0 h-100">
+            <div class="custom-card-header">
+                <i class="bi bi-info-circle me-2"></i> Import Guidelines
+            </div>
+            <div class="custom-card-body bg-light">
+                <h6 class="fw-bold">Required File Format:</h6>
+                <p class="small text-muted mb-4">Ensure your Excel sheet contains the following exact headers for successful auto-mapping:</p>
+                
+                <ul class="list-group list-group-flush mb-4 small shadow-sm rounded">
+                    <li class="list-group-item d-flex justify-content-between"><strong>PRN</strong> <span class="text-muted">Unique ID</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><strong>Name</strong> <span class="text-muted">Student Name</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><strong>Division</strong> <span class="text-muted">A, B, C, or D (Optional)</span></li>
+                </ul>
+
+                <h6 class="fw-bold mt-2">Subject Columns Layout (Wide Format):</h6>
+                <p class="small text-muted mb-3">Marks must be mapped dynamically grouped by Subject Code postfixes.</p>
+                
+                <div class="bg-dark text-light p-3 rounded font-monospace small shadow-sm" style="font-size: 0.75rem; overflow-x: auto;">
+                    SUB1_Assignment, SUB1_Attendance, SUB1_UT, SUB1_MSE,<br>
+                    SUB2_Assignment, SUB2_Attendance, SUB2_UT, SUB2_MSE...
+                </div>
+                
+                <div class="alert alert-warning mt-4 small mb-0 d-flex align-items-start">
+                    <i class="bi bi-exclamation-triangle ms-1 me-2 mt-1"></i>
+                    <div>
+                        <strong>Note:</strong> Out-of-bounds components handles missing datasets as 0 marks gracefully. Marks should be relative to Assignment (5), Attendance (5), UT (20) and MSE (20) making each subject precisely aggregate to 60.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

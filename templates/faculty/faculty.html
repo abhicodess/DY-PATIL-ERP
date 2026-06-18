@@ -1,0 +1,170 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Faculty{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Faculty{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Faculty</div><div class="ph-sub">{{ faculty_list|length }} members</div></div>
+  <div class="ph-actions">
+    <a href="/export_faculty_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export</a>
+    <button class="btn btn-out btn-sm" onclick="document.getElementById('impFacSmart').classList.add('show')"><i class="fas fa-file-excel"></i> Import Excel</button>
+    <button class="btn btn-am btn-sm" onclick="if(confirm('Remove placeholder/empty faculty rows?')) document.getElementById('fixFacForm').submit()"><i class="fas fa-broom"></i> Fix Bad Data</button>
+    <a href="/add_faculty" class="btn btn-dark btn-sm"><i class="fas fa-plus"></i> Add Faculty</a>
+  </div>
+</div>
+
+{% if request.args.get('deleted') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('deleted') }} faculty deleted.</span></div>
+{% endif %}
+{% if request.args.get('cleaned') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('cleaned') }} bad rows removed.</span></div>
+{% endif %}
+{% if request.args.get('imported') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('imported') }} faculty imported. {% if request.args.get('skipped') %}({{ request.args.get('skipped') }} skipped){% endif %}</span></div>
+{% endif %}
+{% if request.args.get('error') == 'no_file' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Please select an Excel file before importing faculty records.</span></div>
+{% elif request.args.get('error') == 'bad_excel' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Unable to read the Excel file. Please upload a valid `.xlsx` file.</span></div>
+{% elif request.args.get('error') == 'bad_format' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Invalid template format. Include at least Name and Email/Faculty headers.</span></div>
+{% endif %}
+
+<div class="card fu fu1">
+  <!-- BULK ACTION BAR -->
+  <div id="fBulkBar" style="display:none;padding:10px 20px;background:var(--blue-s);border-bottom:1px solid var(--blue-m)">
+    <div class="flex-ac gap10">
+      <span style="font-size:13px;font-weight:700;color:var(--blue)"><i class="fas fa-check-circle"></i> <span id="fSelNum">0</span> selected</span>
+      <button type="button" class="btn btn-danger btn-sm" onclick="submitFacBulk()"><i class="fas fa-trash"></i> Delete Selected</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="clearFacSel()"><i class="fas fa-xmark"></i> Deselect All</button>
+    </div>
+  </div>
+
+  <form method="POST" action="/bulk_delete_faculty" id="fBulkForm" style="display:none">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div id="fBulkInputs"></div>
+  </form>
+
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:40px"><input type="checkbox" id="fSelAll" onchange="toggleFacAll(this)" style="cursor:pointer;width:16px;height:16px"></th>
+          <th>Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Phone</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in faculty_list %}
+        <tr>
+          <td><input type="checkbox" class="frow-cb" data-id="{{ f.id }}" onchange="updateFacBar()" style="cursor:pointer;width:16px;height:16px"></td>
+          <td><div class="flex-ac gap8"><div class="av av-sm" style="background:#7C3AED">{{ f.name[0]|upper }}</div>{{ f.name }}</div></td>
+          <td><span class="tag t-vi">{{ f.department }}</span></td>
+          <td style="color:var(--ink3);font-size:12px">{{ f.designation or "—" }}</td>
+          <td style="color:var(--ink3);font-size:12px">{{ f.email }}</td>
+          <td class="mono" style="font-size:12px">{{ f.phone or "—" }}</td>
+          <td>
+            <div class="flex-ac gap6">
+              <button class="btn btn-out btn-sm" onclick="openEditF({{ f.id }},'{{ f.name }}','{{ f.department }}','{{ f.designation or '' }}','{{ f.email }}','{{ f.phone or '' }}')"><i class="fas fa-pen"></i></button>
+              <form method="POST" action="/delete_faculty" style="display:inline" onsubmit="return confirm('Delete {{ f.name }}?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="faculty_id" value="{{ f.id }}">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state"><i class="fas fa-chalkboard-user"></i><p>No faculty yet.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="editFacModal">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:16px"><div class="ct">Edit Faculty</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('editFacModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_faculty"><div class="cb" style="padding-top:0">
+      <input type="hidden" name="faculty_id" id="feid">
+      <div class="fg2">
+        <div class="fgrp"><label>Name *</label><input type="text" name="name" id="fen" required></div>
+        <div class="fgrp"><label>Department</label><select name="department" id="fed">{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>Designation</label><select name="designation" id="fedes">{% for d in DESIGNATIONS %}<option>{{ d }}</option>{% endfor %}</select></div>
+        <div class="fgrp"><label>Phone</label><input type="text" name="phone" id="feph"></div>
+      </div>
+      <div class="fgrp"><label>Email *</label><input type="email" name="email" id="fee" required></div>
+    </div><div class="cf">
+      <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save</button>
+      <button type="button" class="btn btn-out" onclick="document.getElementById('editFacModal').classList.remove('show')">Cancel</button>
+    </div></form>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="impFacSmart">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div><div class="ct">Import Faculty — Faculty_Details_ Format</div></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('impFacSmart').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_faculty_smart" enctype="multipart/form-data">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-info" style="margin-bottom:14px"><i class="fas fa-circle-info"></i>
+          <div style="font-size:12px;line-height:1.7"><strong>Supports Faculty_Details_.xlsx</strong><br>
+          Auto-reads: <code>Sr.No | Name of Faculty | Department | Contact | Email</code><br>Skips empty rows automatically.</div>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('f_impFacSmart').click()">
+          <i class="fas fa-file-excel" style="color:#059669"></i><p>Click to choose Excel file</p><small>.xlsx / .xls</small>
+          <input type="file" name="file" id="f_impFacSmart" accept=".xlsx,.xls" style="display:none"
+                 required
+                 onchange="document.getElementById('fn_impFacSmart').textContent='✓  '+this.files[0].name;document.getElementById('ibtn_impFacSmart').disabled=false">
+        </div>
+        <p id="fn_impFacSmart" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+      </div>
+      <div class="cf">
+        <button type="submit" id="ibtn_impFacSmart" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="button" class="btn btn-out" onclick="document.getElementById('impFacSmart').classList.remove('show')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="POST" action="/fix_faculty" id="fixFacForm" style="display:none"></form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openEditF(id,name,dept,des,email,phone){
+  document.getElementById('editFacModal').classList.add('show');
+  document.getElementById('feid').value=id; document.getElementById('fen').value=name;
+  document.getElementById('fed').value=dept; document.getElementById('fedes').value=des;
+  document.getElementById('fee').value=email; document.getElementById('feph').value=phone;
+}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');}));
+
+function updateFacBar(){
+  var n=document.querySelectorAll('.frow-cb:checked').length;
+  document.getElementById('fBulkBar').style.display=n>0?'block':'none';
+  document.getElementById('fSelNum').textContent=n;
+}
+function toggleFacAll(cb){document.querySelectorAll('.frow-cb').forEach(c=>c.checked=cb.checked);updateFacBar();}
+function clearFacSel(){document.querySelectorAll('.frow-cb,#fSelAll').forEach(c=>c.checked=false);updateFacBar();}
+function submitFacBulk(){
+  var ids=Array.from(document.querySelectorAll('.frow-cb:checked')).map(c=>c.dataset.id);
+  if(!ids.length)return;
+  if(!confirm('Delete '+ids.length+' faculty members?'))return;
+  var c=document.getElementById('fBulkInputs'); c.innerHTML='';
+  ids.forEach(function(id){var i=document.createElement('input');i.type='hidden';i.name='ids[]';i.value=id;c.appendChild(i);});
+  document.getElementById('fBulkForm').submit();
+}
+</script>
+{% endblock %}

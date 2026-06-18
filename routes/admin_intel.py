@@ -1,0 +1,284 @@
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from utils.pg_wrapper import qry, qone
+from functools import wraps
+import logging
+
+admin_intel_bp = Blueprint('admin_intel', __name__)
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("role") != "admin":
+            flash("Administrator access required.", "error")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@admin_intel_bp.route("/admin/intelligence")
+@admin_required
+def admin_attendance_intelligence():
+    """
+    Main Analytics Dashboard - Attendance Intelligence
+    """
+    from services.attendance_ai import AttendanceAI
+    from config import Config
+    DEPARTMENTS, DIVISIONS, YEARS = Config.DEPARTMENTS, Config.DIVISIONS, Config.YEARS
+    
+    dept = request.args.get("dept", "")
+    division = request.args.get("division", "")
+    year = request.args.get("year", "")
+    
+    # Fetch Real AI Insights
+    insights = {
+        "risk_profiles": AttendanceAI.get_risk_profiles(dept=dept, year=year, division=division),
+        "subject_anomalies": AttendanceAI.get_department_comparison()[:5],
+        "attendance_trend": AttendanceAI.get_weekly_trend(dept=dept, division=division),
+        "summary": AttendanceAI.get_insights_summary()
+    }
+    
+    return render_template("admin/attendance_intelligence.html", 
+                           dept=dept, 
+                           division=division,
+                           year=year,
+                           insights=insights,
+                           DEPARTMENTS=DEPARTMENTS,
+                           DIVISIONS=DIVISIONS,
+                           YEARS=YEARS,
+                           is_ai_enabled=True)
+
+@admin_intel_bp.route("/admin/session-detail/<int:sid>")
+@admin_required
+def admin_session_detail(sid):
+    """
+    Deep Audit for a specific session.
+    """
+    session_info = qone("""
+        SELECT 
+            MIN(a.id) as id,
+            a.date as lecture_date,
+            a.subject,
+            a.time_slot as start_time,
+            a.division,
+            a.semester as year,
+            f.name as faculty_name
+        FROM attendance a
+        LEFT JOIN faculty f ON f.id::TEXT = a.faculty OR f.name = a.faculty
+        WHERE a.id = %s
+        GROUP BY a.date, a.subject, a.time_slot, a.division, a.semester, f.name
+    """, (sid,))
+    
+    if not session_info:
+        flash("Audit session not found", "error")
+        return redirect(url_for("admin_intel.admin_faculty_logs"))
+        
+    records = qry("""
+        SELECT a2.id as att_id, a2.status, s.name as student_name, s.roll, s.id as student_id
+        FROM attendance a2
+        JOIN students s ON a2.student_id = s.id
+        WHERE a2.date = (SELECT date FROM attendance WHERE id = %s)
+          AND a2.subject = (SELECT subject FROM attendance WHERE id = %s)
+          AND a2.time_slot = (SELECT time_slot FROM attendance WHERE id = %s)
+        ORDER BY s.roll
+    """, (sid, sid, sid))
+    
+    summary = {
+        "present": sum(1 for r in records if str(r["status"]).lower() == "present"),
+        "absent": sum(1 for r in records if str(r["status"]).lower() == "absent"),
+        "total": len(records)
+    }
+    
+    return render_template("admin/attendance_session_detail.html", 
+                           session=session_info, records=records, summary=summary)
+
+@admin_intel_bp.route("/admin/faculty-logs")
+@admin_required
+def admin_faculty_logs():
+    """Review logs for all faculty sessions."""
+    from config import Config
+    DEPARTMENTS, DIVISIONS, YEARS = Config.DEPARTMENTS, Config.DIVISIONS, Config.YEARS
+    try:
+        f_id = request.args.get("faculty_id")
+        dept = request.args.get("dept")
+        
+        filter_sql = ""
+        params = []
+        if f_id: filter_sql += " AND f.id=%s"; params.append(f_id)
+        if dept: filter_sql += " AND f.department=%s"; params.append(dept)
+        
+        params.append(100) # For LIMIT
+        
+        # Direct SQL instead of query_registry to avoid import errors
+        sql = """
+            SELECT 
+                MIN(a.id) as id, 
+                f.name as faculty_name, 
+                f.department as faculty_dept,
+                f.department as branch,
+                a.subject,
+                a.division,
+                a.date as lecture_date,
+                a.time_slot,
+                a.time_slot as start_time,
+                a.semester as year,
+                'Submitted' as status,
+                'Theory' as method,
+                NULL as created_at,
+                COUNT(a.id) as total_students,
+                SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent
+            FROM attendance a
+            LEFT JOIN faculty f ON f.id::TEXT = a.faculty OR f.name = a.faculty
+            WHERE 1=1
+            {filters}
+            GROUP BY f.id, f.name, f.department, a.subject, a.division, a.date, a.time_slot, a.semester
+            ORDER BY a.date DESC LIMIT %s
+        """.format(filters=filter_sql)
+        
+        sessions_data = qry(sql, params)
+        faculty_list = qry("SELECT id, name FROM faculty ORDER BY name")
+        
+        return render_template("admin/faculty_sessions.html", 
+                               sessions=sessions_data, faculty_list=faculty_list,
+                               DEPARTMENTS=DEPARTMENTS, DIVISIONS=DIVISIONS, YEARS=YEARS)
+    except Exception as e:
+        logging.error("Admin Faculty Logs Error: %s", e, exc_info=True)
+        return render_template("errors/500.html"), 500
+
+@admin_intel_bp.route("/shortage_report")
+@admin_required
+def shortage_report():
+    from config import Config
+    DEPARTMENTS, DIVISIONS, YEARS = Config.DEPARTMENTS, Config.DIVISIONS, Config.YEARS
+    threshold_pct = int(request.args.get("threshold", "75"))
+    dept = request.args.get("department", "").strip()
+    div = request.args.get("division", "").strip()
+    t = threshold_pct / 100.0
+    
+    sql = f"""
+        WITH stats AS (
+            SELECT s.id, s.name, s.roll, s.department as dept, s.division,
+                   COUNT(a.id) as sessions,
+                   SUM(CASE WHEN a.status ILIKE 'Present' THEN 1 ELSE 0 END) as present
+            FROM students s
+            LEFT JOIN attendance a ON s.id = a.student_id
+            WHERE (%s='' OR s.department=%s) AND (%s='' OR s.division=%s)
+            GROUP BY s.id, s.name, s.roll, s.department, s.division
+        )
+        SELECT *,
+               ROUND(CASE WHEN sessions > 0 THEN (present * 100.0 / sessions) ELSE 0 END, 1) as pct,
+               CEIL(GREATEST(0, ({t} * sessions - present) / (1 - {t} + 0.00001))) as shortage,
+               FLOOR(GREATEST(0, (present - {t} * sessions) / ({t} + 0.00001))) as can_miss
+        FROM stats
+        WHERE (CASE WHEN sessions > 0 THEN (present * 100.0 / sessions) ELSE 0 END) < %s
+        ORDER BY pct ASC, roll ASC
+    """
+    defaulters = qry(sql, (dept, dept, div, div, threshold_pct))
+    
+    return render_template("attendance/shortage_report.html", 
+                           defaulters=defaulters, 
+                           threshold=threshold_pct, 
+                           department=dept, 
+                           division=div,
+                           DEPARTMENTS=DEPARTMENTS, DIVISIONS=DIVISIONS, YEARS=YEARS)
+
+@admin_intel_bp.route("/attendance_roll_call")
+@admin_required
+def attendance_roll_call():
+    from config import Config
+    DEPARTMENTS, DIVISIONS, YEARS = Config.DEPARTMENTS, Config.DIVISIONS, Config.YEARS
+    from datetime import date, timedelta
+    
+    view = request.args.get("view", "daily")
+    dept = request.args.get("dept", "").strip()
+    year = request.args.get("year", "").strip()
+    div  = request.args.get("division", "").strip()
+    
+    today = date.today()
+    if view == "weekly":
+        start_date = today - timedelta(days=7)
+    elif view == "monthly":
+        start_date = today - timedelta(days=30)
+    elif view == "cumulative":
+        start_date = date(2000, 1, 1)
+    else:
+        start_date = today
+
+    # Standard Student Roll Call
+    sql = """
+        SELECT s.id, s.name, s.roll, s.division, s.department, s.year,
+               (SELECT COALESCE(COUNT(a2.id), 0) FROM attendance a2 
+                WHERE a2.student_id = s.id 
+                AND (a2.date >= CAST(%s AS TEXT) OR CAST(%s AS TEXT) = '2000-01-01')) as total_sessions,
+               (SELECT COALESCE(SUM(CASE WHEN a2.status ILIKE 'Present' THEN 1 ELSE 0 END), 0) FROM attendance a2
+                WHERE a2.student_id = s.id 
+                AND (a2.date >= CAST(%s AS TEXT) OR CAST(%s AS TEXT) = '2000-01-01')) as present_count
+        FROM students s
+        WHERE 1=1
+    """
+    params = [start_date, start_date, start_date, start_date]
+    if dept: sql += " AND s.department=%s"; params.append(dept)
+    if year: sql += " AND s.year=%s"; params.append(year)
+    if div:  sql += " AND s.division=%s"; params.append(div)
+    
+    sql += " ORDER BY s.roll"
+    rows = qry(sql, params)
+    
+    return render_template("admin/attendance_roll_call.html", 
+                           rows=rows, view=view, dept=dept, year=year, div=div,
+                           DEPARTMENTS=DEPARTMENTS, YEARS=YEARS, DIVISIONS=DIVISIONS)
+
+@admin_intel_bp.route("/student/<int:student_id>/attendance")
+@admin_required
+def student_attendance_profile(student_id):
+    from flask import abort
+    student = qone("SELECT * FROM students WHERE id = %s", (student_id,))
+    if not student:
+        abort(404)
+    
+    # Subject breakdown with hardening
+    subjects_data = qry("""
+        SELECT subject, 
+               COALESCE(COUNT(*), 0) as total,
+               COALESCE(SUM(CASE WHEN status ILIKE 'Present' THEN 1 ELSE 0 END), 0) as present
+        FROM attendance
+        WHERE student_id = %s
+        GROUP BY subject
+    """, (student_id,))
+    
+    for s in subjects_data:
+        s["pct"] = round(s["present"] * 100.0 / s["total"], 1) if s["total"] > 0 else 0
+
+    # Global comparison
+    global_avg = qone("SELECT AVG(CASE WHEN status ILIKE 'Present' THEN 100.0 ELSE 0 END) as avg FROM attendance")["avg"] or 0
+    
+    # Recent history timeline
+    recent_history = qry("""
+        SELECT a.date, a.subject, a.status, f.name as faculty_name
+        FROM attendance a
+        LEFT JOIN faculty f ON f.id::TEXT = a.faculty OR f.name = a.faculty
+        WHERE a.student_id = %s
+        ORDER BY a.date DESC LIMIT 20
+    """, (student_id,))
+
+    # Overall Metrics
+    overall = qone("""
+        SELECT COALESCE(COUNT(*), 0) as total, 
+               COALESCE(SUM(CASE WHEN status ILIKE 'Present' THEN 1 ELSE 0 END), 0) as present 
+        FROM attendance WHERE student_id=%s
+    """, (student_id,))
+    
+    total = overall["total"]
+    present = overall["present"]
+    overall_pct = round(present * 100.0 / total, 1) if total > 0 else 0
+    
+    # Simple risk score: (100 - pct) + penalty for last absence
+    last_status = recent_history[0]["status"] if recent_history else "Present"
+    risk_score = (100 - overall_pct) + (15 if last_status.lower() == "absent" else 0)
+
+    return render_template("admin/student_subject_breakdown.html", 
+                           student=student, 
+                           subjects_data=subjects_data, 
+                           global_avg=global_avg,
+                           recent_history=recent_history,
+                           overall_pct=overall_pct,
+                           risk_score=min(100, risk_score))

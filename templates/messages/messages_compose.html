@@ -1,0 +1,71 @@
+{% extends "common/base.html" %}
+{% block title %}Compose Message{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Messages{% endblock %}
+{% block av_color %}{% if session.role=='faculty' %}#7C3AED{% elif session.role=='student' %}#059669{% else %}#2563EB{% endif %}{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}{{ session.role|title }}{% endblock %}
+{% block sidebar_nav %}
+<div class="sb-sec">Messages</div>
+<a href="/messages" class="sb-link"><i class="fas fa-inbox"></i> Inbox</a>
+<a href="/messages/sent" class="sb-link"><i class="fas fa-paper-plane"></i> Sent</a>
+<a href="/messages/compose" class="sb-link active"><i class="fas fa-pen-to-square"></i> Compose</a>
+{% endblock %}
+{% block page_title %}Compose Message{% endblock %}
+{% block breadcrumb %}<a href="/messages">Messages</a> / Compose{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">New Message</div><div class="ph-actions"><a href="/messages/search" class="btn btn-out btn-sm"><i class="fas fa-magnifying-glass"></i> Find Person</a></div></div>
+<div class="card fu fu1" style="max-width:620px">
+  <div class="ch"><div class="ct">Send a Message</div></div>
+  <form method="POST" action="/messages/compose"><div class="cb">
+    <div class="fg2">
+      <div class="fgrp"><label>Send To (Role)</label>
+        <select name="to_role" id="to-role" onchange="updateRecipients()">
+          {% if session.role=='student' %}
+          <option value="faculty">Faculty Member</option>
+          {% else %}
+          <option value="student">Student</option>
+          <option value="faculty">Faculty Member</option>
+          {% endif %}
+        </select>
+      </div>
+      <div class="fgrp"><label>Recipient *</label>
+        <select name="to_id" id="to-id">
+          {% if session.role=='student' %}
+            {% for f in faculty_list %}<option value="{{ f.id }}" {% if prefill.get('to_id')==f.id %}selected{% endif %}>{{ f.name }} ({{ f.department }})</option>{% endfor %}
+          {% else %}
+            {% for s in students %}<option value="{{ s.id }}" class="opt-student" {% if prefill.get('to_id')==s.id %}selected{% endif %}>{{ s.name }} — {{ s.roll }}</option>{% endfor %}
+            {% for f in faculty_list %}<option value="{{ f.id }}" class="opt-faculty" style="display:none" {% if prefill.get('to_id')==f.id %}selected{% endif %}>{{ f.name }} ({{ f.department }})</option>{% endfor %}
+          {% endif %}
+        </select>
+      </div>
+    </div>
+    <div class="fgrp"><label>Subject *</label>
+      <input type="text" name="subject" value="{{ prefill.get('subject','') }}" placeholder="Message subject…" required>
+    </div>
+    <div class="fgrp"><label>Message *</label>
+      <textarea name="body" rows="6" required placeholder="Type your message here…"></textarea>
+    </div>
+  </div><div class="cf">
+    <button type="submit" class="btn btn-dark"><i class="fas fa-paper-plane"></i> Send Message</button>
+    <a href="/messages" class="btn btn-out">Cancel</a>
+  </div></form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+// Auto-select recipient from URL params
+window.addEventListener('DOMContentLoaded',function(){
+  var urlRole=new URLSearchParams(window.location.search).get('to_role');
+  var urlId  =new URLSearchParams(window.location.search).get('to_id');
+  if(urlRole && document.getElementById('to-role')){
+    document.getElementById('to-role').value=urlRole;
+    updateRecipients();
+    if(urlId) setTimeout(function(){document.getElementById('to-id').value=urlId;},50);
+  }
+});
+function updateRecipients(){
+  var role=document.getElementById('to-role').value;
+  document.querySelectorAll('.opt-student').forEach(o=>o.style.display=role=='student'?'':'none');
+  document.querySelectorAll('.opt-faculty').forEach(o=>o.style.display=role=='faculty'?'':'none');
+  document.getElementById('to-id').value='';
+}
+</script>{% endblock %}

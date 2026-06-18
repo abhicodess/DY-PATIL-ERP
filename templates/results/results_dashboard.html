@@ -1,0 +1,499 @@
+{% extends "common/base.html" %}
+{% block title %}Results Dashboard{% endblock %}
+
+{% block content %}
+<style>
+/* ── KPI Grid ── */
+.results-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+@media (max-width: 1200px) {
+  .results-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .results-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Mid Section Grid ── */
+.results-mid-grid {
+  display: grid;
+  grid-template-columns: 3fr 4fr 5fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 992px) {
+  .results-mid-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── KPI Cards ── */
+.kpi-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: var(--sh-sm);
+  transition: box-shadow .2s, transform .2s;
+  height: 100%;
+}
+.kpi-card:hover { box-shadow: var(--sh-md); transform: translateY(-2px); }
+.kpi-card .accent-line { height: 3px; border-radius: 3px 3px 0 0; margin: -20px -22px 16px; }
+.kpi-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 12px; }
+.kpi-value { font-size: 30px; font-weight: 700; font-family: var(--mono); line-height: 1; margin-bottom: 4px; }
+.kpi-label { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; }
+.kpi-sub { font-size: 10px; color: var(--ink4); margin-top: 4px; }
+.kpi-blue  .kpi-value { color: var(--blue); }  .kpi-blue  .kpi-icon { background: var(--blue-s); color: var(--blue); }  .kpi-blue  .accent-line { background: var(--blue); }
+.kpi-green .kpi-value { color: var(--green); }  .kpi-green .kpi-icon { background: var(--green-s); color: var(--green); }  .kpi-green .accent-line { background: var(--green); }
+.kpi-amber .kpi-value { color: var(--amber); }  .kpi-amber .kpi-icon { background: var(--amber-s); color: var(--amber); }  .kpi-amber .accent-line { background: var(--amber); }
+.kpi-red   .kpi-value { color: var(--red); }  .kpi-red   .kpi-icon { background: var(--red-s); color: var(--red); }  .kpi-red   .accent-line { background: var(--red); }
+.kpi-purple .kpi-value { color: var(--violet); }  .kpi-purple .kpi-icon{ background: var(--violet-s); color: var(--violet); }  .kpi-purple .accent-line{ background: var(--violet); }
+.kpi-slate .kpi-value { color: var(--ink2); }  .kpi-slate .kpi-icon { background: var(--bg2); color: var(--ink3); }  .kpi-slate .accent-line { background: var(--border2); }
+
+/* ── Grade pill ── */
+.grade-pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; font-family:var(--mono); white-space:nowrap; }
+.gp-O  { background:var(--green-s); color:var(--green); border:1px solid rgba(5, 150, 105, 0.2); }
+.gp-Ap { background:var(--blue-s); color:var(--blue); border:1px solid rgba(37, 99, 235, 0.2); }
+.gp-A  { background:var(--violet-s); color:var(--violet); border:1px solid rgba(124, 58, 237, 0.2); }
+.gp-Bp { background:var(--amber-s); color:var(--amber); border:1px solid rgba(217, 119, 6, 0.2); }
+.gp-B  { background:#ffedd5; color:#9a3412; border:1px solid #fed7aa; }
+.gp-C  { background:var(--red-s); color:var(--red); border:1px solid rgba(220, 38, 38, 0.2); }
+.gp-F  { background:var(--red-s); color:var(--red); border:1px solid rgba(220, 38, 38, 0.2); }
+
+/* ── Status badge ── */
+.status-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.05em; white-space:nowrap; }
+.status-badge::before { content:''; width:6px; height:6px; border-radius:50%; }
+.sb-pass  { background:var(--green-s); color:var(--green); } .sb-pass::before  { background:var(--green); box-shadow:0 0 5px var(--green); }
+.sb-atkt  { background:var(--amber-s); color:var(--amber); } .sb-atkt::before  { background:var(--amber); }
+.sb-fail  { background:var(--red-s); color:var(--red); } .sb-fail::before  { background:var(--red); }
+.sb-absent{ background:var(--bg2); color:var(--ink3); } .sb-absent::before{ background:var(--ink4); }
+
+/* ── Marks bar ── */
+.mbar { display:flex; align-items:center; gap:6px; }
+.mbar-bg { flex:1; height:5px; background:var(--bg2); border-radius:4px; overflow:hidden; min-width:48px; }
+.mbar-fill { height:100%; border-radius:4px; }
+.mbar-val { font-size:11px; font-family:var(--mono); font-weight:600; min-width:38px; text-align:right; }
+
+/* ── Section tag ── */
+.sec-tag { display:inline-block; width:24px; height:24px; border-radius:6px; font-size:11px; font-weight:700; text-align:center; line-height:24px; }
+.sec-A { background:var(--blue-s); color:var(--blue); }
+.sec-B { background:var(--green-s); color:var(--green); }
+.sec-C { background:var(--violet-s); color:var(--violet); }
+.sec-D { background:var(--amber-s); color:var(--amber); }
+
+/* ── Grade mini-bar chart ── */
+.gbar-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+.gbar-label { width:26px; font-size:11px; font-weight:700; font-family:var(--mono); text-align:right; }
+.gbar-bg { flex:1; height:16px; background:var(--bg2); border-radius:4px; overflow:hidden; }
+.gbar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:6px; font-size:10px; font-weight:600; color:#fff; }
+.gbar-count { width:28px; font-size:11px; font-family:var(--mono); color:var(--ink4); }
+
+/* ── Table ── */
+.rtable th { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink3); padding:10px 12px; white-space:nowrap; border-bottom:2px solid var(--border); background:var(--bg); position:sticky; top:0; z-index:1; }
+.rtable td { padding:10px 12px; vertical-align:middle; border-bottom:1px solid var(--border); font-size:12.5px; }
+.rtable tbody tr:hover { background:var(--bg); }
+.rtable tbody tr.row-absent { background:var(--amber-s); }
+
+/* ── Avatar initials ── */
+.stud-avatar { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
+
+/* ── Topper card ── */
+.topper-card { background:linear-gradient(135deg, #1e3a5f, var(--blue)); border-radius:12px; padding:18px 20px; color:#fff; }
+.topper-card .name { font-size:16px; font-weight:700; margin-bottom:4px; }
+.topper-card .pct  { font-size:28px; font-weight:800; font-family:var(--mono); }
+
+/* ── Section performance cards ── */
+.sec-perf-card { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:14px 16px; text-align:center; }
+.sec-perf-card .sec-letter { font-size:20px; font-weight:800; margin-bottom:4px; }
+.sec-perf-card .sec-avg { font-size:18px; font-weight:700; font-family:var(--mono); color:var(--blue); }
+
+@media print { .no-print { display:none!important; } body { font-size:11px; } }
+</style>
+
+<!-- ── Flash ── -->
+{% if request.args.get('error') %}
+<div class="alert al-err">⚠ {{ request.args.get('error') }}</div>
+{% endif %}
+
+<!-- ── Page Header ── -->
+<div class="ph no-print">
+  <div>
+    <nav style="font-size:12px;color:var(--ink4);">
+      <a href="/admin">Home</a>
+      <span style="margin: 0 4px;">/</span>
+      <span style="color: var(--ink);">Results Dashboard</span>
+    </nav>
+    <h1 class="ph-title" style="margin-top: 4px;">Results Dashboard</h1>
+    <p class="ph-sub">
+      SEM {{ semester or 'All' }} · {{ dept or 'All Departments' }} · {{ total_students }} students
+    </p>
+  </div>
+  <div class="ph-actions">
+    <a href="/results_analytics?dept={{ dept }}&semester={{ semester }}"
+       class="btn btn-out btn-sm">
+      <i class="fa-solid fa-chart-line"></i> Analytics
+    </a>
+    <a href="/results_export_excel?dept={{ dept }}&semester={{ semester }}&section={{ section }}&status={{ status }}"
+       class="btn btn-gr btn-sm">
+      <i class="fa-solid fa-file-excel"></i> Export Excel
+    </a>
+  </div>
+</div>
+
+<!-- ── KPI Cards ──────────────────────────────────────── -->
+<div class="results-kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-value">{{ total_students }}</div>
+    <div class="kpi-label">Total Students</div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">✅</div>
+    <div class="kpi-value">{{ pass_count }}</div>
+    <div class="kpi-label">Passed</div>
+    <div class="kpi-sub">
+      {{ ((pass_count/total_students*100)|round(1)) if total_students else 0 }}% pass rate
+    </div>
+  </div>
+  <div class="kpi-card kpi-amber">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">⚠️</div>
+    <div class="kpi-value">{{ atkt_count }}</div>
+    <div class="kpi-label">ATKT</div>
+    <div class="kpi-sub">1–2 subjects below 40%</div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">❌</div>
+    <div class="kpi-value">{{ fail_count }}</div>
+    <div class="kpi-label">Failed</div>
+    <div class="kpi-sub">3+ subjects below 40%</div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">📊</div>
+    <div class="kpi-value">{{ avg_pct }}%</div>
+    <div class="kpi-label">Class Avg</div>
+  </div>
+  <div class="kpi-card kpi-slate">
+    <div class="accent-line"></div>
+    <div class="kpi-icon">🚶</div>
+    <div class="kpi-value">{{ absent_count }}</div>
+    <div class="kpi-label">Absent</div>
+    <div class="kpi-sub">Students with AB</div>
+  </div>
+</div>
+
+<!-- ── Topper + Grade Chart + Section Performance ──── -->
+<div class="results-mid-grid">
+  <!-- Topper -->
+  <div class="card">
+    <div class="ch">
+      <h2 class="ct">🏆 Class Topper</h2>
+    </div>
+    <div class="cb">
+      {% if topper %}
+      <div class="topper-card">
+        <div class="mb-2" style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em">Top Performer</div>
+        <div class="name">{{ topper.name }}</div>
+        <div style="font-size:12px;opacity:.8;margin-bottom:8px;font-family:var(--mono)">{{ topper.roll }}</div>
+        <div class="pct">{{ topper.percentage }}%</div>
+        <div style="font-size:12px;opacity:.8;margin-top:4px">
+          Grade: {{ topper.grade }} · Section {{ topper.section }}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="fa-solid fa-user-slash"></i>
+        <p>No data</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Grade Distribution -->
+  <div class="card">
+    <div class="ch" style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 class="ct">📊 Grade Distribution</h2>
+      <span class="tag t-nn">{{ total_students }} students</span>
+    </div>
+    <div class="cb">
+      {% set gmax = [grade_dist.values()|list|max, 1]|max %}
+      {% for g, cnt, color in [
+          ('O',  grade_dist.O,  '#10b981'),
+          ('A+', grade_dist['A+'], '#3b82f6'),
+          ('A',  grade_dist.A,  '#8b5cf6'),
+          ('B+', grade_dist['B+'],'#f59e0b'),
+          ('B',  grade_dist.B,  '#fb923c'),
+          ('C',  grade_dist.C,  '#f87171'),
+          ('F',  grade_dist.F,  '#ef4444')
+      ] %}
+      <div class="gbar-row">
+        <div class="gbar-label" style="color:{{ color }}">{{ g }}</div>
+        <div class="gbar-bg">
+          <div class="gbar-fill" style="width:{{ (cnt/gmax*100)|int }}%;background:{{ color }}">
+            {% if (cnt/gmax*100)|int > 15 %}{{ cnt }}{% endif %}
+          </div>
+        </div>
+        <div class="gbar-count">{{ cnt }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Section Performance -->
+  <div class="card">
+    <div class="ch">
+      <h2 class="ct">🏫 Section Performance</h2>
+    </div>
+    <div class="cb">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        {% for sec in ['A','B','C','D'] %}
+        {% if sec in sec_summary %}
+        {% set sd = sec_summary[sec] %}
+        <div>
+          <div class="sec-perf-card">
+            <div class="sec-letter"
+                 style="color:{{'#1e40af' if sec=='A' else ('#065f46' if sec=='B' else ('#5b21b6' if sec=='C' else '#92400e'))}}">
+              Section {{ sec }}
+            </div>
+            <div class="sec-avg">{{ sd.avg }}%</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:4px">
+              {{ sd.count }} students · {{ sd.pass }} passed
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter Bar ────────────────────────────────────── -->
+<div class="card no-print" style="margin-bottom: 20px;">
+  <form method="GET" action="/results_dashboard" class="cb" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+    <div class="fgrp" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Search</label>
+      <input type="text" name="q" value="{{ search }}" placeholder="Name or Roll No...">
+    </div>
+    <div class="fgrp" style="margin-bottom: 0; width: 130px;">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Department</label>
+      <select name="dept">
+        <option value="">All</option>
+        {% for d in DEPARTMENTS %}<option {{ 'selected' if d==dept }}>{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fgrp" style="margin-bottom: 0; width: 130px;">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Semester</label>
+      <select name="semester">
+        <option value="">All</option>
+        {% for s in SEMESTERS %}<option {{ 'selected' if s==semester }}>{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fgrp" style="margin-bottom: 0; width: 130px;">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Section</label>
+      <select name="section">
+        <option value="">All Sections</option>
+        {% for s in SECTIONS %}<option {{ 'selected' if s==section }}>{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fgrp" style="margin-bottom: 0; width: 130px;">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Status</label>
+      <select name="status">
+        <option value="">All Status</option>
+        <option value="PASS"  {{ 'selected' if status=='PASS'  }}>PASS</option>
+        <option value="ATKT"  {{ 'selected' if status=='ATKT'  }}>ATKT</option>
+        <option value="FAIL"  {{ 'selected' if status=='FAIL'  }}>FAIL</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button type="submit" class="btn btn-dark" style="padding: 8px 16px;">Filter</button>
+      {% if dept or semester or section or status or search %}
+      <a href="/results_dashboard" class="btn btn-out" style="padding: 8px 16px;">✕ Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- ── Results Table ─────────────────────────────────── -->
+<div class="card">
+  <div class="ch" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="ct">Results Table
+      <span style="font-size:11px;font-weight:400;color:var(--ink4);margin-left:6px">
+        showing {{ students|length }} of {{ total_students }} records
+      </span>
+    </h2>
+    <span style="font-size:12px;color:var(--ink3)" class="no-print">
+      Page {{ page }}/{{ total_pages }}
+    </span>
+  </div>
+  <div style="overflow-x:auto; max-height:560px;">
+    <table class="tbl rtable">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Roll No.</th>
+          <th>Student Name</th>
+          <th>Sec</th>
+          {% for subj in subjects %}
+          <th title="{{ subj }}">{{ subj|truncate(14, True) }}</th>
+          {% endfor %}
+          <th>Total</th>
+          <th>Max</th>
+          <th>%</th>
+          <th>Grade</th>
+          <th>Status</th>
+          <th class="no-print">Card</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        {% set av_colors = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#06b6d4','#f43f5e','#84cc16'] %}
+        {% set av_col = av_colors[loop.index0 % 8] %}
+        {% set initials = (s.name or "Student").split()|map('first')|list|join('')|upper|truncate(2,True,'') %}
+        {% set bar_col = '#10b981' if s.percentage>=75 else ('#3b82f6' if s.percentage>=60 else ('#f59e0b' if s.percentage>=50 else '#ef4444')) %}
+        <tr class="{{ 'row-absent' if s.has_absent }}">
+          <td style="color:var(--ink4);font-family:var(--mono);font-size:11px">{{ (page-1)*per_page + loop.index }}</td>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--ink2);">{{ s.roll }}</td>
+          <td>
+            <div class="flex-ac gap10">
+              <div class="stud-avatar" style="background:{{ av_col }}">{{ initials }}</div>
+              <div>
+                <div style="font-weight:500;font-size:13px">{{ s.name }}</div>
+                {% if s.has_absent %}
+                <div style="font-size:10px;color:var(--amber);font-weight:600">⚠ Absent in subject(s)</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td><span class="sec-tag sec-{{ s.section }}">{{ s.section }}</span></td>
+
+          {# Subject-wise marks #}
+          {% for subj in subjects %}
+            {% set subj_row = s.subjects | selectattr("subject","equalto",subj) | first | default(none) %}
+            {% if subj_row %}
+              {% set sm = subj_row.marks if subj_row.marks is not none else 0 %}
+              {% set st = subj_row.total if subj_row.total and subj_row.total > 0 else 100 %}
+              {% set sp = (sm/st*100)|round(1) %}
+              {% set sc = '#10b981' if sp>=75 else ('#3b82f6' if sp>=60 else ('#f59e0b' if sp>=50 else '#ef4444')) %}
+              <td>
+                <div class="mbar">
+                  <div class="mbar-bg"><div class="mbar-fill" style="width:{{ [sp,100]|min }}%;background:{{ sc }}"></div></div>
+                  <div class="mbar-val" style="color:{{ sc }}">{{ sm|int }}</div>
+                </div>
+              </td>
+            {% else %}
+              <td style="color:var(--ink4);font-family:var(--mono);font-size:11px">—</td>
+            {% endif %}
+          {% endfor %}
+
+          <td style="font-weight:600;font-family:var(--mono);font-size:13px">{{ s.cum_obtained }}</td>
+          <td style="color:var(--ink4);font-family:var(--mono);font-size:11px">{{ s.cum_max }}</td>
+          <td>
+            <div class="mbar">
+              <div class="mbar-bg"><div class="mbar-fill" style="width:{{ [s.percentage,100]|min }}%;background:{{ bar_col }}"></div></div>
+              <div class="mbar-val" style="color:{{ bar_col }}">{{ s.percentage }}%</div>
+            </div>
+          </td>
+          <td>
+            {% set gc = 'gp-O' if s.grade=='O' else ('gp-Ap' if s.grade=='A+' else ('gp-A' if s.grade=='A' else ('gp-Bp' if s.grade=='B+' else ('gp-B' if s.grade=='B' else ('gp-C' if s.grade=='C' else 'gp-F'))))) %}
+            <span class="grade-pill {{ gc }}">{{ s.grade }}</span>
+          </td>
+          <td>
+            {% set sc2 = 'sb-pass' if s.status=='PASS' else ('sb-atkt' if s.status=='ATKT' else 'sb-fail') %}
+            <span class="status-badge {{ sc2 }}">{{ s.status }}</span>
+            {% if s.fail_count > 0 %}
+            <div style="font-size:10px;color:var(--red);margin-top:2px" title="{{ s.failed_subjs|join(', ') }}">
+              {{ s.fail_count }} subj. below 40%
+            </div>
+            {% endif %}
+          </td>
+          <td class="no-print">
+            <a href="/results_reportcard/{{ s.roll }}?dept={{ dept }}&semester={{ semester }}"
+               class="btn btn-out btn-sm" style="font-size:11px;padding:3px 8px;border-radius:6px"
+               target="_blank" title="View Report Card">🪪</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 11 + subjects|length }}" style="text-align: center; color:var(--ink4); font-size:13px; padding: 40px 20px;">
+            No results found. Try adjusting your filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+  <div style="display: flex; justify-content: center; padding: 15px 0;" class="no-print">
+    <div class="pagi">
+      {% if page > 1 %}
+      <a href="?page={{ page-1 }}&dept={{ dept }}&semester={{ semester }}&section={{ section }}&status={{ status }}&q={{ search }}">‹</a>
+      {% else %}
+      <span style="opacity: 0.5; pointer-events: none;">‹</span>
+      {% endif %}
+      
+      {% for p in range(1, total_pages+1) %}
+      {% if p == page or p <= 2 or p >= total_pages-1 or (p >= page-2 and p <= page+2) %}
+        {% if p == page %}
+        <span class="cur">{{ p }}</span>
+        {% else %}
+        <a href="?page={{ p }}&dept={{ dept }}&semester={{ semester }}&section={{ section }}&status={{ status }}&q={{ search }}">{{ p }}</a>
+        {% endif %}
+      {% elif p == 3 and page > 5 %}
+        <span>…</span>
+      {% elif p == total_pages-2 and page < total_pages-4 %}
+        <span>…</span>
+      {% endif %}
+      {% endfor %}
+      
+      {% if page < total_pages %}
+      <a href="?page={{ page+1 }}&dept={{ dept }}&semester={{ semester }}&section={{ section }}&status={{ status }}&q={{ search }}">›</a>
+      {% else %}
+      <span style="opacity: 0.5; pointer-events: none;">›</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Grade Reference ── -->
+<div class="card no-print" style="margin-top: 20px;">
+  <div class="ch">
+    <h2 class="ct">📖 Grade Reference</h2>
+  </div>
+  <div class="cb">
+    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      {% for threshold, letter, label, color in GRADE_TABLE %}
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm)">
+        <span style="width:30px;height:24px;border-radius:5px;background:{{ color }};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">{{ letter }}</span>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--ink)">{{ label }}</div>
+          <div style="font-size:10px;color:var(--ink4)">≥ {{ threshold }}%</div>
+        </div>
+      </div>
+      {% endfor %}
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--amber-s);border:1px solid var(--amber);border-radius:var(--r-sm);color:var(--amber)">
+        <span style="font-size:11px;font-weight:700;">ATKT</span>
+        <div style="font-size:11px;">1–2 subjects &lt; 40%</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--red-s);border:1px solid var(--red);border-radius:var(--r-sm);color:var(--red)">
+        <span style="font-size:11px;font-weight:700;">FAIL</span>
+        <div style="font-size:11px;">3+ subjects &lt; 40%</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

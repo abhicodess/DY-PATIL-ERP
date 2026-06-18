@@ -1,0 +1,225 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Session Audit{% endblock %}
+
+{% block content %}
+<style>
+/* Page-Specific Metric Pills */
+.metric-group { display: flex; gap: 8px; justify-content: center; }
+.metric-pill { 
+    padding: 6px 12px; 
+    border-radius: 8px; 
+    font-family: var(--mono); 
+    font-size: 11px; 
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 50px;
+}
+.metric-label { font-size: 8px; text-transform: uppercase; opacity: 0.7; margin-bottom: 2px; }
+.m-total { background: var(--bg2); color: var(--ink2); }
+.m-present { background: var(--green-s); color: var(--green); }
+.m-absent { background: var(--red-s); color: var(--red); }
+</style>
+
+<div class="fu">
+    <!-- Breadcrumbs -->
+    <nav style="font-size:12px; color:var(--ink4); margin-bottom:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">
+        <a href="{{ url_for('admin.dashboard') }}" style="color:var(--blue);">Home</a>
+        <span style="margin: 0 4px;">/</span>
+        <span>Attendance</span>
+        <span style="margin: 0 4px;">/</span>
+        <span style="color:var(--ink);">Faculty Sessions</span>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="ph">
+        <div>
+            <h1 class="ph-title">Faculty Session Audit</h1>
+            <p class="ph-sub">Monitoring real-time attendance logging across departments</p>
+        </div>
+        <div class="ph-actions">
+            <span class="tag t-nn" style="padding: 8px 16px; font-weight: 700; font-family: var(--mono);">
+                LATEST UPDATES: {{ sessions[0].lecture_date if sessions else 'N/A' }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Stats Cards Grid -->
+    <div class="sg">
+        <div class="sc">
+            <div>
+                <div class="sv">{{ (sessions|length) if sessions else 0 }}</div>
+                <div class="sl">Total Sessions</div>
+            </div>
+            <div class="sico ic-bl"><i class="fas fa-calendar-check"></i></div>
+        </div>
+        <div class="sc">
+            {% set sub_count = 0 %}
+            {% if sessions %}
+                {% for s in sessions %}
+                    {% if (s.status|lower) == 'submitted' %}{% set sub_count = sub_count + 1 %}{% endif %}
+                {% endfor %}
+            {% endif %}
+            <div>
+                <div class="sv">{{ sub_count }}</div>
+                <div class="sl">Finalized</div>
+            </div>
+            <div class="sico ic-gr"><i class="fas fa-check-double"></i></div>
+        </div>
+        <div class="sc">
+            {% set draft_count = 0 %}
+            {% if sessions %}
+                {% for s in sessions %}
+                    {% if (s.status|lower) == 'draft' %}{% set draft_count = draft_count + 1 %}{% endif %}
+                {% endfor %}
+            {% endif %}
+            <div>
+                <div class="sv">{{ draft_count }}</div>
+                <div class="sl">Drafts</div>
+            </div>
+            <div class="sico ic-am"><i class="fas fa-pen-fancy"></i></div>
+        </div>
+        <div class="sc">
+            {% set faculty_count = faculty_list|length if faculty_list else 0 %}
+            <div>
+                <div class="sv">{{ faculty_count }}</div>
+                <div class="sl">Active Faculty</div>
+            </div>
+            <div class="sico ic-vi"><i class="fas fa-user-tie"></i></div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card no-print" style="margin-bottom: 24px;">
+        <form method="GET" class="cb" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+            <div class="fgrp" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                <label>Faculty Member</label>
+                <select name="faculty_id">
+                    <option value="">Search all faculty...</option>
+                    {% for f in faculty_list %}
+                    <option value="{{ f.id }}" {% if request.args.get('faculty_id')|int == f.id %}selected{% endif %}>{{ f.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fgrp" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                <label>Department / Branch</label>
+                <select name="dept">
+                    <option value="">All Departments</option>
+                    {% for d in DEPARTMENTS %}
+                    <option value="{{ d }}" {% if request.args.get('dept') == d %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fgrp" style="margin-bottom: 0; width: 150px;">
+                <label>From Date</label>
+                <input type="date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+            </div>
+            <div class="fgrp" style="margin-bottom: 0; width: 150px;">
+                <label>To Date</label>
+                <input type="date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-dark" style="padding: 8px 16px;">Filter</button>
+                <a href="{{ url_for('admin_intel.admin_attendance_intelligence', dept=request.args.get('dept',''), division=request.args.get('division','')) }}" class="btn btn-blue" style="padding: 8px 16px;">
+                    <i class="fas fa-brain"></i> AI Insights
+                </a>
+                <a href="{{ url_for('admin_intel.admin_faculty_logs') }}" class="btn btn-out" style="padding: 8px 16px;" title="Reset Filters">
+                    <i class="fas fa-undo"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Section -->
+    <div class="card">
+        <div class="cb" style="padding: 0;">
+            <div style="overflow-x: auto;">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th style="width: 300px;">Faculty & Division</th>
+                            <th style="width: 300px;">Subject Details</th>
+                            <th style="width: 200px;">Session Date</th>
+                            <th style="text-align: center; width: 220px;">Attendance Metrics</th>
+                            <th style="width: 180px;">Status</th>
+                            <th style="text-align: right; width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sessions %}
+                        <tr>
+                            <td>
+                                <span style="font-weight: 700; font-size: 14px; display: block;">{{ s.faculty_name }}</span>
+                                <div class="flex-ac gap8" style="margin-top: 4px;">
+                                    <span class="tag t-bl">{{ s.branch }}</span>
+                                    <span style="font-size:11px; color:var(--ink4); font-weight:700;">DIV {{ s.division }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-weight: 600; display: block;">{{ s.subject }}</span>
+                                <div style="font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                    <i class="fas fa-clock" style="font-size: 10px; opacity: 0.6"></i>
+                                    <span>{{ s.time_slot }}</span>
+                                    <span style="opacity: 0.3">•</span>
+                                    <span style="font-weight: 700; text-transform: uppercase; font-size: 10px;">{{ s.method or 'Theory' }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight: 700;">{{ s.lecture_date }}</div>
+                                <span style="font-size: 11px; color: var(--ink4); display: block; margin-top: 2px;">Logged {{ s.created_at.strftime('%d %b, %H:%M') if s.created_at else 'N/A' }}</span>
+                            </td>
+                            <td>
+                                <div class="metric-group">
+                                    <div class="metric-pill m-total">
+                                        <span class="metric-label">Roll</span>
+                                        <span>{{ s.total_students }}</span>
+                                    </div>
+                                    <div class="metric-pill m-present">
+                                        <span class="metric-label">Pres</span>
+                                        <span>{{ s.present }}</span>
+                                    </div>
+                                    <div class="metric-pill m-absent">
+                                        <span class="metric-label">Abs</span>
+                                        <span>{{ s.absent }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if s.status|lower == 'submitted' %}
+                                    <span class="tag t-gr"><i class="fas fa-check-circle"></i> Finalized</span>
+                                {% elif s.status|lower == 'draft' %}
+                                    <span class="tag t-am"><i class="fas fa-pencil-ruler"></i> In Progress</span>
+                                {% else %}
+                                    <span class="tag t-nn"><i class="fas fa-lock"></i> Locked</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{{ url_for('admin_intel.admin_session_detail', sid=s.id) }}" class="btn btn-out btn-sm" title="Deep Audit Session" style="padding: 6px 10px;">
+                                    <i class="fas fa-search-plus"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not sessions %}
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <p>No sessions found matching your current query profile. Try broadening your historical scope or changing faculty.</p>
+                <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+                    <a href="{{ url_for('admin_intel.admin_attendance_intelligence') }}" class="btn btn-blue">
+                        <i class="fas fa-brain"></i> AI Insights
+                    </a>
+                    <a href="{{ url_for('admin_intel.admin_faculty_logs') }}" class="btn btn-dark">
+                        <i class="fas fa-undo"></i> Reset Filters
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

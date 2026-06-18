@@ -1,0 +1,131 @@
+{% extends "common/base.html" %}
+{% block title %}Messages{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Messages{% endblock %}
+{% block av_color %}{% if session.role=='faculty' %}#7C3AED{% elif session.role=='student' %}#059669{% else %}#2563EB{% endif %}{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}
+{% block user_role %}{{ session.role|title }}{% endblock %}
+{% block sidebar_nav %}
+{% if session.role=='admin' %}
+<div class="sb-sec">Overview</div><a href="/admin" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% elif session.role=='faculty' %}
+<div class="sb-sec">My Workspace</div><a href="/faculty_dashboard" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% else %}
+<div class="sb-sec">My Academics</div><a href="/student_dashboard" class="sb-link"><i class="fas fa-gauge-high"></i> Dashboard</a>
+{% endif %}
+<div class="sb-sec">Messages</div>
+<a href="/messages" class="sb-link {% if view=='inbox' %}active{% endif %}"><i class="fas fa-inbox"></i> Inbox {% if unread_count()>0 %}<span class="sb-badge">{{ unread_count() }}</span>{% endif %}</a>
+<a href="/messages/sent" class="sb-link {% if view=='sent' %}active{% endif %}"><i class="fas fa-paper-plane"></i> Sent</a>
+<a href="/messages/compose" class="sb-link"><i class="fas fa-pen-to-square"></i> Compose</a>
+<a href="/messages/search" class="sb-link"><i class="fas fa-magnifying-glass"></i> Find People</a>
+{% endblock %}
+{% block page_title %}{% if view=='sent' %}Sent Messages{% else %}Inbox{% endif %}{% endblock %}
+{% block breadcrumb %}Messages / {% if view=='sent' %}Sent{% else %}Inbox{% endif %}{% endblock %}
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">{% if view=='sent' %}Sent Messages{% else %}Inbox{% endif %}</div><div class="ph-sub">{{ msgs|length }} messages</div></div>
+  <div class="ph-actions"><a href="/messages/compose" class="btn btn-dark btn-sm"><i class="fas fa-pen-to-square"></i> Compose</a></div>
+</div>
+<div class="card fu fu1"><div class="cb p0">
+  {% for m in msgs %}
+  <div class="notice msg-row {% if not m.is_read and view=='inbox' %}msg-unread{% endif %}" onclick="viewMessage('{{ m.id }}')" style="cursor:pointer;border-radius:0;border-left:none;border-right:none;border-top:none;">
+    <div class="flex-sb">
+      <div style="flex-grow:1">
+        <div class="n-title" style="display:flex;align-items:center;gap:8px">
+          {{ m.subject }}
+          {% if not m.is_read and view=='inbox' %}<span class="badge badge-blue">New</span>{% endif %}
+        </div>
+        <div class="n-meta">
+          {% if view=='sent' %}<i class="fas fa-arrow-right"></i> To: {{ m.to_name }}
+          {% else %}<i class="fas fa-user"></i> From: {{ m.from_name }} ({{ m.from_role }}){% endif %}
+          &nbsp;·&nbsp; <i class="fas fa-clock"></i> {{ m.sent_at[:16] if m.sent_at else '—' }}
+        </div>
+        <div class="n-body text-dim">{{ m.body[:120] }}{% if m.body|length>120 %}…{% endif %}</div>
+        <div id="full-body-{{ m.id }}" style="display:none">{{ m.body }}</div>
+        <div id="full-subj-{{ m.id }}" style="display:none">{{ m.subject }}</div>
+        <div id="full-meta-{{ m.id }}" style="display:none">
+          {% if view=='sent' %}To: {{ m.to_name }} ({{ m.to_role }}){% else %}From: {{ m.from_name }} ({{ m.from_role }}){% endif %}
+          · {{ m.sent_at }}
+        </div>
+      </div>
+      <div class="flex-ac gap6" style="flex-shrink:0;margin-left:12px" onclick="event.stopPropagation()">
+        {% if view=='inbox' %}
+        <a href="/messages/compose?reply_to={{ m.id }}" class="btn btn-out btn-sm" title="Reply"><i class="fas fa-reply"></i></a>
+        {% endif %}
+        <form method="POST" action="/messages/delete" style="display:inline" onsubmit="return confirm('Delete message?')">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="msg_id" value="{{ m.id }}">
+          <button type="submit" class="btn btn-danger btn-sm" title="Delete"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:60px"><i class="fas fa-envelope-open"></i><p>No messages.</p></div>
+  {% endfor %}
+</div></div>
+
+<!-- Message View Modal -->
+<div id="msgModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+  <div class="modal-content" style="background-color:#fff; margin:5% auto; padding:32px; border-radius:16px; width:90%; max-width:800px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #f1f5f9; padding-bottom:20px; margin-bottom:20px">
+      <div>
+        <h2 id="m-subject" style="margin:0 0 8px 0; color:#1e293b; font-size:1.5rem; line-height:1.2;">Message</h2>
+        <div id="m-meta" style="font-size:0.875rem; color:#64748b; display:flex; align-items:center; gap:8px"></div>
+      </div>
+      <span class="close" onclick="closeModal()" style="font-size:28px; cursor:pointer; color:#94a3b8; line-height:1">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div id="m-body" style="white-space:pre-wrap; line-height:1.7; color:#334155; font-size:1.05rem; max-height:60vh; overflow-y:auto; padding-right:15px; font-family: 'Inter', sans-serif;"></div>
+    </div>
+    <div class="modal-footer" style="padding-top:24px; text-align:right; border-top:1px solid #f1f5f9; margin-top:24px; display:flex; justify-content:flex-end; gap:12px">
+      <button class="btn btn-out" style="padding:10px 20px" onclick="closeModal()">Close</button>
+      <a id="m-reply" href="#" class="btn btn-primary" style="padding:10px 24px"><i class="fas fa-reply"></i> Reply Now</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function viewMessage(id) {
+  const subject = document.getElementById('full-subj-' + id).innerText;
+  const meta = document.getElementById('full-meta-' + id).innerText;
+  const body = document.getElementById('full-body-' + id).innerText;
+  
+  document.getElementById('m-subject').innerText = subject;
+  document.getElementById('m-meta').innerText = meta;
+  document.getElementById('m-body').innerText = body;
+  
+  const replyBtn = document.getElementById('m-reply');
+  if (replyBtn) {
+    if ("{{ view }}" === "inbox") {
+      replyBtn.style.display = 'inline-block';
+      replyBtn.href = '/messages/compose?reply_to=' + id;
+    } else {
+      replyBtn.style.display = 'none';
+    }
+  }
+
+  document.getElementById('msgModal').style.display = 'block';
+  
+  {% if view=='inbox' %}
+  fetch('/api/messages/mark_read/' + id, { method: 'POST', headers: {'X-CSRF-Token': '{{ csrf_token() }}'} });
+  {% endif %}
+}
+
+function closeModal() {
+  document.getElementById('msgModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+  if (event.target == document.getElementById('msgModal')) {
+    closeModal();
+  }
+}
+</script>
+
+<style>
+.msg-row:hover { background: rgba(37, 99, 235, 0.08) !important; transition: background 0.2s ease; }
+.msg-unread { background: rgba(37, 99, 235, 0.05) !important; border-left: 3px solid #2563EB !important; }
+.badge-blue { background: #2563EB; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.7em; font-weight: 500; }
+.text-dim { color: #64748b; font-size: 0.9em; margin-top: 4px; }
+</style>
+{% endblock %}

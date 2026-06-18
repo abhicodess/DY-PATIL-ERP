@@ -1,0 +1,574 @@
+{% extends "common/base.html" %}
+{% block title %}Results Management{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+
+{% block page_title %}Results Management{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Results{% endblock %}
+
+{% block topbar_extras %}
+{% endblock %}
+
+{% block content %}
+<style>
+  /* Professional Dashboard Tuning */
+  .brand-header {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand-header-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .brand-header-sub {
+    font-size: 14px;
+    color: var(--ink3);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+  }
+  .stat-card-val {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-card-label {
+    font-size: 13px;
+    color: var(--ink3);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .stat-card-sub {
+    font-size: 11px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .stat-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  
+  /* Filter Action Card */
+  .filter-panel {
+    background: #fff;
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+  }
+  .filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-header-title { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .filter-actions { display: flex; gap: 16px; font-size: 13px; font-weight: 500; }
+  .filter-actions a { color: var(--ink2); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+  .filter-actions a:hover { color: var(--blue); }
+  .filter-actions a.danger:hover { color: #DC2626; }
+  
+  .filter-body { padding: 16px 20px; }
+  .filter-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .filter-group { flex: 1; min-width: 140px; }
+  .filter-label { font-size: 11px; color: var(--ink4); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .filter-select { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--ink); background: #fafafa; outline: none; }
+  .filter-select:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px var(--blue-s); }
+  
+  /* Clean Table Card */
+  .modern-table-wrap {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .modern-table-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .modern-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .modern-table th {
+    padding: 12px 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink4);
+    letter-spacing: 0.05em;
+    background: #f9fafb;
+    border-bottom: 1px solid var(--border);
+  }
+  .modern-table td { padding: 16px 20px; font-size: 13px; color: var(--ink2); border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  .modern-table tr:hover td { background: #fdfdfd; }
+  .modern-table tr:last-child td { border-bottom: none; }
+  
+  .avatar-rounded { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+  .tag { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid transparent; }
+  .tag-pass { background: rgba(5, 150, 105, 0.1); color: #059669; border-color: rgba(5, 150, 105, 0.2); }
+  .tag-fail { background: rgba(220, 38, 38, 0.1); color: #DC2626; border-color: rgba(220, 38, 38, 0.2); }
+  .tag-live { background: rgba(37, 99, 235, 0.1); color: #2563EB; border-color: rgba(37, 99, 235, 0.2); }
+  .tag-draft { background: rgba(217, 119, 6, 0.1); color: #D97706; border-color: rgba(217, 119, 6, 0.2); }
+  
+  .modern-btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+  .modern-btn-primary { background: #111827; color: white; }
+  .modern-btn-primary:hover { background: #374151; }
+  .modern-btn-outline { background: #fff; border-color: var(--border); color: var(--ink); }
+  .modern-btn-outline:hover { background: #f9fafb; border-color: var(--border2); }
+  
+  .grade-badge { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 12px; }
+  
+  .modal-bx { width: 100%; max-width: 550px; background: white; border-radius: 12px; overflow: hidden; animation: slideUp 0.3s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-hd { padding: 20px 24px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .modal-content { padding: 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+</style>
+
+<!-- NOTICES -->
+{% if request.args.get('success') %}<div class="notice notice-ok mb16"><i class="fas fa-check-circle"></i> Result added successfully.</div>{% endif %}
+{% if request.args.get('updated') %}<div class="notice notice-ok mb16"><i class="fas fa-check-circle"></i> Result updated.</div>{% endif %}
+{% if request.args.get('deleted') %}<div class="notice notice-warn mb16"><i class="fas fa-trash"></i> Result deleted.</div>{% endif %}
+{% if request.args.get('published_ok') %}<div class="notice notice-ok mb16"><i class="fas fa-eye"></i> Results published successfully.</div>{% endif %}
+{% if request.args.get('unpublished_ok') %}<div class="notice notice-warn mb16"><i class="fas fa-eye-slash"></i> Results unpublished.</div>{% endif %}
+{% if request.args.get('imported') %}<div class="notice notice-ok mb16"><i class="fas fa-upload"></i> {{ request.args.get('imported') }} results imported, {{ request.args.get('skipped','0') }} skipped.</div>{% endif %}
+{% if request.args.get('error') %}<div class="notice notice-err mb16"><i class="fas fa-exclamation-circle"></i> Error: {{ request.args.get('error')|replace('_',' ')|title }}</div>{% endif %}
+
+<!-- HEADER BRAND -->
+<div class="brand-header">
+  <div>
+    <div class="brand-header-title">Results Management</div>
+    <div class="brand-header-sub">Enter, publish and actively manage student examinations with precision out of 60 marks total.</div>
+  </div>
+  <div style="display:flex; gap:12px;">
+    <a href="/export_results_excel?dept={{ dept }}&semester={{ semester }}" class="modern-btn modern-btn-outline"><i class="fas fa-download"></i> Export CSV</a>
+    <button class="modern-btn modern-btn-primary" onclick="openModal('addModal')"><i class="fas fa-plus"></i> Add Result</button>
+  </div>
+</div>
+
+<!-- STATS CARDS -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div>
+      <div class="stat-card-val">{{ total_r }}</div>
+      <div class="stat-card-label">Total Results</div>
+      <div class="stat-card-sub" style="color:#059669"><i class="fas fa-arrow-up"></i> All registered records</div>
+    </div>
+    <div class="stat-card-icon" style="background:#EFF6FF; color:#2563EB"><i class="fas fa-trophy"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-card-val">{{ published_r }}</div>
+      <div class="stat-card-label">Published Live</div>
+      <div class="stat-card-sub" style="color:#059669"><i class="fas fa-eye"></i> Visible to students</div>
+    </div>
+    <div class="stat-card-icon" style="background:#ECFDF5; color:#059669"><i class="fas fa-check-circle"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-card-val">{{ pass_r }}</div>
+      <div class="stat-card-label">Gross Passing</div>
+      <div class="stat-card-sub" style="color:#6B7280"><i class="fas fa-shield-halved"></i> Above threshold</div>
+    </div>
+    <div class="stat-card-icon" style="background:#F5F3FF; color:#7C3AED"><i class="fas fa-award"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-card-val" style="color:#DC2626">{{ fail_r }}</div>
+      <div class="stat-card-label">Needs Attention</div>
+      <div class="stat-card-sub" style="color:#DC2626"><i class="fas fa-arrow-down"></i> Currently Failing</div>
+    </div>
+    <div class="stat-card-icon" style="background:#FEF2F2; color:#DC2626"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+</div>
+
+<!-- FILTERS AND ACTIONS -->
+<div class="filter-panel">
+  <div class="filter-header">
+    <div class="filter-header-title">Filter & Actions Center</div>
+    <div class="filter-actions">
+      <a href="#" onclick="openModal('publishModal')"><i class="fas fa-satellite-dish"></i> Publish</a>
+      <a href="#" onclick="openModal('importModal')"><i class="fas fa-file-excel"></i> Import</a>
+      <a href="#" onclick="openModal('copyMarksModal')"><i class="fas fa-copy"></i> Copy Marks</a>
+      <a href="#" onclick="openModal('summaryModal')"><i class="fas fa-calculator"></i> Compute Ranks</a>
+      <a href="#" class="danger" onclick="openModal('bulkDeleteModal')"><i class="fas fa-trash-can"></i> Bulk Delete</a>
+    </div>
+  </div>
+  <div class="filter-body">
+    <form method="get" class="filter-form">
+      <div class="filter-group">
+        <div class="filter-label">Department</div>
+        <select name="dept" class="filter-select">
+          <option value="">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}" {% if dept==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="min-width: 100px;">
+        <div class="filter-label">Semester</div>
+        <select name="semester" class="filter-select">
+          <option value="">All</option>
+          {% for s in SEMESTERS %}<option value="{{ s }}" {% if semester==s %}selected{% endif %}>Sem {{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="min-width: 100px;">
+        <div class="filter-label">Year</div>
+        <select name="year" class="filter-select">
+          <option value="">All</option>
+          {% for y in YEARS %}<option value="{{ y }}" {% if year==y %}selected{% endif %}>Year {{ y }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Exam Type</div>
+        <select name="exam_type" class="filter-select">
+          <option value="">All Types</option>
+          {% for et in exam_types %}<option value="{{ et }}" {% if exam_type==et %}selected{% endif %}>{{ et }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="filter-group" style="min-width: 100px;">
+        <div class="filter-label">Status</div>
+        <select name="published" class="filter-select">
+          <option value="">All</option>
+          <option value="1" {% if published=='1' %}selected{% endif %}>Live</option>
+          <option value="0" {% if published=='0' %}selected{% endif %}>Draft</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width: 160px;">
+        <div class="filter-label">Search Keywords</div>
+        <input type="text" name="q" value="{{ q }}" placeholder="Name or roll..." class="filter-select">
+      </div>
+      <div style="padding-bottom:1px;">
+        <button type="submit" class="modern-btn modern-btn-primary" style="padding:9px 16px;"><i class="fas fa-search"></i> Apply</button>
+        {% if dept or semester or year or q or published or exam_type %}
+        <a href="/admin_results" class="modern-btn modern-btn-outline" style="padding:9px 12px; margin-left:4px;"><i class="fas fa-times"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DATA TABLE -->
+<div class="modern-table-wrap">
+  <div class="modern-table-header">
+    <div style="font-weight: 600; color: var(--ink);">Students Table View</div>
+    <div style="font-size: 13px; color: var(--ink4);">Showing {{ results|length }} precise records</div>
+  </div>
+  <table class="modern-table">
+    <thead>
+      <tr>
+        <th width="5%">#</th>
+        <th width="25%">Candidate details</th>
+        <th width="15%">Dept / Sem</th>
+        <th width="20%">Subject Assessed</th>
+        <th width="12%">Aggregate / 60</th>
+        <th width="5%">Grade</th>
+        <th width="10%">Status</th>
+        <th width="8%">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      {% set p = (r.marks/r.total*100)|round(1) if r.total else 0 %}
+      <tr>
+        <td style="color:var(--ink4); font-weight: 500;">{{ loop.index }}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="avatar-rounded" style="background:{% if loop.index0%4==0%}#2563EB{%elif loop.index0%4==1%}#7C3AED{%elif loop.index0%4==2%}#059669{%else%}#D97706{%endif%}">{{ r.student_name[0]|upper }}</div>
+            <div>
+              <div style="font-weight:600; color:var(--ink); font-size:14px;">{{ r.student_name }}</div>
+              <div style="font-size:12px; color:var(--ink4); font-family: 'DM Mono', monospace;">{{ r.roll or 'Not assigned' }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight:500;">{{ r.department or 'General' }}</div>
+          <div style="font-size:12px; color:var(--ink3); margin-top:2px;"><i class="fas fa-layer-group" style="font-size:10px;"></i> Semester {{ r.semester }}</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:#111827;">{{ r.subject }}</div>
+          <div style="font-size:11px; color:#6B7280; text-transform: uppercase; margin-top:3px; letter-spacing:0.5px;">{{ r.exam_type or 'Regular' }}</div>
+        </td>
+        <td>
+          <div style="display:flex; align-items: baseline; gap: 4px;">
+            <span style="font-size: 18px; font-weight: 800; color:var(--ink);">{{ r.marks|int if r.marks==r.marks|int else r.marks }}</span>
+            <span style="font-size: 13px; color:var(--ink4); font-weight:500;">/ {{ r.total|int }}</span>
+          </div>
+        </td>
+        <td>
+          {% set gc = '#16a34a' if p>=85 else ('#2563eb' if p>=70 else ('#8b5cf6' if p>=60 else ('#d97706' if p>=40 else '#dc2626'))) %}
+          <div class="grade-badge" style="background:{{ gc }};">{{ r.grade or '?' }}</div>
+        </td>
+        <td>
+          <div style="display:flex; flex-direction: column; gap:6px; align-items:flex-start;">
+            {% if r.result=='Pass' %}<span class="tag tag-pass"><i class="fas fa-check"></i> Pass</span>{% else %}<span class="tag tag-fail"><i class="fas fa-xmark"></i> Fail</span>{% endif %}
+            {% if r.published %}<span class="tag tag-live"><i class="fas fa-globe"></i> Live</span>{% else %}<span class="tag tag-draft"><i class="fas fa-pen-ruler"></i> Draft</span>{% endif %}
+          </div>
+        </td>
+        <td>
+          <div style="display:flex; gap:8px;">
+            <button style="background:none; border:none; color:var(--ink3); cursor:pointer; font-size:14px; padding:4px;" title="Edit Component Details" onclick="openEdit({{ r.id }}, '{{ r.subject|replace("'","\\'") }}', '{{ r.semester }}', {{ r.assignment_marks|default(0) }}, {{ r.attendance_marks|default(0) }}, {{ r.teacher_assessment|default(0) }}, {{ r.ut_marks|default(0) }}, {{ r.mse_marks|default(0) }}, {{ r.tw_marks|default(0) }}, {{ r.pr_or_marks|default(0) }}, '{{ r.exam_type|replace("'","\\'") }}')"><i class="fas fa-pen-to-square"></i></button>
+            <button style="background:none; border:none; color:#DC2626; cursor:pointer; font-size:14px; padding:4px;" title="Delete" onclick="openDelete({{ r.id }}, '{{ r.student_name|replace("'","\\'") }}')"><i class="fas fa-trash-can"></i></button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align:center; padding: 40px;">
+          <div style="width: 64px; height: 64px; background: #f3f4f6; border-radius: 50%; display: flex; align-items:center; justify-content:center; color:#9ca3af; font-size:24px; margin: 0 auto 16px;"><i class="fas fa-folder-open"></i></div>
+          <div style="font-weight:600; color:var(--ink2); font-size: 15px;">No Results Found</div>
+          <div style="font-size:13px; color:var(--ink4); margin-top:4px;">No examination records evaluate to the currently configured filters.</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================= MODALS ======================== -->
+
+<!-- ADD RESULT MODAL (with 60-mark breakdown) -->
+<div id="addModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('addModal')">
+  <div class="modal-bx">
+    <div class="modal-hd">
+      <span>Add Breakdown Result</span>
+      <button onclick="closeModal('addModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_save_result">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Student Name / Exact Match</label>
+          <input type="text" name="student_name" required class="filter-select">
+        </div>
+        <div class="form-grid mb16">
+          <div><label class="filter-label">Subject</label><input type="text" name="subject" required class="filter-select"></div>
+          <div><label class="filter-label">Semester</label><select name="semester" class="filter-select">{% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}</select></div>
+        </div>
+        
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-chart-pie"></i> Marks Breakdown (Theory & Practicals)</div>
+          <div class="form-grid">
+            <div><label class="filter-label">Assignment</label><input type="number" name="assignment_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Attendance</label><input type="number" name="attendance_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Teacher Assessment</label><input type="number" name="teacher_assessment" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Unit Test / UT</label><input type="number" name="ut_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Mid-Sem / MSE</label><input type="number" name="mse_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Term Work / TW</label><input type="number" name="tw_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+            <div><label class="filter-label">Practical / PR / OR</label><input type="number" name="pr_or_marks" step="0.01" min="0" value="0" class="filter-select"></div>
+          </div>
+        </div>
+        <!-- We implicitly default total to 60 through logic now, but pass it. -->
+        <input type="hidden" name="total" value="60">
+      </div>
+      <div style="padding:16px 24px; background:#f9fafb; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('addModal')">Discard</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-save"></i> Save Academic Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT RESULT MODAL -->
+<div id="editModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('editModal')">
+  <div class="modal-bx">
+    <div class="modal-hd">
+      <span>Modify Assessment Result</span>
+      <button onclick="closeModal('editModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_edit_result">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="result_id" id="edit_id">
+      <div class="modal-content">
+        <div class="form-grid mb16">
+          <div style="grid-column: span 2;"><label class="filter-label">Subject</label><input type="text" name="subject" required id="edit_subject" class="filter-select"></div>
+          <div><label class="filter-label">Semester</label><select name="semester" id="edit_semester" class="filter-select">{% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}</select></div>
+          <div><label class="filter-label">Exam Type</label><select name="exam_type" id="edit_examtype" class="filter-select"><option>Semester Exam</option><option>Unit Test 1</option><option>Unit Test 2</option><option>Practical</option><option>Internal</option></select></div>
+        </div>
+        
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-sliders"></i> Internal Marks Scaling (Theory & Practical)</div>
+          <div class="form-grid">
+            <div><label class="filter-label">Assign</label><input type="number" name="assignment_marks" id="edit_assign" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">Attndn</label><input type="number" name="attendance_marks" id="edit_attend" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">T. Assess</label><input type="number" name="teacher_assessment" id="edit_ta" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">UT Mark</label><input type="number" name="ut_marks" id="edit_ut" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">MSE Mark</label><input type="number" name="mse_marks" id="edit_mse" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">TW</label><input type="number" name="tw_marks" id="edit_tw" step="0.01" min="0" class="filter-select"></div>
+            <div><label class="filter-label">PR / OR</label><input type="number" name="pr_or_marks" id="edit_pr_or" step="0.01" min="0" class="filter-select"></div>
+          </div>
+        </div>
+        <!-- We implicitly default total to 60 through logic now -->
+        <input type="hidden" name="total" value="60">
+      </div>
+      <div style="padding:16px 24px; background:#f9fafb; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('editModal')">Cancel Modifications</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-check"></i> Apply Rewrite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Publish Modal -->
+<div id="publishModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('publishModal')">
+  <div class="modal-bx" style="max-width:400px;">
+    <div class="modal-hd">
+      <span><i class="fas fa-satellite-dish"></i> Publish Results</span>
+      <button onclick="closeModal('publishModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_publish_results" id="publishForm">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Semester</label>
+          <select name="semester" class="filter-select" required>
+            <option value="">Select Semester</option>
+            {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Department (Optional)</label>
+          <select name="dept" class="filter-select">
+            <option value="">All Departments</option>
+            {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:space-between; gap:12px;">
+        <button type="submit" formaction="/admin_unpublish_results" class="modern-btn modern-btn-outline"><i class="fas fa-eye-slash"></i> Unpublish</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-globe"></i> Publish Live</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div id="importModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('importModal')">
+  <div class="modal-bx" style="max-width:400px;">
+    <div class="modal-hd">
+      <span><i class="fas fa-file-excel"></i> Import Excel</span>
+      <button onclick="closeModal('importModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_import_results" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Upload Excel File (.xlsx)</label>
+          <input type="file" name="file" accept=".xlsx,.xls" required class="filter-select">
+        </div>
+        <div>
+          <label class="filter-label">Target Semester</label>
+          <select name="semester" class="filter-select" required>
+            {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('importModal')">Cancel</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-upload"></i> Process Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="copyMarksModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('copyMarksModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Copy Marks Placeholder</span><button onclick="closeModal('copyMarksModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
+<div id="summaryModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('summaryModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Compute Ranks Placeholder</span><button onclick="closeModal('summaryModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
+<div id="bulkDeleteModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('bulkDeleteModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Bulk Delete Placeholder</span><button onclick="closeModal('bulkDeleteModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
+<div id="deleteModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('deleteModal')">
+  <div class="modal-bx" style="max-width:380px;">
+    <div class="modal-hd" style="color:#DC2626; border-bottom-color:#fecaca; background:#fef2f2;">
+      <span><i class="fas fa-triangle-exclamation"></i> Terminate Record</span>
+      <button onclick="closeModal('deleteModal')" style="background:none; border:none; font-size:20px; color:#ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_delete_result">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="result_id" id="del_id">
+      <div class="modal-content text-center">
+        <p style="font-size:15px; color:var(--ink2);">Are you absolutely certain you wish to wipe the academic record for <strong id="del_name" style="color:#111;"></strong>? All historical traces will be deleted permanently.</p>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:center; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('deleteModal')">Abort</button>
+        <button type="submit" class="modern-btn" style="background:#DC2626; color:white;"><i class="fas fa-trash"></i> Yes, Delete Instantly</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function openModal(id){
+  document.getElementById(id).style.display='flex';
+}
+function closeModal(id){
+  document.getElementById(id).style.display='none';
+}
+function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
+  document.getElementById('edit_id').value = id;
+  document.getElementById('edit_subject').value = subject;
+  
+  // Set the precise values out of 60 dynamically mapped fields
+  document.getElementById('edit_assign').value = assign;
+  document.getElementById('edit_attend').value = attend;
+  document.getElementById('edit_ta').value = ta;
+  document.getElementById('edit_ut').value = ut;
+  document.getElementById('edit_mse').value = mse;
+  document.getElementById('edit_tw').value = tw;
+  document.getElementById('edit_pr_or').value = pr_or;
+  
+  var ss = document.getElementById('edit_semester');
+  for(var o of ss.options) o.selected = (o.value === String(semester));
+  var es = document.getElementById('edit_examtype');
+  for(var o of es.options) o.selected = (o.value === examtype);
+  
+  openModal('editModal');
+}
+function openDelete(id, name){
+  document.getElementById('del_id').value = id;
+  document.getElementById('del_name').textContent = name;
+  openModal('deleteModal');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') document.querySelectorAll('.modal-ov').forEach(function(m){m.style.display='none';});
+});
+</script>
+{% endblock %}

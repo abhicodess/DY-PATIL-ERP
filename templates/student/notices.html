@@ -1,0 +1,26 @@
+{% extends "common/base.html" %}
+{% block title %}Notices{% endblock %}
+{% block page_title %}Campus Announcements{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Notices{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Recent Announcements</div><div class="ph-sub">Important updates from faculty and admin</div></div>
+</div>
+
+<div class="fu fu1">
+  {% for n in notices %}
+  <div class="card mb16">
+    <div class="ch">
+      <div class="ct">{{ n.title }}</div>
+      <div class="cs">Posted by {{ n.faculty_name }} &bull; {{ n.created_at[:16] }}</div>
+    </div>
+    <div class="cb">
+      <p style="white-space:pre-wrap;line-height:1.6">{{ n.message }}</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="card"><div class="cb empty-state"><i class="fas fa-bullhorn"></i><p>No active notices found.</p></div></div>
+  {% endfor %}
+</div>
+{% endblock %}

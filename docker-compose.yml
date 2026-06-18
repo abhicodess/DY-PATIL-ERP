@@ -1,0 +1,397 @@
+# Required env vars before running:
+# POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
+# SECRET_KEY, JWT_SECRET_KEY, GRAFANA_ADMIN_USER, GRAFANA_ADMIN_PASSWORD
+# Copy .env.example to .env and fill in real values.
+
+services:
+  # Primary Database (Writes)
+  db:
+    image: postgres:16-alpine
+    container_name: erp_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: postgres -c wal_level=replica -c max_wal_senders=10 -c max_replication_slots=10 -c hot_standby=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # Read Replica Database (SELECT Queries)
+  db_replica:
+    image: postgres:16-alpine
+    container_name: erp_db_replica
+    user: postgres
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: ["sh", "-c", "if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then echo 'Initializing replica from primary...'; rm -rf /var/lib/postgresql/data/*; pg_basebackup -h db -D /var/lib/postgresql/data -U postgres -v -P -X stream -R; fi; chmod 700 /var/lib/postgresql/data; echo 'Starting standby replica...'; exec postgres -c hot_standby=on"]
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # PgBouncer Connection Pooler (routes connections to primary and replica)
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: erp_pgbouncer
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      db_replica:
+        condition: service_started
+    restart: unless-stopped
+
+  # Redis cache, rate limiter, and message broker
+  redis:
+    image: redis:7-alpine
+    container_name: erp_redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  # Frontend Vite builder
+  frontend:
+    image: node:20-alpine
+    container_name: erp_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - frontend_dist:/app/dist
+    command: sh -c "npm install && npm run build"
+    restart: "no"
+
+  # Horizontally scaled Flask Application Instance 1
+  app1:
+    build: .
+    container_name: erp_app1
+    ports:
+      - "8000:8000"
+    command: gunicorn --config gunicorn.conf.py "app:create_app()"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REPLICA_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db_replica
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - FLASK_ENV=production
+      - DEBUG=false
+      - PORT=8000
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Horizontally scaled Flask Application Instance 2
+  app2:
+    build: .
+    container_name: erp_app2
+    command: gunicorn --config gunicorn.conf.py "app:create_app()"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REPLICA_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db_replica
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - FLASK_ENV=production
+      - DEBUG=false
+      - PORT=8000
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Horizontally scaled Flask Application Instance 3
+  app3:
+    build: .
+    container_name: erp_app3
+    command: gunicorn --config gunicorn.conf.py "app:create_app()"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REPLICA_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db_replica
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - FLASK_ENV=production
+      - DEBUG=false
+      - PORT=8000
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Celery worker dedicated to CRITICAL tasks (SMS/Email status updates)
+  celery_worker_critical:
+    build: .
+    container_name: erp_worker_critical
+    command: celery -A celery_app worker -Q critical --concurrency=8 --loglevel=info
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Celery worker dedicated to DEFAULT tasks (Attendance validations & reports)
+  celery_worker_default:
+    build: .
+    container_name: erp_worker_default
+    command: celery -A celery_app worker -Q default --concurrency=4 --loglevel=info
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Celery worker dedicated to BULK tasks (Excel/results uploads)
+  celery_worker_bulk:
+    build: .
+    container_name: erp_worker_bulk
+    command: celery -A celery_app worker -Q bulk --concurrency=2 --loglevel=info
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Celery worker dedicated to SCHEDULED tasks (Cron-jobs and daily alerts)
+  celery_worker_scheduled:
+    build: .
+    container_name: erp_worker_scheduled
+    command: celery -A celery_app worker -Q scheduled --concurrency=1 --loglevel=info
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build: .
+    container_name: erp_beat
+    command: celery -A celery_app beat --loglevel=info
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/erp_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  # Nginx Load Balancer and Static File Server
+  nginx:
+    image: nginx:alpine
+    container_name: erp_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/usr/share/nginx/html:ro
+      - .:/app:ro # Mount project root to serve flask static assets directly
+    depends_on:
+      - app1
+      - app2
+      - app3
+      - frontend
+    restart: unless-stopped
+
+  # Prometheus Server
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: erp_prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    depends_on:
+      - app1
+      - app2
+      - app3
+    restart: unless-stopped
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: erp_grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_SNAPSHOTS_EXTERNAL_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  postgres_replica_data:
+  frontend_dist:
+  grafana_data:

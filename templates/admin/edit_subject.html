@@ -1,0 +1,58 @@
+{% extends "common/base.html" %}
+{% block title %}Edit Subject{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+
+
+{% block page_title %}Edit Subject{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('admin.dashboard') }}">Home</a> / <a href="{{ url_for('admin.subjects') }}">Subjects</a> / Edit{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div class="ph-title">Edit: {{ subject.name }}</div>
+  <a href="{{ url_for('admin.subjects') }}" class="btn btn-out btn-sm"><i class="fa-solid fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="card fu fu1" style="max-width:580px">
+  <div class="ch"><div class="ct">Subject Details</div></div>
+  <form method="POST" action="{{ url_for('admin.edit_subject', id=subject.id) }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="cb">
+      <div class="fg2">
+        <div class="fgrp"><label>Subject Name *</label><input type="text" name="name" value="{{ subject.name }}" required></div>
+        <div class="fgrp"><label>Subject Code</label><input type="text" name="subject_code" value="{{ subject.subject_code or subject.code }}"></div>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>Department</label>
+          <select name="department">
+            {% for d in DEPARTMENTS %}
+            <option {{ 'selected' if (subject.department == d or subject.dept == d) }}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fgrp"><label>Semester</label>
+          <select name="semester">
+            {% for s in SEMESTERS %}
+            <option {{ 'selected' if subject.semester == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="fgrp"><label>Division</label><input type="text" name="division" value="{{ subject.division or 'A' }}"></div>
+        <div class="fgrp"><label>Credits</label><input type="number" name="credits" value="{{ subject.credits or 4 }}" min="1" max="10"></div>
+      </div>
+      <div class="fgrp"><label>Teacher / Faculty</label>
+        <input type="text" name="teacher" list="tl" value="{{ subject.teacher or '' }}" placeholder="Type name…">
+        <datalist id="tl">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+      </div>
+    </div>
+    <div class="cf">
+      <button type="submit" class="btn btn-dark"><i class="fa-solid fa-save"></i> Save Changes</button>
+      <a href="{{ url_for('admin.subjects') }}" class="btn btn-out">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% endblock %}

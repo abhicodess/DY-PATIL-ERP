@@ -1,0 +1,52 @@
+{% extends "common/base.html" %}
+{% block title %}Performance Analysis{% endblock %}
+{% block page_title %}Academic Analysis{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Analysis{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Attendance Insights</div><div class="ph-sub">Comprehensive breakdown of your attendance trends</div></div>
+</div>
+
+<div class="sg fu fu1 mb16">
+  <div class="sc">
+    <div><div class="sv" style="color:{% if summary.percentage>=75 %}var(--green){% else %}var(--red){% endif %}">{{ summary.percentage }}%</div><div class="sl">Overall %</div></div>
+    <div class="sico ic-gr"><i class="fas fa-chart-pie"></i></div>
+  </div>
+  <div class="sc">
+    <div><div class="sv">{{ summary.present }}/{{ summary.total }}</div><div class="sl">Lectures Attended</div></div>
+    <div class="sico ic-bl"><i class="fas fa-check-double"></i></div>
+  </div>
+  <div class="sc">
+    <div><div class="sv">{{ summary.status }}</div><div class="sl">Risk Status</div></div>
+    <div class="sico ic-am"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+</div>
+
+<div class="card fu fu2">
+  <div class="ch"><div class="ct">Subject-wise Breakdown</div><div class="cs">Detailed view of every course</div></div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead><tr><th>Subject</th><th>Attended</th><th>Total</th><th>Percentage</th><th>Trend</th></tr></thead>
+      <tbody>
+        {% for s, v in subjects.items() %}
+        <tr>
+          <td><strong>{{ s }}</strong></td>
+          <td class="mono">{{ v.present }}</td>
+          <td class="mono">{{ v.total }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="prog-track" style="width:80px;margin:0"><div class="prog-bar {% if v.percentage>=75 %}pb-gr{% elif v.percentage>=50 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ v.percentage }}%"></div></div>
+              <span class="mono" style="font-weight:700">{{ v.percentage }}%</span>
+            </div>
+          </td>
+          <td>
+             {% if v.percentage>=75 %}<span class="tag t-gr">Safe</span>{% elif v.percentage>=60 %}<span class="tag t-am">Warning</span>{% else %}<span class="tag t-re">Critical</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Admissions 2026-27</h1>
+            <p class="lead">Begin your journey with DY Patil College of Engineering.</p>
+            <hr class="my-4">
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Application Form</h5>
+                    <form action="{{ url_for('admissions.apply') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="applicant_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="text" name="phone" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Department Preference</label>
+                            <select name="dept_preference" class="form-select">
+                                <option value="Computer">Computer Engineering</option>
+                                <option value="IT">Information Technology</option>
+                                <option value="Mechanical">Mechanical Engineering</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">10th Score (%)</label>
+                                <input type="number" step="0.01" name="score_10th" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">12th Score (%)</label>
+                                <input type="number" step="0.01" name="score_12th" class="form-control" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

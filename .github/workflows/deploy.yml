@@ -1,0 +1,100 @@
+name: ERP Production Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-cov
+      - name: Run tests with coverage
+        env:
+          SECRET_KEY: placeholder_secret_key_for_testing_purposes_only_32_chars
+          JWT_SECRET_KEY: placeholder_jwt_secret_key_for_testing_purposes_only_32_chars
+        run: |
+          pytest --cov=. --cov-fail-under=80
+
+      - name: Validate OpenAPI spec
+        env:
+          SECRET_KEY: placeholder_secret_key_for_testing_purposes_only_32_chars
+          JWT_SECRET_KEY: placeholder_jwt_secret_key_for_testing_purposes_only_32_chars
+        run: |
+          pip install openapi-spec-validator pyyaml
+          flask openapi export
+          openapi-spec-validator docs/openapi/openapi.json
+          echo "OpenAPI spec is valid"
+
+      - name: Check for breaking changes
+        run: |
+          pip install openapi-diff
+          if [ -f docs/openapi/openapi.previous.json ]; then
+            openapi-diff docs/openapi/openapi.json \
+                         docs/openapi/openapi.previous.json \
+                         --fail-on-incompatible
+          else
+            echo "No previous spec found, skipping diff"
+          fi
+
+      - name: Verify changelog updated
+        run: |
+          git fetch --depth=2 origin ${{ github.ref_name }} || true
+          git diff --name-only HEAD~1 | grep -q CHANGELOG.md || \
+            (echo "ERROR: CHANGELOG.md must be updated with every API change" && exit 1)
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Security scan (Bandit)
+        run: |
+          pip install bandit
+          bandit -r . -ll --exclude ./tests
+
+  build:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/erp-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify secrets are set
+        run: |
+          [ -n "${{ secrets.SECRET_KEY }}" ]     || (echo "SECRET_KEY not set in GitHub Secrets" && exit 1)
+          [ -n "${{ secrets.JWT_SECRET_KEY }}" ] || (echo "JWT_SECRET_KEY not set in GitHub Secrets" && exit 1)
+      - name: Deploy to Production
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            cd /opt/erp
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            ./scripts/deploy.sh

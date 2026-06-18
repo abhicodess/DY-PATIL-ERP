@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block report_title %}Report{% endblock %}</title>
+    <style>
+        @page {
+            size: A4;
+            margin-top: 3.5cm;
+            margin-bottom: 2cm;
+            margin-left: 1.5cm;
+            margin-right: 1.5cm;
+            @top-center {
+                content: element(header);
+            }
+            @bottom-center {
+                content: element(footer);
+            }
+        }
+
+        /* Typography */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: "Georgia", "Times New Roman", serif;
+            color: #800000; /* Maroon DY Patil brand color */
+            margin-top: 0;
+            margin-bottom: 0.3em;
+        }
+
+        h1 { font-size: 18pt; border-bottom: 2px solid #800000; padding-bottom: 5px; }
+        h2 { font-size: 14pt; color: #555555; margin-top: 15px; }
+        h3 { font-size: 11pt; color: #800000; }
+
+        /* Running Header */
+        div.header {
+            position: running(header);
+            width: 100%;
+            border-bottom: 2px solid #800000;
+            padding-bottom: 5px;
+            height: 60px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 120px;
+        }
+
+        .logo-img {
+            height: 45px;
+            width: auto;
+        }
+
+        .univ-cell {
+            text-align: center;
+        }
+
+        .univ-title {
+            font-family: "Georgia", serif;
+            font-size: 13pt;
+            font-weight: bold;
+            color: #800000;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        .univ-subtitle {
+            font-size: 8pt;
+            color: #666;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .meta-cell {
+            text-align: right;
+            font-size: 8pt;
+            color: #666;
+            width: 150px;
+        }
+
+        /* Running Footer */
+        div.footer {
+            position: running(footer);
+            width: 100%;
+            border-top: 1px solid #dddddd;
+            padding-top: 5px;
+            font-size: 8pt;
+            color: #777777;
+        }
+
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+
+        .footer-table td {
+            border: none;
+            padding: 0;
+        }
+
+        .footer-right {
+            text-align: right;
+        }
+
+        .page-number:before {
+            content: counter(page);
+        }
+        
+        .page-count:before {
+            content: counter(pages);
+        }
+
+        /* Main Content Structures */
+        .report-meta-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #800000;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-size: 9pt;
+        }
+
+        .meta-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .meta-row {
+            display: table-row;
+        }
+
+        .meta-label {
+            display: table-cell;
+            font-weight: bold;
+            color: #555;
+            padding: 4px 10px 4px 0;
+            width: 25%;
+        }
+
+        .meta-value {
+            display: table-cell;
+            color: #333;
+            padding: 4px 0;
+        }
+
+        /* Tables */
+        table.report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-size: 9.5pt;
+        }
+
+        table.report-table th {
+            background-color: #f2f2f2;
+            color: #333333;
+            font-weight: bold;
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 2px solid #800000;
+            font-size: 9pt;
+        }
+
+        table.report-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eeeeee;
+            vertical-align: middle;
+        }
+
+        table.report-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        table.report-table tr.summary-row {
+            background-color: #eaeaea !important;
+            font-weight: bold;
+            border-top: 2px solid #800000;
+            border-bottom: 2px double #800000;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 8pt;
+            font-weight: bold;
+            border-radius: 3px;
+            text-align: center;
+        }
+
+        .badge-green { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .badge-red { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .badge-amber { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        
+        .badge-pass { background-color: #d4edda; color: #155724; }
+        .badge-fail { background-color: #f8d7da; color: #721c24; }
+        .badge-atkt { background-color: #fff3cd; color: #856404; }
+        
+        .badge-present { background-color: #d4edda; color: #155724; }
+        .badge-absent { background-color: #f8d7da; color: #721c24; }
+
+        /* Watermark for DRAFT */
+        .watermark {
+            position: fixed;
+            top: 35%;
+            left: 5%;
+            width: 90%;
+            text-align: center;
+            font-size: 72pt;
+            font-weight: bold;
+            color: rgba(128, 0, 0, 0.06);
+            transform: rotate(-45deg);
+            transform-origin: 50% 50%;
+            z-index: -1000;
+            pointer-events: none;
+            letter-spacing: 10px;
+        }
+
+        /* Page break utilities */
+        .page-break {
+            page-break-after: always;
+        }
+        
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        /* custom content blocks */
+        {% block report_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+
+    <!-- Watermark (only rendered if context has is_draft) -->
+    {% if is_draft %}
+    <div class="watermark">DRAFT</div>
+    {% endif %}
+
+    <!-- Running Header -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td class="logo-cell">
+                    <img src="{{ logo_url or 'http://localhost:8000/static/images/dypatil_logo.png' }}" class="logo-img" alt="DY Patil Logo">
+                </td>
+                <td class="univ-cell">
+                    <p class="univ-title">D. Y. PATIL UNIVERSITY</p>
+                    <p class="univ-subtitle">University Management Information System</p>
+                </td>
+                <td class="meta-cell">
+                    <strong>Report ID:</strong> {{ job_id or 'N/A' }}<br>
+                    <strong>Generated:</strong> {{ generated_at or 'Today' }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Running Footer -->
+    <div class="footer">
+        <table class="footer-table">
+            <tr>
+                <td>DY Patil College ERP &bull; Confidential Report</td>
+                <td class="footer-right">
+                    Page <span class="page-number"></span> of <span class="page-count"></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <h1>{% block report_header_title %}Report Title{% endblock %}</h1>
+        
+        <div class="report-meta-box">
+            <div class="meta-grid">
+                {% block report_meta %}
+                <!-- Meta data like filters will go here -->
+                {% endblock %}
+            </div>
+        </div>
+
+        {% block report_content %}
+        <!-- Main tables and charts will go here -->
+        {% endblock %}
+
+        {% block report_summary %}
+        <!-- Summary notes or signs will go here -->
+        {% endblock %}
+    </div>
+
+</body>
+</html>

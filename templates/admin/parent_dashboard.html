@@ -1,0 +1,114 @@
+{% extends "common/base.html" %}
+{% block title %}Parent Communication Dashboard{% endblock %}
+
+{% block content %}
+<div class="fu">
+    <!-- Page Header -->
+    <div class="ph">
+        <div>
+            <h1 class="ph-title">Parent Communication</h1>
+            <p class="ph-sub">Manage notifications and broadcasts to parents</p>
+        </div>
+    </div>
+
+    <div class="g2">
+        <!-- Broadcast Section -->
+        <div class="card">
+            <div class="ch">
+                <h2 class="ct"><i class="fas fa-bullhorn" style="margin-right: 8px; color: var(--blue);"></i> Send Broadcast</h2>
+                <p class="cs">Send SMS notifications to parents of a specific department</p>
+            </div>
+            <form id="broadcastForm" class="cb">
+                <div class="fgrp">
+                    <label>Department</label>
+                    <select id="deptSelect">
+                        <option value="Computer Engineering">Computer Engineering</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        <option value="Civil Engineering">Civil Engineering</option>
+                    </select>
+                </div>
+                <div class="fgrp">
+                    <label>Template</label>
+                    <select id="templateSelect">
+                        <option value="general_notice">General Notice</option>
+                        <option value="emergency_holiday">Emergency Holiday</option>
+                        <option value="fee_reminder">Fee Reminder</option>
+                    </select>
+                </div>
+                <button type="button" onclick="sendBroadcast()" class="btn btn-blue" style="width: 100%; justify-content: center; margin-top: 10px;">Send SMS Broadcast</button>
+            </form>
+        </div>
+
+        <!-- Defaulter Notification -->
+        <div class="card">
+            <div class="ch">
+                <h2 class="ct"><i class="fas fa-triangle-exclamation" style="margin-right: 8px; color: var(--red);"></i> Defaulter Alerts</h2>
+                <p class="cs">Send automated attendance shortage alerts to parents of students below threshold</p>
+            </div>
+            <div class="cb">
+                <div class="alert al-warn">
+                    <i class="fas fa-info-circle"></i>
+                    <div>This will search for all students with attendance below the specified threshold and send alert SMS messages to their registered parent contacts.</div>
+                </div>
+                <div class="fgrp">
+                    <label>Attendance Threshold (%)</label>
+                    <input type="number" id="thresholdInp" value="75">
+                </div>
+                <button type="button" onclick="notifyDefaulters()" class="btn btn-re" style="width: 100%; justify-content: center; margin-top: 10px;">Notify Parents of Defaulters</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function sendBroadcast() {
+    const dept = document.getElementById('deptSelect').value;
+    const template = document.getElementById('templateSelect').value;
+    
+    try {
+        const resp = await fetch('/api/parent/broadcast', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ department: dept, template_slug: template })
+        });
+        
+        if (resp.ok) {
+            alert('Broadcast sent successfully!');
+        } else {
+            const data = await resp.json();
+            alert('Error: ' + (data.error || 'Unknown error occurred'));
+        }
+    } catch (e) {
+        alert('Network error while sending broadcast');
+    }
+}
+
+async function notifyDefaulters() {
+    const threshold = document.getElementById('thresholdInp').value;
+    
+    try {
+        const resp = await fetch('/api/parent/notify-defaulters', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ threshold: parseInt(threshold) })
+        });
+        
+        if (resp.ok) {
+            const data = await resp.json();
+            alert(`Notifications processed!\nDefaulters notified: ${data.defaulters_notified}\nSMS Sent: ${data.sms_sent}`);
+        } else {
+            alert('Error processing notifications');
+        }
+    } catch (e) {
+        alert('Network error while processing notifications');
+    }
+}
+</script>
+{% endblock %}

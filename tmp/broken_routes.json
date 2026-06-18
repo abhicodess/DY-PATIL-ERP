@@ -1,0 +1,34 @@
+[
+    {
+        "file": ".\\attic\\erp_result_system\\templates\\index.html",
+        "endpoint": "upload"
+    },
+    {
+        "file": ".\\attic\\erp_result_system\\templates\\index.html",
+        "endpoint": "upload"
+    },
+    {
+        "file": ".\\attic\\erp_result_system\\templates\\index.html",
+        "endpoint": "dashboard"
+    },
+    {
+        "file": ".\\attic\\erp_result_system\\templates\\upload.html",
+        "endpoint": "upload"
+    },
+    {
+        "file": ".\\scripts\\fix_templates.py",
+        "endpoint": "old"
+    },
+    {
+        "file": ".\\scripts\\fix_templates.py",
+        "endpoint": "old"
+    },
+    {
+        "file": ".\\scripts\\fix_templates.py",
+        "endpoint": "{new}"
+    },
+    {
+        "file": ".\\templates\\admin\\faculty_sessions.html",
+        "endpoint": "audit_session_detail"
+    }
+]

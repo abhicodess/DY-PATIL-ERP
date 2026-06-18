@@ -1,0 +1,321 @@
+{% extends "common/base.html" %}
+
+{% block title %}Faculty Assignments{% endblock %}
+
+{% block content %}
+<style>
+    .f-assign-page {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .fgrp label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink3);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .fgrp select, .fgrp input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-sm);
+        background: var(--white);
+        color: var(--ink);
+        font-size: 14px;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .fgrp select:focus, .fgrp input:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px var(--blue-s);
+    }
+
+    .assignment-card {
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--white);
+        overflow: hidden;
+        box-shadow: var(--sh-sm);
+    }
+
+    .assignment-card .ch {
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .assignment-table-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .faculty-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .faculty-name {
+        font-weight: 700;
+        color: var(--ink);
+    }
+
+    .faculty-dept {
+        font-size: 11px;
+        color: var(--ink4);
+        background: var(--bg2);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .class-tag {
+        font-family: var(--mono);
+        font-weight: 600;
+        color: var(--blue);
+        background: var(--blue-s);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .delete-btn {
+        color: var(--ink4);
+        transition: all 0.2s;
+        padding: 6px;
+        border-radius: 6px;
+    }
+
+    .delete-btn:hover {
+        color: var(--red);
+        background: var(--red-s);
+    }
+
+    .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: var(--ink4);
+    }
+
+    .empty-state i {
+        font-size: 32px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="f-assign-page">
+    <div class="ph">
+        <div class="ph-title">
+            <div class="ct">Faculty Subject Assignments</div>
+            <div class="ph-sub">Administrative control for mapping faculty to academic subjects and classes</div>
+        </div>
+        <div class="ph-actions" style="display: flex; gap: 12px; align-items: center;">
+            <div class="tag t-vi">Total Assignments: {{ assignments|length }}</div>
+            <form action="/admin/auto_link_faculty" method="POST" style="margin: 0;">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-dark btn-sm">
+                    <i class="fas fa-wand-magic-sparkles"></i> Auto-Import from Timetable
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert al-{{ category if category != 'error' else 're' }} mb20">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'info-circle' }}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="grid g6040">
+        <!-- New Assignment Form -->
+        <div class="card">
+            <div class="ch" style="border-bottom: 1px solid var(--border); padding-bottom: 18px;">
+                <div class="ct"><i class="fas fa-plus-circle" style="color: var(--green); margin-right: 8px;"></i>Create New Assignment</div>
+                <div class="cs">Map a specific subject to a faculty for a particular division</div>
+            </div>
+            <div class="cb">
+                <form action="/admin/faculty_assignments" method="POST">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="assign">
+
+                    <div class="fgrp mb20">
+                        <label for="faculty_id">Faculty Member</label>
+                        <select name="faculty_id" id="faculty_id" required>
+                            <option value="">-- Search & Select Faculty --</option>
+                            {% for f in faculty_list %}
+                            <option value="{{ f.id }}">{{ f.name }} ({{ f.department }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="fgrp mb20">
+                        <label for="subject_name">Select Subject</label>
+                        <select name="subject_name" id="subject_name" required>
+                            <option value="">-- Select Subject --</option>
+                            {% for s in subject_list %}
+                            <option value="{{ s.name }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="fgrp">
+                            <label for="department">Department</label>
+                            <select name="department" id="department" required>
+                                {% for d in DEPARTMENTS %}
+                                <option value="{{ d }}">{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="fgrp">
+                            <label for="semester">Semester</label>
+                            <select name="semester" id="semester" required>
+                                {% for s in SEMESTERS %}
+                                <option value="{{ s }}">{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="fgrp">
+                            <label for="class_name">Class Name (e.g. TY-CS)</label>
+                            <input type="text" name="class_name" id="class_name" placeholder="Enter Class Name" required>
+                        </div>
+                        <div class="fgrp">
+                            <label for="division">Division</label>
+                            <select name="division" id="division" required>
+                                {% for div in DIVISIONS %}
+                                <option value="{{ div }}">Division {{ div }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-blue w100" style="padding: 12px; justify-content: center; font-size: 15px;">
+                            <i class="fas fa-save"></i> Confirm Assignment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side: Existing Assignments Quick View / Instructions -->
+        <div>
+            <div class="card mb16">
+                <div class="cb" style="background: var(--blue-s); color: var(--blue); border-radius: var(--r-md);">
+                    <div style="display: flex; gap: 12px;">
+                        <i class="fas fa-lightbulb" style="font-size: 20px; margin-top: 4px;"></i>
+                        <div style="font-size: 13px; line-height: 1.6;">
+                            <b>Pro-Tip:</b> Assignments are unique per Faculty + Subject + Class. Re-assigning the same combination will update the record.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Summary / Info -->
+            <div class="card">
+                <div class="ch">
+                    <div class="ct">Assignment Stats</div>
+                </div>
+                <div class="cb p0">
+                    <table class="tbl">
+                        <tr>
+                            <td style="color: var(--ink3);">Unique Faculties</td>
+                            <td style="text-align: right; font-weight: 700;">{{ faculty_list|length }}</td>
+                        </tr>
+                        <tr>
+                            <td style="color: var(--ink3);">Subjects Available</td>
+                            <td style="text-align: right; font-weight: 700;">{{ subject_list|length }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Assignments Table -->
+    <div class="card mt20" style="margin-top: 24px;">
+        <div class="ch" style="border-bottom: 1px solid var(--border); padding-bottom: 14px;">
+            <div class="ct">Current Faculty Assignments</div>
+        </div>
+        <div class="cb p0">
+            <div class="assignment-table-container">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Faculty Member</th>
+                            <th>Allocated Subject</th>
+                            <th>Department</th>
+                            <th>Semester</th>
+                            <th>Class/Div</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in assignments %}
+                        <tr>
+                            <td>
+                                <div class="faculty-badge">
+                                    <div class="av av-sm ic-bl">{{ a.faculty_name[:1] }}</div>
+                                    <div class="faculty-name">{{ a.faculty_name }}</div>
+                                </div>
+                            </td>
+                            <td style="font-weight: 500;">{{ a.subject_name }}</td>
+                            <td><span class="tag t-nn">{{ a.department }}</span></td>
+                            <td>Sem {{ a.semester }}</td>
+                            <td>
+                                <span class="class-tag">{{ a.class_name }}</span>
+                                <span class="tag t-vi">Div {{ a.division }}</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <form action="/admin/faculty_assignments" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this assignment?')">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="{{ a.id }}">
+                                    <button type="submit" class="delete-btn btn-ghost" title="Delete Assignment">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <i class="fas fa-folder-open"></i>
+                                    <p>No faculty assignments found in the system.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,129 @@
+
+{% extends "common/base.html" %}
+{% block title %}Consolidated Attendance Report{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#0F172A{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Administrator{% endblock %}
+
+
+
+{% block page_title %}Consolidated Attendance Report{% endblock %}
+{% block breadcrumb %}<a href="/attendance_dashboard">Home</a> / Consolidated Report{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Institutional Attendance Matrix</div>
+    <div class="ph-sub">Consolidated subject-wise performance for the current academic session</div>
+  </div>
+  <div class="ph-actions">
+    <button class="btn btn-out btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print Report</button>
+    <button class="btn btn-dark btn-sm" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export Matrix</button>
+  </div>
+</div>
+
+<div class="card mb20">
+  <div class="cb">
+    <form class="fg4" method="GET" action="/consolidated_report">
+      <div class="fgrp">
+        <label>Select Division</label>
+        <select name="div" onchange="this.form.submit()">
+          <option value="">All Divisions</option>
+          {% for d in divs %}
+          <option value="{{ d }}" {% if selected_div == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fgrp">
+        <label>Select Branch</label>
+        <select name="branch" onchange="this.form.submit()">
+          <option value="">All Branches</option>
+          {% for b in branches %}
+          <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fgrp" style="display:flex;align-items:flex-end">
+        <button type="submit" class="btn btn-dark" style="height:42px">Apply Filters</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch">
+    <div class="ct">Attendance Matrix</div>
+    <div class="cs">Cross-subject cumulative percentages</div>
+  </div>
+  <div class="cb p0 overflow-x">
+    <table class="tbl" id="reportTable">
+      <thead>
+        <tr>
+          <th style="min-width:60px">Roll</th>
+          <th style="min-width:200px">Student Name</th>
+          {% for sub in subjects %}
+          <th class="text-center" style="font-size:11px">{{ sub }}</th>
+          {% endfor %}
+          <th class="text-center" style="background:var(--bg2);font-weight:800">CUM %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td><span class="tag t-nn">{{ s.roll }}</span></td>
+          <td>
+            <div style="font-weight:600">{{ s.name }}</div>
+            <div style="font-size:10px;color:var(--ink4)">{{ s.prn }}</div>
+          </td>
+          {% for sub in subjects %}
+          {% set p = s.subjects.get(sub, '-') %}
+          <td class="text-center">
+            {% if p == '-' %}
+            <span style="color:var(--ink4)">-</span>
+            {% else %}
+            <span class="tag {% if p >= 75 %}t-gr{% elif p >= 60 %}t-am{% else %}t-re{% endif %}" style="min-width:45px">
+              {{ p }}%
+            </span>
+            {% endif %}
+          </td>
+          {% endfor %}
+          <td class="text-center" style="background:var(--bg2)">
+            <div style="font-weight:800;color:{% if s.total_pct >= 75 %}var(--green){% elif s.total_pct >= 60 %}var(--amber){% else %}var(--red){% endif %}">
+              {{ s.total_pct }}%
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ subjects|length + 3 }}">
+            <div class="empty-state">No student records found for the selected criteria.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.overflow-x { overflow-x: auto; max-width: 100%; }
+.text-center { text-align: center; }
+@media print {
+  .sidebar, .ph-actions, .card:first-of-type { display: none !important; }
+  .content { margin: 0 !important; padding: 0 !important; }
+  .card { border: none !important; box-shadow: none !important; }
+  .tbl th, .tbl td { font-size: 10px !important; padding: 4px !important; }
+}
+</style>
+
+<script>
+function exportToExcel() {
+  let table = document.getElementById("reportTable");
+  let html = table.outerHTML;
+  let url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+  let link = document.createElement("a");
+  link.download = "Consolidated_Attendance_Report.xls";
+  link.href = url;
+  link.click();
+}
+</script>
+{% endblock %}

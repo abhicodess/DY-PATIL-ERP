@@ -1,0 +1,272 @@
+{% extends "attendance/attendance_base.html" %}
+
+{% block title %}Attendance Management Pro{% endblock %}
+{% block nav_pro %}active{% endblock %}
+{% block page_title %}Attendance Management Pro{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_management">Attendance Pro</a>{% endblock %}
+
+{% block topbar_extras %}
+<a href="/export_attendance_excel" class="tb-icon" title="Export Attendance"><i class="fas fa-download"></i></a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .pro-dots-cell { text-align: center; }
+  .pro-dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid var(--border);
+  }
+  .pro-dot.P { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+  .pro-dot.A { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .pro-dot.L { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .pro-dot.H { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+  .pro-dot.dash { color: var(--ink4); background: var(--bg); }
+
+  .bulk-bar {
+    display: none; align-items: center; gap: 16px;
+    background: var(--ink); color: #fff;
+    padding: 12px 20px; border-radius: 10px; margin-bottom: 16px;
+    animation: slideDown 0.3s ease;
+  }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+  .bulk-bar .bulk-label { font-size: 13px; font-weight: 600; flex: 1; }
+  .bulk-bar .bulk-actions { display: flex; gap: 8px; }
+
+  .att-tabs { display: flex; gap: 4px; background: var(--bg2); padding: 5px; border-radius: 10px; width: fit-content; margin-bottom: 16px; }
+  .att-tab { text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink3); transition: 0.2s; }
+  .att-tab.active { background: var(--white); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .att-tab:hover:not(.active) { color: var(--ink2); }
+
+  .pro-filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .pro-filter-bar .att-filter-input,
+  .pro-filter-bar .att-filter-select {
+    font-size: 13px; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--white); outline: none; color: var(--ink);
+  }
+  .pro-filter-bar .att-filter-input:focus,
+  .pro-filter-bar .att-filter-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+  }
+  .pro-filter-bar .att-filter-input { width: 240px; }
+</style>
+
+{# ── Summary Stats Row ── #}
+<div class="sg fu">
+  <div class="sc">
+    <div>
+      <div class="sv">{{ metrics.count }}</div>
+      <div class="sl">Students Tracked</div>
+      <div class="sdelta up"><i class="fas fa-users"></i> Current selection</div>
+    </div>
+    <div class="sico ic-bl"><i class="fas fa-users"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#059669">{{ metrics.avg_attendance }}%</div>
+      <div class="sl">Avg Attendance</div>
+      <div class="sdelta up"><i class="fas fa-wave-square"></i> Cumulative average</div>
+    </div>
+    <div class="sico ic-gr"><i class="fas fa-chart-pie"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#D97706">{{ metrics.shortage_count }}</div>
+      <div class="sl">Shortage Alerts</div>
+      <div class="sdelta"><i class="fas fa-triangle-exclamation"></i> Below 75%</div>
+    </div>
+    <div class="sico ic-am"><i class="fas fa-user-clock"></i></div>
+  </div>
+</div>
+
+{# ── Main Card ── #}
+<div class="card fu fu1">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Attendance Pro</div>
+      <div class="cs">Weekly tracking grid with cumulative performance &bull; {{ date }}</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn btn-out btn-sm" onclick="window.location.reload()">
+        <i class="fas fa-rotate-right"></i> Refresh
+      </button>
+      <button class="btn btn-dark btn-sm" onclick="exportToExcel()">
+        <i class="fas fa-file-export"></i> Export
+      </button>
+    </div>
+  </div>
+
+  <div class="cb">
+    {# Tab Bar #}
+    <div class="att-tabs">
+      <a href="?tab=live&division={{ selected_div }}" class="att-tab {{ 'active' if selected_tab == 'live' else '' }}">
+        <i class="fas fa-circle-dot" style="font-size:9px;margin-right:5px;"></i>Live Tracking
+      </a>
+      <a href="?tab=weekly&division={{ selected_div }}" class="att-tab {{ 'active' if selected_tab == 'weekly' else '' }}">
+        <i class="fas fa-calendar-week" style="font-size:11px;margin-right:5px;"></i>Weekly
+      </a>
+      <a href="?tab=monthly&division={{ selected_div }}" class="att-tab {{ 'active' if selected_tab == 'monthly' else '' }}">
+        <i class="fas fa-calendar" style="font-size:11px;margin-right:5px;"></i>Monthly
+      </a>
+      <a href="?tab=defaulter&division={{ selected_div }}" class="att-tab {{ 'active' if selected_tab == 'defaulter' else '' }}">
+        <i class="fas fa-triangle-exclamation" style="font-size:11px;margin-right:5px;"></i>Defaulters
+      </a>
+    </div>
+
+    {# Filter Bar #}
+    <div class="pro-filter-bar">
+      <form method="GET" action="/attendance_management" id="filterForm" style="display:contents;">
+        <input type="hidden" name="tab" value="{{ selected_tab }}">
+        <select name="division" class="att-filter-select" onchange="this.form.submit()">
+          <option value="All">All Divisions</option>
+          {% for d in divs %}
+          <option value="{{ d }}" {% if selected_div == d %}selected{% endif %}>Division {{ d }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <input type="text" id="liveSearch" class="att-filter-input" placeholder="Search by name or PRN…" oninput="doLiveSearch()">
+    </div>
+
+    {# Bulk Action Bar #}
+    <div class="bulk-bar" id="bulkBar">
+      <div class="bulk-label"><i class="fas fa-check-circle" style="margin-right:6px;"></i><span id="selText">0 selected</span></div>
+      <div class="bulk-actions">
+        <button class="btn btn-sm" style="background:#059669;color:#fff;" onclick="execBulk('P')"><i class="fas fa-check"></i> Present</button>
+        <button class="btn btn-sm" style="background:#DC2626;color:#fff;" onclick="execBulk('A')"><i class="fas fa-xmark"></i> Absent</button>
+        <button class="btn btn-sm" style="background:#D97706;color:#fff;" onclick="execBulk('L')"><i class="fas fa-clock"></i> Late</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetSel()">Cancel</button>
+      </div>
+    </div>
+
+    {# Table #}
+    <div style="overflow-x:auto;">
+      <table class="tbl" id="proTable">
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" id="masterCheck" onclick="toggleMaster(this)"></th>
+            <th>Student</th>
+            <th>PRN</th>
+            <th>Division</th>
+            {% for day in week_labels %}
+            <th class="pro-dots-cell">{{ day }}</th>
+            {% endfor %}
+            <th>Attendance</th>
+            <th style="width:80px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr class="st-row" data-search="{{ s.name|lower }} {{ s.roll|lower }}">
+            <td><input type="checkbox" class="row-check" value="{{ s.id }}" onchange="updateSel()"></td>
+            <td>
+              <div class="flex-ac gap8">
+                <div class="av av-sm" style="background:{% if s.pct >= 75 %}#059669{% elif s.pct >= 50 %}#D97706{% else %}#DC2626{% endif %}">{{ (s.name or 'S')[0]|upper }}</div>
+                <div>
+                  <div style="font-weight:600;font-size:13px;">{{ s.name }}</div>
+                  <div style="font-size:11px;color:var(--ink4);">{{ s.prn or 'No PRN' }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="tag t-bl">{{ s.roll or '—' }}</span></td>
+            <td><span class="tag t-vi">{{ s.division or '—' }}</span></td>
+
+            {% for status in s.dots %}
+            <td class="pro-dots-cell">
+              {% if status == 'P' %}
+                <span class="pro-dot P">P</span>
+              {% elif status == 'A' %}
+                <span class="pro-dot A">A</span>
+              {% elif status == 'L' %}
+                <span class="pro-dot L">L</span>
+              {% elif status == 'H' %}
+                <span class="pro-dot H">H</span>
+              {% else %}
+                <span class="pro-dot dash">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+
+            <td>
+              <div>
+                <div class="prog-hd">
+                  <span class="prog-lbl" style="font-size:11px;">{{ s.attended }}/{{ s.total }}</span>
+                  <span class="tag {% if s.pct >= 75 %}t-gr{% elif s.pct >= 50 %}t-am{% else %}t-re{% endif %}" style="font-size:10px;">{{ s.pct }}%</span>
+                </div>
+                <div class="prog-track" style="margin-top:5px;">
+                  <div class="prog-bar {% if s.pct >= 75 %}pb-gr{% elif s.pct >= 50 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ s.pct }}%"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm" title="View Dashboard">
+                <i class="fas fa-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="12">
+              <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No students found{% if selected_div != 'All' %} in Division {{ selected_div }}{% endif %}.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if students %}
+    <div style="padding:12px 0 0; font-size:12px; color:var(--ink4);">
+      Showing <strong>{{ students|length }}</strong> student{{ 's' if students|length != 1 else '' }}
+      {% if selected_div != 'All' %} in Division <strong>{{ selected_div }}</strong>{% endif %}.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+  function doLiveSearch() {
+    var q = document.getElementById('liveSearch').value.toLowerCase();
+    document.querySelectorAll('.st-row').forEach(function(r) {
+      r.style.display = (r.dataset.search || r.textContent.toLowerCase()).includes(q) ? '' : 'none';
+    });
+  }
+
+  function toggleMaster(el) {
+    document.querySelectorAll('.row-check').forEach(function(c) {
+      if (c.closest('.st-row').style.display !== 'none') c.checked = el.checked;
+    });
+    updateSel();
+  }
+
+  function updateSel() {
+    var count = document.querySelectorAll('.row-check:checked').length;
+    document.getElementById('selText').textContent = count + ' student' + (count === 1 ? '' : 's') + ' selected';
+    document.getElementById('bulkBar').style.display = count > 0 ? 'flex' : 'none';
+  }
+
+  function resetSel() {
+    document.getElementById('masterCheck').checked = false;
+    document.querySelectorAll('.row-check').forEach(function(c) { c.checked = false; });
+    updateSel();
+  }
+
+  function execBulk(status) {
+    var count = document.querySelectorAll('.row-check:checked').length;
+    alert('Bulk update queued: Mark ' + count + ' student(s) as ' + status + '. This will be applied on next save.');
+    resetSel();
+  }
+
+  function exportToExcel() {
+    var table = document.getElementById('proTable');
+    var wb = XLSX.utils.table_to_book(table);
+    XLSX.writeFile(wb, 'Attendance_Pro_{{ date }}.xlsx');
+  }
+</script>
+{% endblock %}

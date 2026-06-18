@@ -1,0 +1,342 @@
+{% extends "common/base.html" %}
+{% block title %}Students{% endblock %}
+<!-- students-template: division-column-v2 -->
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Students{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Students{% endblock %}
+
+{% block content %}
+{% set empty_div_count = students|selectattr('division', 'none')|list|length + students|selectattr('division', 'equalto', '')|list|length %}
+{% if students|length > 0 and (empty_div_count / students|length) > 0.10 %}
+<div class="alert al-am fu mb20" style="display:flex; align-items:center;">
+    <i class="fas fa-triangle-exclamation" style="font-size:24px; margin-right:16px;"></i>
+    <div style="flex:1;">
+      <strong style="display:block; margin-bottom:4px;">Missing Divisions Detected</strong>
+      <div style="font-size:12px; opacity:0.9;">Over 10% of students are missing their division. Attempt auto-fix based on roll numbers?</div>
+    </div>
+    <form action="/admin/fix_student_divisions" method="POST" style="margin:0;">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-wand-magic-sparkles"></i> Fix Divisions</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="ph fu">
+  <div><div class="ph-title">Students</div><div class="ph-sub">{{ total }} students found</div></div>
+  <div class="ph-actions">
+    <a href="/api/students/export" class="btn btn-out btn-sm"><i class="fas fa-file-csv"></i> Export CSV</a>
+    <a href="/export_students_excel" class="btn btn-out btn-sm"><i class="fas fa-file-excel"></i> Export Excel</a>
+    {% if session.role == 'admin' %}
+    <button class="btn btn-out btn-sm" onclick="document.getElementById('impStudSmart').classList.add('show')"><i class="fas fa-upload"></i> Bulk Import</button>
+    <button class="btn btn-dark btn-sm" onclick="openAddModal()"><i class="fas fa-user-plus"></i> Add Manually</button>
+    <button class="btn btn-am btn-sm" onclick="if(confirm('Remove all rows with invalid names/rolls?')) document.getElementById('fixStudForm').submit()"><i class="fas fa-broom"></i> Fix Data</button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-bg" id="addStudentModal">
+  <div class="modal-box" style="max-width:700px">
+    <div class="ch flex-sb" style="padding-bottom:16px">
+      <div class="ct">Add Student Manually</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeAddModal()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/save_student">
+      <div class="cb" style="padding-top:0">
+        <div class="fg2">
+          <div class="fgrp"><label>Full Name *</label><input type="text" name="name" required placeholder="e.g. Rahul Patil"></div>
+          <div class="fgrp"><label>PRN Number *</label><input type="text" name="prn" required placeholder="e.g. 23BIT001"></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Department *</label>
+            <select name="department" required><option value="">Select Dept</option>{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select>
+          </div>
+          <div class="fgrp"><label>Year *</label>
+            <select name="year" required><option value="">Select Year</option>{% for y in YEARS %}<option value="{{ y }}">Year {{ y }}</option>{% endfor %}</select>
+          </div>
+        </div>
+        <div class="fg3">
+          <div class="fgrp"><label>Division</label><input type="text" name="division" placeholder="A, B, C..."></div>
+          <div class="fgrp"><label>Gender</label><select name="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+          <div class="fgrp"><label>Date of Birth</label><input type="date" name="dob"></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Contact</label><input type="text" name="contact_number"></div>
+          <div class="fgrp"><label>Parent Contact</label><input type="text" name="parent_contact"></div>
+        </div>
+        <div class="fgrp"><label>Email</label><input type="email" name="email"></div>
+        <div class="fgrp"><label>Password (Optional)</label><input type="text" name="password" placeholder="Default: student123"></div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-plus"></i> Create Student</button>
+        <button type="button" class="btn btn-out" onclick="closeAddModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if request.args.get('deleted') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('deleted') }} students deleted.</span></div>
+{% endif %}
+{% if request.args.get('cleaned') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('cleaned') }} bad rows removed.</span></div>
+{% endif %}
+{% if request.args.get('success') or request.args.get('imported') %}
+<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>
+  {% if request.args.get('imported') %}{{ request.args.get('imported') }} records imported.{% if request.args.get('skipped') %} ({{ request.args.get('skipped') }} skipped){% endif %}
+  {% else %}Done!{% endif %}
+</span></div>
+{% endif %}
+{% if request.args.get('error') == 'no_file' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Please select an Excel file before importing students.</span></div>
+{% elif request.args.get('error') == 'bad_excel' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Unable to read the Excel file. Please upload a valid `.xlsx` file.</span></div>
+{% elif request.args.get('error') == 'bad_format' %}
+<div class="alert al-err fu"><i class="fas fa-circle-exclamation"></i><span>Invalid template format. Use the official student import columns (PRN and Name).</span></div>
+{% endif %}
+
+<div class="card fu fu1">
+  <div class="cb">
+    <form method="GET" action="/students" id="filterForm">
+      <div class="toolbar">
+        <input class="tb-field" type="text" name="q" value="{{ q }}" placeholder="Search name or PRN…" style="width:200px">
+        <select class="tb-field" name="dept">
+          <option value="">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}" {% if dept==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </select>
+        <select class="tb-field" name="year">
+          <option value="">All Years</option>
+          {% for y in YEARS %}<option value="{{ y }}" {% if year==y %}selected{% endif %}>Year {{ y }}</option>{% endfor %}
+        </select>
+        <select class="tb-field" name="division">
+          <option value="">All Divisions</option>
+          {% for d in DIVISIONS %}<option value="{{ d }}" {% if division==d %}selected{% endif %}>Div {{ d }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i> Search</button>
+        <a href="/students" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- BULK ACTION BAR — shown when rows selected -->
+  <div id="bulkBar" style="display:none;padding:10px 20px;background:var(--blue-s);border-top:1px solid var(--blue-m);border-bottom:1px solid var(--blue-m)">
+    <div class="flex-ac gap10">
+      <span id="selCount" style="font-size:13px;font-weight:700;color:var(--blue)"><i class="fas fa-check-circle"></i> <span id="selNum">0</span> selected</span>
+      <button type="button" class="btn btn-danger btn-sm" onclick="submitBulkDelete()"><i class="fas fa-trash"></i> Delete Selected</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="clearSel()"><i class="fas fa-xmark"></i> Deselect All</button>
+    </div>
+  </div>
+
+  <!-- BULK DELETE FORM (hidden, submitted via JS) -->
+  <form method="POST" action="/bulk_delete_students" id="bulkForm" style="display:none">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div id="bulkInputs"></div>
+  </form>
+
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:40px"><input type="checkbox" id="selAll" onchange="toggleAll(this)" style="cursor:pointer;width:16px;height:16px"></th>
+          <th>Student</th>
+          <th>PRN Number</th>
+          <th>Department</th>
+          <th>Year</th>
+          <th>Division</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr id="row-{{ s.id }}">
+          <td><input type="checkbox" class="row-cb" data-id="{{ s.id }}" onchange="updateBar()" style="cursor:pointer;width:16px;height:16px"></td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="av av-sm" style="background:{% if loop.index0%5==0%}#2563EB{%elif loop.index0%5==1%}#7C3AED{%elif loop.index0%5==2%}#059669{%elif loop.index0%5==3%}#D97706{%else%}#0891B2{%endif%}">{{ s.name[0]|upper if s.name else "?" }}</div>
+              {{ s.name }}
+            </div>
+          </td>
+          <td><span class="tag t-gr" style="font-size:11px;font-weight:700">{{ s.prn or s.roll or "N/A" }}</span></td>
+          <td><span class="tag t-bl">{{ s.department }}</span></td>
+          <td>{{ s.year }}</td>
+          <td>{% if s.division %}<span class="tag t-nn">{{ s.division }}</span>{% else %}<span style="color:var(--ink4)">-</span>{% endif %}</td>
+          <td>
+            <div class="flex-ac gap6">
+              <a href="/report_card/{{ s.id }}" class="btn btn-out btn-sm" title="Report Card"><i class="fas fa-file-alt"></i></a>
+              {% if session.role == 'admin' %}
+              <button class="btn btn-out btn-sm" onclick="openEdit(this)" 
+                data-id="{{ s.id }}" data-name="{{ s.name }}" data-prn="{{ s.prn or s.roll or '' }}"
+                data-dept="{{ s.department }}" data-year="{{ s.year }}" data-email="{{ s.email or '' }}"
+                data-div="{{ s.division or '' }}" data-gender="{{ s.gender or '' }}" data-dob="{{ s.dob or '' }}"
+                data-contact="{{ s.contact_number or '' }}" data-parent="{{ s.parent_contact or '' }}"
+                data-address="{{ s.address or '' }}" data-adm="{{ s.admission_year or '' }}">
+                <i class="fas fa-pen"></i>
+              </button>
+              <form method="POST" action="/delete_student" style="display:inline" onsubmit="return confirm('Delete {{ s.name }}?')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="student_id" value="{{ s.id }}">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9"><div class="empty-state"><i class="fas fa-users"></i><p>No students found. {% if session.role == 'admin' %}<a href="/add_student" style="color:var(--blue)">Add one</a>{% endif %}</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="editModal">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:16px">
+      <div class="ct">Edit Student</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_student">
+      <div class="cb" style="padding-top:0">
+        <input type="hidden" name="student_id" id="eid">
+        <div class="fg2">
+          <div class="fgrp"><label>Full Name *</label><input type="text" name="name" id="en" required></div>
+          <div class="fgrp"><label>PRN Number *</label><input type="text" name="prn" id="eprn" required></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Department</label>
+            <select name="department" id="ed">{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select>
+          </div>
+          <div class="fgrp"><label>Year</label>
+            <select name="year" id="ey">{% for y in YEARS %}<option>{{ y }}</option>{% endfor %}</select>
+          </div>
+        </div>
+        <div class="fg3">
+          <div class="fgrp"><label>Division</label><input type="text" name="division" id="ediv"></div>
+          <div class="fgrp"><label>Gender</label><select name="gender" id="egender"><option>Male</option><option>Female</option><option>Other</option><option value="">Unknown</option></select></div>
+          <div class="fgrp"><label>Date of Birth</label><input type="date" name="dob" id="edob"></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Contact</label><input type="text" name="contact_number" id="econtact"></div>
+          <div class="fgrp"><label>Parent Contact</label><input type="text" name="parent_contact" id="eparent"></div>
+        </div>
+        <div class="fgrp"><label>Email</label><input type="email" name="email" id="ee"></div>
+        <div class="fgrp"><label>Address</label><textarea name="address" id="eaddress" rows="2"></textarea></div>
+        <div class="fgrp"><label>Admission Year</label><input type="number" name="admission_year" id="eadm"></div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Changes</button>
+        <button type="button" class="btn btn-out" onclick="closeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="impStudSmart">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div><div class="ct">Import Students — BE-AIDS Format</div><div class="cs">Smart import — auto-detects DY Patil format</div></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('impStudSmart').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_students_smart" enctype="multipart/form-data">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-info" style="margin-bottom:14px">
+          <i class="fas fa-circle-info"></i>
+          <div style="font-size:12px;line-height:1.7"><strong>Supports BE-AIDS_students-2025-26_list_.xlsx</strong><br>
+          Auto-reads: <code>PRN → Roll No.</code>, <code>Name As Per Marksheet → Name</code>, <code>Email</code><br>
+          Dept &amp; Year auto-detected from filename.</div>
+        </div>
+        <div class="fg2" style="margin-top:8px">
+          <div class="fgrp"><label>Department (auto if blank)</label>
+            <select name="department"><option value="">Auto-detect</option>
+              <option>AIDS</option><option>AIML</option><option>CS</option><option>IT</option>
+            </select>
+          </div>
+          <div class="fgrp"><label>Year (auto if blank)</label>
+            <select name="year"><option value="">Auto-detect</option>
+              <option value="I">I (FE)</option><option value="II">II (SE)</option>
+              <option value="III">III (TE)</option><option value="IV">IV (BE)</option>
+            </select>
+          </div>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('f_impStudSmart').click()">
+          <i class="fas fa-file-excel" style="color:#059669"></i>
+          <p>Click to choose Excel or PDF file</p><small>.xlsx / .xls / .pdf</small>
+          <input type="file" name="file" id="f_impStudSmart" accept=".xlsx,.xls,.pdf" style="display:none"
+                 required multiple
+                 onchange="document.getElementById('fn_impStudSmart').textContent='✓  '+this.files[0].name;document.getElementById('ibtn_impStudSmart').disabled=false">
+        </div>
+        <p id="fn_impStudSmart" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+      </div>
+      <div class="cf">
+        <button type="submit" id="ibtn_impStudSmart" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="button" class="btn btn-out" onclick="document.getElementById('impStudSmart').classList.remove('show')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="POST" action="/fix_students" id="fixStudForm" style="display:none"></form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openAddModal() { document.getElementById('addStudentModal').classList.add('show'); }
+function closeAddModal() { document.getElementById('addStudentModal').classList.remove('show'); }
+
+// ── EDIT MODAL ──────────────────────────────────────────
+function openEdit(btn){
+  document.getElementById('editModal').classList.add('show');
+  var d = btn.dataset;
+  document.getElementById('eid').value=d.id;
+  document.getElementById('en').value=d.name;
+  document.getElementById('eprn').value=d.prn;
+  document.getElementById('ed').value=d.dept;
+  document.getElementById('ey').value=d.year;
+  document.getElementById('ee').value=d.email;
+  if(document.getElementById('ediv')) document.getElementById('ediv').value = d.div || '';
+  if(document.getElementById('egender')) document.getElementById('egender').value = d.gender || '';
+  if(document.getElementById('edob')) document.getElementById('edob').value = d.dob || '';
+  if(document.getElementById('econtact')) document.getElementById('econtact').value = d.contact || '';
+  if(document.getElementById('eparent')) document.getElementById('eparent').value = d.parent || '';
+  if(document.getElementById('eaddress')) document.getElementById('eaddress').value = d.address || '';
+  if(document.getElementById('eadm')) document.getElementById('eadm').value = d.adm || '';
+}
+function closeModal(){document.getElementById('editModal').classList.remove('show');}
+document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('impStudSmart').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+
+// ── BULK DELETE ─────────────────────────────────────────
+function updateBar(){
+  var cbs = document.querySelectorAll('.row-cb:checked');
+  var n = cbs.length;
+  document.getElementById('bulkBar').style.display = n > 0 ? 'block' : 'none';
+  document.getElementById('selNum').textContent = n;
+}
+function toggleAll(cb){
+  document.querySelectorAll('.row-cb').forEach(c => c.checked = cb.checked);
+  updateBar();
+}
+function clearSel(){
+  document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+  document.getElementById('selAll').checked = false;
+  updateBar();
+}
+function submitBulkDelete(){
+  var ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => c.dataset.id);
+  if(ids.length === 0) return;
+  if(!confirm('Delete ' + ids.length + ' selected students? This cannot be undone.')) return;
+  var container = document.getElementById('bulkInputs');
+  container.innerHTML = '';
+  ids.forEach(function(id){
+    var inp = document.createElement('input');
+    inp.type='hidden'; inp.name='ids[]'; inp.value=id;
+    container.appendChild(inp);
+  });
+  document.getElementById('bulkForm').submit();
+}
+</script>
+{% endblock %}

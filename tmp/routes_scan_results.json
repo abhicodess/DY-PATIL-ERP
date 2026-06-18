@@ -1,0 +1,2362 @@
+[
+  {
+    "endpoint": "static",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/static/<path:filename>"
+  },
+  {
+    "endpoint": "features.admin_audit_logs",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_audit_logs"
+  },
+  {
+    "endpoint": "features.api_notifications",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/notifications"
+  },
+  {
+    "endpoint": "features.admin_notifications",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/admin_notifications"
+  },
+  {
+    "endpoint": "features.delete_notification",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_notification/<int:nid>"
+  },
+  {
+    "endpoint": "features.admin_backup",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_backup"
+  },
+  {
+    "endpoint": "features.api_v1_stats",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/v1/stats"
+  },
+  {
+    "endpoint": "features.api_v1_departments",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/v1/departments"
+  },
+  {
+    "endpoint": "results_bp.results_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_dashboard"
+  },
+  {
+    "endpoint": "results_bp.results_analytics",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_analytics"
+  },
+  {
+    "endpoint": "results_bp.results_reportcard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_reportcard/<roll>"
+  },
+  {
+    "endpoint": "results_bp.results_export_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_export_excel"
+  },
+  {
+    "endpoint": "results_bp.results_chart_data",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_chart_data"
+  },
+  {
+    "endpoint": "cumulative.cumulative_import",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/cumulative_import"
+  },
+  {
+    "endpoint": "cumulative.cumulative_commit",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/cumulative_commit"
+  },
+  {
+    "endpoint": "cumulative.cumulative_delete_row",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/cumulative_delete_row"
+  },
+  {
+    "endpoint": "cumulative.cumulative_clear_all",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/cumulative_clear_all"
+  },
+  {
+    "endpoint": "cumulative.cumulative_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/cumulative_report"
+  },
+  {
+    "endpoint": "cumulative.cumulative_export",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/cumulative_export"
+  },
+  {
+    "endpoint": "sms.get_sms_history",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/sms/history"
+  },
+  {
+    "endpoint": "sms.get_templates",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/sms/templates"
+  },
+  {
+    "endpoint": "sms.get_analytics",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/sms/analytics"
+  },
+  {
+    "endpoint": "sms.send_test_sms",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/sms/send-test"
+  },
+  {
+    "endpoint": "otp.request_otp",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/auth/request-otp"
+  },
+  {
+    "endpoint": "otp.verify_otp",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/auth/verify-otp"
+  },
+  {
+    "endpoint": "parent_comm.department_broadcast",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/parent/broadcast"
+  },
+  {
+    "endpoint": "parent_comm.get_parent_mapping",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/parent/mapping/<int:student_id>"
+  },
+  {
+    "endpoint": "parent_comm.add_parent_contact",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/parent/add-parent"
+  },
+  {
+    "endpoint": "parent_comm.list_defaulters",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/parent/defaulters"
+  },
+  {
+    "endpoint": "parent_comm.notify_defaulters",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/parent/notify-defaulters"
+  },
+  {
+    "endpoint": "faculty_att.faculty_assignments",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/admin/faculty_assignments"
+  },
+  {
+    "endpoint": "faculty_att.auto_link_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/auto_link_faculty"
+  },
+  {
+    "endpoint": "faculty_att.fix_student_divisions",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/fix_student_divisions"
+  },
+  {
+    "endpoint": "faculty_att.attendance_portal",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/attendance_portal"
+  },
+  {
+    "endpoint": "faculty_att.create_session_from_slot",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/create_session_from_slot/<int:slot_id>"
+  },
+  {
+    "endpoint": "faculty_att.create_session",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty/create_session"
+  },
+  {
+    "endpoint": "faculty_att.new_session",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/faculty/new_session"
+  },
+  {
+    "endpoint": "faculty_att.marking_session",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/marking_session/<int:session_id>"
+  },
+  {
+    "endpoint": "faculty_att.api_save_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty/api/save_attendance"
+  },
+  {
+    "endpoint": "faculty_att.submit_session",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty/submit_session"
+  },
+  {
+    "endpoint": "faculty_att.session_history",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/session_history"
+  },
+  {
+    "endpoint": "faculty_att.export_session",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/export_session/<int:session_id>"
+  },
+  {
+    "endpoint": "faculty_att.my_students",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/my_students"
+  },
+  {
+    "endpoint": "faculty_att.faculty_student_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/student_report/<int:student_id>"
+  },
+  {
+    "endpoint": "timetable_v2.timetable_view",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/timetable_v2"
+  },
+  {
+    "endpoint": "timetable_v2.api_add_slot",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/add_time_slot"
+  },
+  {
+    "endpoint": "timetable_v2.api_copy_day",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/copy_day"
+  },
+  {
+    "endpoint": "admin_intel.admin_attendance_intelligence",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/intelligence"
+  },
+  {
+    "endpoint": "admin_intel.admin_session_detail",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/session-detail/<int:sid>"
+  },
+  {
+    "endpoint": "admin_intel.admin_faculty_logs",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/faculty-logs"
+  },
+  {
+    "endpoint": "api.v1.auth.login",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/v1/auth/login"
+  },
+  {
+    "endpoint": "api.v1.auth.logout",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/v1/auth/logout"
+  },
+  {
+    "endpoint": "api.v1.auth.get_current_user",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/v1/auth/me"
+  },
+  {
+    "endpoint": "api.v1.faculty.get_timetable",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/v1/faculty/timetable"
+  },
+  {
+    "endpoint": "api.v1.faculty.get_dashboard_summary",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/v1/faculty/dashboard/summary"
+  },
+  {
+    "endpoint": "api.v1.attendance.initialize_session",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/v1/attendance/initialize"
+  },
+  {
+    "endpoint": "api.v1.attendance.submit_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/v1/attendance/submit"
+  },
+  {
+    "endpoint": "route_not_found",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/missing-route"
+  },
+  {
+    "endpoint": "health_check",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/health"
+  },
+  {
+    "endpoint": "index",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/"
+  },
+  {
+    "endpoint": "login",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/faculty_login"
+  },
+  {
+    "endpoint": "login",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/admin_login"
+  },
+  {
+    "endpoint": "login",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/login"
+  },
+  {
+    "endpoint": "logout",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/logout"
+  },
+  {
+    "endpoint": "backup",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/backup"
+  },
+  {
+    "endpoint": "reset_system",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/reset"
+  },
+  {
+    "endpoint": "admin",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin"
+  },
+  {
+    "endpoint": "admin_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_dashboard"
+  },
+  {
+    "endpoint": "students",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/students"
+  },
+  {
+    "endpoint": "add_student",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/add_student"
+  },
+  {
+    "endpoint": "save_student",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_student"
+  },
+  {
+    "endpoint": "edit_student",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/edit_student"
+  },
+  {
+    "endpoint": "delete_student",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_student"
+  },
+  {
+    "endpoint": "export_students_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_students_excel"
+  },
+  {
+    "endpoint": "import_students_excel",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_students_excel"
+  },
+  {
+    "endpoint": "faculty",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty"
+  },
+  {
+    "endpoint": "faculty_students",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_students"
+  },
+  {
+    "endpoint": "add_faculty",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/add_faculty"
+  },
+  {
+    "endpoint": "save_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_faculty"
+  },
+  {
+    "endpoint": "edit_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/edit_faculty"
+  },
+  {
+    "endpoint": "delete_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_faculty"
+  },
+  {
+    "endpoint": "export_faculty_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_faculty_excel"
+  },
+  {
+    "endpoint": "import_faculty_excel",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_faculty_excel"
+  },
+  {
+    "endpoint": "subjects",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/subjects"
+  },
+  {
+    "endpoint": "add_subject",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/add_subject"
+  },
+  {
+    "endpoint": "save_subject",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_subject"
+  },
+  {
+    "endpoint": "edit_subject",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/edit_subject"
+  },
+  {
+    "endpoint": "delete_subject",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_subject"
+  },
+  {
+    "endpoint": "export_subjects_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_subjects_excel"
+  },
+  {
+    "endpoint": "attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance"
+  },
+  {
+    "endpoint": "mark_attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/mark_attendance"
+  },
+  {
+    "endpoint": "save_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_attendance"
+  },
+  {
+    "endpoint": "save_bulk_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_bulk_attendance"
+  },
+  {
+    "endpoint": "attendance_bulk",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/attendance_bulk"
+  },
+  {
+    "endpoint": "attendance_backup",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_backup"
+  },
+  {
+    "endpoint": "attendance_restore",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/attendance_restore"
+  },
+  {
+    "endpoint": "attendance_reset",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/attendance_reset"
+  },
+  {
+    "endpoint": "api_students_by_dept",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/students_by_dept"
+  },
+  {
+    "endpoint": "view_attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/view_attendance"
+  },
+  {
+    "endpoint": "edit_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/edit_attendance"
+  },
+  {
+    "endpoint": "delete_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_attendance"
+  },
+  {
+    "endpoint": "delete_attendance_summary_row",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_attendance_summary_row"
+  },
+  {
+    "endpoint": "clear_student_attendance_summary",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/clear_student_attendance_summary"
+  },
+  {
+    "endpoint": "clear_all_attendance_summary",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/clear_all_attendance_summary"
+  },
+  {
+    "endpoint": "export_attendance_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_attendance_excel"
+  },
+  {
+    "endpoint": "export_attendance_report_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_attendance_report_excel"
+  },
+  {
+    "endpoint": "attendance_roll_call",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_roll_call"
+  },
+  {
+    "endpoint": "student_attendance_profile",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student/<int:student_id>/attendance"
+  },
+  {
+    "endpoint": "faculty_logs",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/faculty_sessions"
+  },
+  {
+    "endpoint": "audit_session_detail",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/session/<int:sid>"
+  },
+  {
+    "endpoint": "attendance_insights",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/attendance_intelligence"
+  },
+  {
+    "endpoint": "attendance_export",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_attendance_report"
+  },
+  {
+    "endpoint": "broadcast_sms",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/v1/broadcast_sms"
+  },
+  {
+    "endpoint": "send_shortage_notices",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/send_shortage_notices"
+  },
+  {
+    "endpoint": "download_attendance_template",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/download_attendance_template"
+  },
+  {
+    "endpoint": "import_attendance_excel_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_attendance_excel"
+  },
+  {
+    "endpoint": "import_final_attendance_report",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_final_attendance_report"
+  },
+  {
+    "endpoint": "attendance_upload_backup",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_upload_backup/<int:batch_id>"
+  },
+  {
+    "endpoint": "attendance_upload_restore",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/attendance_upload_restore/<int:batch_id>"
+  },
+  {
+    "endpoint": "attendance_analytics",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_analytics"
+  },
+  {
+    "endpoint": "consolidated_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/consolidated_report"
+  },
+  {
+    "endpoint": "attendance_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_report"
+  },
+  {
+    "endpoint": "timetable",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/timetable"
+  },
+  {
+    "endpoint": "save_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_timetable"
+  },
+  {
+    "endpoint": "edit_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/edit_timetable"
+  },
+  {
+    "endpoint": "delete_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_timetable"
+  },
+  {
+    "endpoint": "clear_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/clear_timetable"
+  },
+  {
+    "endpoint": "clean_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/clean_timetable"
+  },
+  {
+    "endpoint": "duplicate_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/duplicate_timetable"
+  },
+  {
+    "endpoint": "move_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/move_timetable"
+  },
+  {
+    "endpoint": "export_timetable_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_timetable_excel"
+  },
+  {
+    "endpoint": "import_timetable_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_timetable_v2"
+  },
+  {
+    "endpoint": "api_add_time_slot",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/add_time_slot"
+  },
+  {
+    "endpoint": "api_copy_day",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/copy_day"
+  },
+  {
+    "endpoint": "admin_update_profile",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_update_profile"
+  },
+  {
+    "endpoint": "check_conflicts_api",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/check_conflicts_api"
+  },
+  {
+    "endpoint": "reports",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/reports"
+  },
+  {
+    "endpoint": "admin_profile",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_profile"
+  },
+  {
+    "endpoint": "faculty_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_dashboard"
+  },
+  {
+    "endpoint": "faculty_attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_attendance"
+  },
+  {
+    "endpoint": "faculty_get_students_for_subject",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_get_students_for_subject"
+  },
+  {
+    "endpoint": "faculty_get_attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_get_attendance"
+  },
+  {
+    "endpoint": "faculty_portal",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_portal"
+  },
+  {
+    "endpoint": "faculty_save_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_save_attendance"
+  },
+  {
+    "endpoint": "faculty_edit_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_edit_attendance"
+  },
+  {
+    "endpoint": "faculty_delete_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_delete_attendance"
+  },
+  {
+    "endpoint": "faculty_import_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_import_attendance"
+  },
+  {
+    "endpoint": "faculty_marks",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_marks"
+  },
+  {
+    "endpoint": "faculty_save_marks",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_save_marks"
+  },
+  {
+    "endpoint": "api_students_by_subject",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty/api/students_by_subject"
+  },
+  {
+    "endpoint": "faculty_delete_marks",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_delete_marks"
+  },
+  {
+    "endpoint": "faculty_notices",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_notices"
+  },
+  {
+    "endpoint": "faculty_save_notice",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_save_notice"
+  },
+  {
+    "endpoint": "faculty_delete_notice",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_delete_notice"
+  },
+  {
+    "endpoint": "faculty_notes",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_notes"
+  },
+  {
+    "endpoint": "faculty_save_note",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_save_note"
+  },
+  {
+    "endpoint": "faculty_edit_note",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_edit_note"
+  },
+  {
+    "endpoint": "faculty_delete_note",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_delete_note"
+  },
+  {
+    "endpoint": "faculty_timetable",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_timetable"
+  },
+  {
+    "endpoint": "faculty_profile",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_profile"
+  },
+  {
+    "endpoint": "faculty_update_profile",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_update_profile"
+  },
+  {
+    "endpoint": "student_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_dashboard"
+  },
+  {
+    "endpoint": "student_profile",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_profile"
+  },
+  {
+    "endpoint": "student_settings",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/student_settings"
+  },
+  {
+    "endpoint": "student_notes",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_notes"
+  },
+  {
+    "endpoint": "student_notices",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_notices"
+  },
+  {
+    "endpoint": "student_analysis",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_analysis"
+  },
+  {
+    "endpoint": "student_attendance",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_attendance"
+  },
+  {
+    "endpoint": "student_marks",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_marks"
+  },
+  {
+    "endpoint": "student_timetable",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_timetable"
+  },
+  {
+    "endpoint": "student_update_profile",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/student_update_profile"
+  },
+  {
+    "endpoint": "upload_photo",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/upload_photo/<role>"
+  },
+  {
+    "endpoint": "import_attendance_excel_admin",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_attendance_excel_v2"
+  },
+  {
+    "endpoint": "faculty_import_attendance_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_import_attendance_v2"
+  },
+  {
+    "endpoint": "import_faculty_details",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_faculty_details"
+  },
+  {
+    "endpoint": "import_students_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_students_v2"
+  },
+  {
+    "endpoint": "import_subjects_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_subjects_v2"
+  },
+  {
+    "endpoint": "import_marks_v2",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_marks_v2"
+  },
+  {
+    "endpoint": "fix_students",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/fix_students"
+  },
+  {
+    "endpoint": "fix_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/fix_faculty"
+  },
+  {
+    "endpoint": "bulk_delete_subjects",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/bulk_delete_subjects"
+  },
+  {
+    "endpoint": "fix_subjects",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/fix_subjects"
+  },
+  {
+    "endpoint": "fix_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/fix_attendance"
+  },
+  {
+    "endpoint": "import_students_smart",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_students_smart"
+  },
+  {
+    "endpoint": "import_faculty_smart",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_faculty_smart"
+  },
+  {
+    "endpoint": "forgot_password",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/forgot_password"
+  },
+  {
+    "endpoint": "reset_password",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/reset_password"
+  },
+  {
+    "endpoint": "bulk_delete_students",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/bulk_delete_students"
+  },
+  {
+    "endpoint": "bulk_delete_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/bulk_delete_faculty"
+  },
+  {
+    "endpoint": "export_marks_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_marks_excel"
+  },
+  {
+    "endpoint": "export_marks_admin",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_marks_admin"
+  },
+  {
+    "endpoint": "search",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/search"
+  },
+  {
+    "endpoint": "search_faculty",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/search_faculty"
+  },
+  {
+    "endpoint": "shortage_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/shortage_report"
+  },
+  {
+    "endpoint": "trigger_shortage_alert",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/trigger_shortage_alert"
+  },
+  {
+    "endpoint": "export_shortage_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_shortage_excel"
+  },
+  {
+    "endpoint": "report_card",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/report_card/<int:student_id>"
+  },
+  {
+    "endpoint": "report_card_student",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/report_card_student"
+  },
+  {
+    "endpoint": "results_reportcard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/results_reportcard/<roll>"
+  },
+  {
+    "endpoint": "admin_results",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_results"
+  },
+  {
+    "endpoint": "admin_save_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_save_result"
+  },
+  {
+    "endpoint": "admin_edit_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_edit_result"
+  },
+  {
+    "endpoint": "admin_delete_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_delete_result"
+  },
+  {
+    "endpoint": "admin_publish_results",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_publish_results"
+  },
+  {
+    "endpoint": "admin_unpublish_results",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_unpublish_results"
+  },
+  {
+    "endpoint": "admin_import_results",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_import_results"
+  },
+  {
+    "endpoint": "export_results_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_results_excel"
+  },
+  {
+    "endpoint": "admin_import_sem7",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin_import_sem7"
+  },
+  {
+    "endpoint": "faculty_results",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_results"
+  },
+  {
+    "endpoint": "faculty_leaves",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_leaves"
+  },
+  {
+    "endpoint": "faculty_apply_leave",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_apply_leave"
+  },
+  {
+    "endpoint": "admin_leave_requests",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/faculty_leave_requests"
+  },
+  {
+    "endpoint": "admin_approve_faculty_leave",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/approve_faculty_leave"
+  },
+  {
+    "endpoint": "faculty_save_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_save_result"
+  },
+  {
+    "endpoint": "faculty_edit_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_edit_result"
+  },
+  {
+    "endpoint": "faculty_delete_result",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/faculty_delete_result"
+  },
+  {
+    "endpoint": "student_results",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_results"
+  },
+  {
+    "endpoint": "student_results_download",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_results_download"
+  },
+  {
+    "endpoint": "student_leave",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/student_leave"
+  },
+  {
+    "endpoint": "admin_leaves",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_leaves"
+  },
+  {
+    "endpoint": "update_leave",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/update_leave"
+  },
+  {
+    "endpoint": "analytics_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/analytics"
+  },
+  {
+    "endpoint": "messages_inbox",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/messages"
+  },
+  {
+    "endpoint": "messages_sent",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/messages/sent"
+  },
+  {
+    "endpoint": "messages_compose",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/messages/compose"
+  },
+  {
+    "endpoint": "messages_delete",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/messages/delete"
+  },
+  {
+    "endpoint": "analytics",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/analytics"
+  },
+  {
+    "endpoint": "calendar_view",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/calendar"
+  },
+  {
+    "endpoint": "save_event",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/save_event"
+  },
+  {
+    "endpoint": "delete_event",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_event"
+  },
+  {
+    "endpoint": "extract_subjects_from_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/extract_subjects_from_timetable"
+  },
+  {
+    "endpoint": "import_subjects_from_tt",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_subjects_from_tt"
+  },
+  {
+    "endpoint": "delete_all_subjects",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/delete_all_subjects"
+  },
+  {
+    "endpoint": "download_subjects_template",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/download_subjects_template"
+  },
+  {
+    "endpoint": "messages_search",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/messages/search"
+  },
+  {
+    "endpoint": "scan_excel",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/scan_excel"
+  },
+  {
+    "endpoint": "check_att_duplicate",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/check_att_duplicate"
+  },
+  {
+    "endpoint": "cumulative_marks",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/cumulative_marks"
+  },
+  {
+    "endpoint": "faculty_cumulative",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/faculty_cumulative"
+  },
+  {
+    "endpoint": "export_cumulative_excel",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_cumulative_excel"
+  },
+  {
+    "endpoint": "timetable_share",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "url": "/timetable_share"
+  },
+  {
+    "endpoint": "timetable_send_all",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/timetable_send_all"
+  },
+  {
+    "endpoint": "assign_subjects",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/assign_subjects"
+  },
+  {
+    "endpoint": "assign_subject_to_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/assign_subject_to_faculty"
+  },
+  {
+    "endpoint": "unassign_subject",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/unassign_subject"
+  },
+  {
+    "endpoint": "auto_assign_subjects",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/auto_assign_subjects"
+  },
+  {
+    "endpoint": "send_classlist",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/send_classlist"
+  },
+  {
+    "endpoint": "admin_faculty_assignments_get",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin/faculty_assignments"
+  },
+  {
+    "endpoint": "admin_faculty_assignments_post",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/faculty_assignments"
+  },
+  {
+    "endpoint": "auto_link_faculty",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/admin/auto_link_faculty"
+  },
+  {
+    "endpoint": "attendance_management",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_management"
+  },
+  {
+    "endpoint": "attendance_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_dashboard"
+  },
+  {
+    "endpoint": "attendance_dashboard_data",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance_dashboard_data"
+  },
+  {
+    "endpoint": "student_attendance_dashboard",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_attendance_dashboard"
+  },
+  {
+    "endpoint": "import_final_pdf",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/import_final_pdf"
+  },
+  {
+    "endpoint": "start_qr_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/start_qr_attendance"
+  },
+  {
+    "endpoint": "mark_qr_attendance",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/mark_qr_attendance"
+  },
+  {
+    "endpoint": "api_student_notifications",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/student_notifications"
+  },
+  {
+    "endpoint": "export_timetable_pdf",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/export_timetable_pdf"
+  },
+  {
+    "endpoint": "api_faculty_workload",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/faculty_workload"
+  },
+  {
+    "endpoint": "api_timetable_analytics",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/timetable_analytics"
+  },
+  {
+    "endpoint": "api_faculty_send_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/faculty_send_timetable"
+  },
+  {
+    "endpoint": "api_admin_send_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/admin_send_timetable"
+  },
+  {
+    "endpoint": "student_notifications",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/student_notifications"
+  },
+  {
+    "endpoint": "api_attendance_mark",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/attendance/mark"
+  },
+  {
+    "endpoint": "api_attendance_summary",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance/summary"
+  },
+  {
+    "endpoint": "api_attendance_report",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/attendance/report"
+  },
+  {
+    "endpoint": "api_student_prediction",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/student_prediction"
+  },
+  {
+    "endpoint": "request_correction",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/request_correction"
+  },
+  {
+    "endpoint": "admin_audit_logs",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/admin_audit_logs"
+  },
+  {
+    "endpoint": "share_timetable",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/share/timetable/<int:fid>"
+  },
+  {
+    "endpoint": "api_mark_read",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/messages/mark_read/<int:mid>"
+  },
+  {
+    "endpoint": "api_send_timetable",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/send_timetable"
+  },
+  {
+    "endpoint": "api_export_students",
+    "methods": [
+      "OPTIONS",
+      "HEAD",
+      "GET"
+    ],
+    "url": "/api/students/export"
+  },
+  {
+    "endpoint": "api_save_slot",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "url": "/api/save_timetable_slot"
+  }
+]

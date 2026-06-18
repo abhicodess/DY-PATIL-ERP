@@ -1,0 +1,1119 @@
+{% extends "common/base.html" %}
+{% block title %}Timetable{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}{% if session.role=='admin' %}Admin Panel{% else %}Faculty Portal{% endif %}{% endblock %}
+{% block av_color %}{% if session.role=='admin' %}#2563EB{% else %}#7C3AED{% endif %}{% endblock %}
+{% block av_letter %}{{ session.name[0]|upper if session.role=='faculty' else 'A' }}{% endblock %}
+{% block user_role %}{{ session.role|title }}{% endblock %}
+
+{% block page_title %}Timetable{% endblock %}
+{% block breadcrumb %}<a href="/">Home</a> / Timetable{% endblock %}
+{% block topbar_extras %}{% endblock %}
+
+{% block content %}
+<style>
+/* ═══════════════════════════════════════════════════════════
+   TIMETABLE — Modern High-Density Grid
+   Days as Rows (Sticky Left), Times as Columns (Sticky Top)
+═══════════════════════════════════════════════════════════ */
+
+:root {
+  --tt-header-bg: #0f172a;
+  --tt-cell-bg: #ffffff;
+  --tt-border: #e2e8f0;
+  --tt-sticky-bg: #f8fafc;
+}
+
+.tt-container {
+  position: relative;
+  min-height: 600px;
+  max-height: calc(100vh - 200px);
+  border-radius: 12px;
+  border: 1px solid var(--tt-border);
+  background: var(--tt-cell-bg);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  overflow: auto;
+}
+
+.tt-tbl {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 1200px;
+  table-layout: fixed;
+}
+
+/* STICKY TIME HEADER */
+.tt-tbl thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--tt-header-bg);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: center;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid var(--tt-border);
+}
+
+/* CORNER CELL */
+.tt-tbl thead th:first-child {
+  left: 0;
+  z-index: 40;
+  background: var(--tt-header-bg);
+  border-right: 2px solid rgba(255,255,255,0.2);
+  width: 120px;
+}
+
+/* STICKY DAY COLUMN */
+.tt-day {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background: var(--tt-sticky-bg);
+  border-right: 2px solid var(--tt-border);
+  border-bottom: 1px solid var(--tt-border);
+  padding: 12px 15px;
+  vertical-align: top;
+}
+
+.tt-day-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tt-day-name { font-weight: 700; color: #1e293b; font-size: 14px; }
+.tt-day-sub { font-size: 10px; color: #64748b; font-weight: 500; }
+
+/* DATA CELLS */
+.tt-cell {
+  background: var(--tt-cell-bg);
+  border-right: 1px solid var(--tt-border);
+  border-bottom: 1px solid var(--tt-border);
+  padding: 6px;
+  vertical-align: top;
+  min-height: 100px;
+  transition: background 0.2s;
+}
+
+.tt-cell:hover { background: #f1f5f9; }
+
+/* SLOT CARDS */
+.sc {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--tt-border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+}
+
+.sc:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+
+/* SUBJECT TYPES COLOR CODING */
+.sc.ty { border-top: 4px solid #3b82f6; } /* Theory */
+.sc.la { border-top: 4px solid #8b5cf6; } /* Lab */
+.sc.el { border-top: 4px solid #10b981; } /* Elective */
+.sc.mi { border-top: 4px solid #f59e0b; } /* Minor */
+.sc.pr { border-top: 4px solid #06b6d4; } /* Practical */
+
+.sc-name { font-weight: 700; color: #0f172a; font-size: 12px; line-height: 1.25; margin-bottom: 4px; }
+.sc-details { display: flex; flex-direction: column; gap: 2px; }
+.sc-item { font-size: 10px; color: #64748b; display: flex; align-items: center; gap: 5px; }
+.sc-item i { width: 14px; opacity: 0.7; }
+
+.sc-badge-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.sc-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; }
+.sc-div { font-size: 10px; font-weight: 600; color: #3b82f6; font-family: monospace; }
+
+/* ADMIN TOOLS */
+.dot-btn {
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px; border-radius: 6px;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #94a3b8; transition: all 0.2s; visibility: hidden;
+}
+.sc:hover .dot-btn { visibility: visible; }
+.dot-btn:hover { background: #f1f5f9; color: #1e293b; }
+
+.sc-drop {
+  position: absolute; top: 35px; right: 8px; z-index: 100;
+  background: #fff; border: 1px solid var(--tt-border);
+  border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  min-width: 160px; display: none; overflow: hidden;
+}
+.sc-drop.open { display: block; animation: slideDown 0.2s ease-out; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ddi {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  width: 100%; text-align: left; background: none; border: none;
+  font-size: 12px; font-weight: 500; color: #475569; cursor: pointer;
+}
+.ddi:hover { background: #f1f5f9; color: #0f172a; }
+.ddi.red { color: #ef4444; }
+.ddi.red:hover { background: #fee2e2; }
+
+/* EMPTY STATE AND ADD */
+.cell-add {
+  display: flex; align-items: center; justify-content: center;
+  height: 40px; border: 2px dashed #e2e8f0; border-radius: 8px;
+  margin-top: 4px; color: #94a3b8; font-size: 12px; cursor: pointer;
+  transition: all 0.2s;
+}
+.cell-add:hover { border-color: #3b82f6; background: #eff6ff; color: #3b82f6; }
+
+@media print {
+  .sidebar, .topbar, .fbar, .ph-actions { display: none !important; }
+  .tt-container { height: auto !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
+  .tt-tbl { min-width: 0 !important; width: 100% !important; table-layout: auto !important; }
+}
+
+.empty-ph{
+  height:42px;border:2px dashed var(--border2);border-radius:7px;
+  background:var(--bg);display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--ink4);cursor:pointer;transition:all .15s
+}
+.tt-cell:hover .empty-ph{border-color:var(--blue-m);color:var(--blue)}
+
+/* Filter bar */
+.fbar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)
+}
+.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none}
+.ff:focus,.ff.on{border-color:var(--blue);background:var(--blue-s);color:var(--blue);font-weight:600}
+.fsrch{display:flex;align-items:center;gap:7px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;min-width:210px;flex:1;max-width:300px}
+.fsrch input{border:none;background:none;font-size:12px;outline:none;width:100%;font-family:var(--font)}
+.fsrch i{color:var(--ink4);font-size:11px;flex-shrink:0}
+
+/* Stats strip */
+.tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tts-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 16px;flex:1;min-width:90px;display:flex;align-items:center;gap:10px}
+.tts-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.tts-v{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--ink)}
+.tts-l{font-size:10px;color:var(--ink3)}
+
+/* Legend */
+.leg{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 14px;background:var(--bg);border-radius:var(--r-sm);margin-bottom:12px;font-size:11px}
+.li{display:flex;align-items:center;gap:4px;font-weight:600;color:var(--ink3)}
+.ldot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* View toggle */
+.vtog{display:flex;background:var(--bg2);border-radius:8px;padding:3px;gap:2px}
+.vtb{padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .15s;background:none;font-family:var(--font)}
+.vtb.on{background:var(--white);color:var(--blue);box-shadow:var(--sh-sm)}
+
+/* Conflict banner */
+.cf-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r-sm);padding:12px 16px;margin-bottom:12px;font-size:12px;color:#991b1b;display:none}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;max-width:360px}
+#toast.ok{background:#ECFDF5;color:#065f46;border:1px solid #A7F3D0}
+#toast.err{background:#FEF2F2;color:#991b1b;border:1px solid #FECACA}
+#toast.warn{background:#FFFBEB;color:#92400e;border:1px solid #FDE68A}
+.tt-day.today { background: #f0f7ff !important; border-left: 3px solid var(--blue) !important; }
+.tt-day.today .tt-day-name { color: var(--blue); }
+.sc.conflict-border { border: 2px solid #ef4444 !important; animation: pulse-red 2s infinite; }
+@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+@media print{.sidebar,.topbar,.fbar,.tts-row,.leg,.dot-btn,.cell-add,.empty-ph,.modal-bg,button,form,.vtog,#toast{display:none!important}.main{margin:0!important;padding:8px!important}.sc{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+
+<!-- ═══ PAGE HEADER ══════════════════════════════════════════ -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Weekly Timetable</div>
+    <div class="ph-sub">{{ total }} slots &nbsp;·&nbsp; {{ time_slots|length }} periods &nbsp;·&nbsp; Academic Year 2025–26</div>
+  </div>
+  <div class="ph-actions">
+    <div class="vtog">
+      <button class="vtb on" id="vg" onclick="setView('grid',this)"><i class="fas fa-table-cells"></i> Grid</button>
+      <button class="vtb"    id="vl" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
+      <button class="vtb"    id="vw" onclick="setView('wl',this)"><i class="fas fa-chart-bar"></i> Load</button>
+    </div>
+    <button onclick="toggleCompact()" id="compBtn" class="btn btn-out btn-sm"><i class="fas fa-compress"></i> Compact</button>
+    {% if session.role == 'admin' %}
+    <button onclick="openBroadcastModal()" class="btn btn-vi btn-sm"><i class="fas fa-paper-plane"></i> Send to Students</button>
+    <button onclick="openSlotSettings()" class="btn btn-out btn-sm"><i class="fas fa-clock"></i> Manage Slots</button>
+    {% endif %}
+    <a href="/export_timetable_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export</a>
+    <button onclick="window.print()" class="btn btn-out btn-sm"><i class="fas fa-print"></i> Print</button>
+
+    {% if session.role == 'faculty' %}
+      {% if show_personal %}
+        <a href="/timetable?all=true" class="btn btn-out btn-sm">
+          <i class="fas fa-globe"></i> View Master Timetable
+        </a>
+      {% else %}
+        <a href="/timetable?personal=true" class="btn btn-out btn-sm">
+          <i class="fas fa-user-check"></i> View My Timetable
+        </a>
+      {% endif %}
+    {% endif %}
+
+    {% if session.role == 'admin' %}
+      <a href="/timetable_share" class="btn btn-out btn-sm"><i class="fas fa-paper-plane"></i> Share Schedule</a>
+      <button onclick="openCopyDayModal()" class="btn btn-out btn-sm"><i class="fas fa-copy"></i> Copy Day</button>
+      <button onclick="M.show('impModal')" class="btn btn-out btn-sm"><i class="fas fa-file-excel"></i> Import</button>
+      <form method="POST" action="/clear_timetable" style="display:inline" onsubmit="return confirm('Delete ALL timetable slots?')">
+        <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Clear All</button>
+      </form>
+      <button onclick="M.show('addModal')" class="btn btn-dark btn-sm"><i class="fas fa-plus"></i> Add Slot</button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Broadcast Modal (Admin) -->
+<div id="broadcastModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+  <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
+      <h3 style="margin:0"><i class="fas fa-paper-plane" style="color:var(--blue)"></i> Broadcast Schedule</h3>
+      <span class="close" onclick="closeBroadcastModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+    </div>
+    <form id="broadcastForm">
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Target Department</label>
+        <select name="department" class="ff" style="width:100%">
+          <option value="All">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px">
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Year</label>
+          <select name="year" class="ff" style="width:100%">
+            <option value="All">All</option>
+            <option value="FE">FE</option><option value="SE">SE</option><option value="TE">TE</option><option value="BE">BE</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division</label>
+          <input type="text" name="division" class="ff" style="width:100%" placeholder="e.g. A">
+        </div>
+      </div>
+      <div style="text-align:right">
+        <button type="button" class="btn btn-out" onclick="closeBroadcastModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Send Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ALERTS -->
+{% if request.args.get('imported') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('imported') }} slots imported successfully.</span></div>{% endif %}
+{% if request.args.get('cleared') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>All timetable data cleared.</span></div>{% endif %}
+{% if request.args.get('saved') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot saved.</span></div>{% endif %}
+{% if request.args.get('deleted') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot deleted.</span></div>{% endif %}
+
+<!-- ═══ STATS STRIP ══════════════════════════════════════════ -->
+<div class="tts-row fu fu1">
+  <div class="tts-card"><div class="tts-ico ic-bl"><i class="fas fa-table-cells"></i></div><div><div class="tts-v">{{ total }}</div><div class="tts-l">Total Slots</div></div></div>
+  <div class="tts-card"><div class="tts-ico ic-bl"><i class="fas fa-book-open"></i></div><div><div class="tts-v">{{ theory }}</div><div class="tts-l">Theory</div></div></div>
+  <div class="tts-card"><div class="tts-ico ic-vi"><i class="fas fa-flask"></i></div><div><div class="tts-v">{{ lab }}</div><div class="tts-l">Lab</div></div></div>
+  <div class="tts-card"><div class="tts-ico ic-gr"><i class="fas fa-leaf"></i></div><div><div class="tts-v">{{ elec }}</div><div class="tts-l">Elective</div></div></div>
+  <div class="tts-card"><div class="tts-ico ic-am"><i class="fas fa-users"></i></div><div><div class="tts-v">{{ teachers|length }}</div><div class="tts-l">Faculty</div></div></div>
+</div>
+
+<!-- ═══ LEGEND ═══════════════════════════════════════════════ -->
+<div class="leg fu">
+  <strong style="color:var(--ink2);margin-right:4px">Subject type:</strong>
+  <div class="li"><div class="ldot" style="background:#2563EB"></div>Theory</div>
+  <div class="li"><div class="ldot" style="background:#7C3AED"></div>Lab</div>
+  <div class="li"><div class="ldot" style="background:#059669"></div>Elective</div>
+  <div class="li"><div class="ldot" style="background:#D97706"></div>Minor</div>
+  <div class="li"><div class="ldot" style="background:#0891B2"></div>Practical</div>
+  <div style="margin-left:auto;font-size:11px;color:var(--ink4)"><kbd>N</kbd>=Add &nbsp;<kbd>C</kbd>=Compact &nbsp;<kbd>Esc</kbd>=Close</div>
+</div>
+
+<!-- ═══ FILTER BAR ════════════════════════════════════════════ -->
+<form method="GET" action="/timetable" id="filterForm" class="fbar fu">
+  <div class="fsrch">
+    <i class="fas fa-magnifying-glass"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Search subject, teacher, room…">
+  </div>
+  <select class="ff {{ 'on' if f_subj }}" name="subject" onchange="this.form.submit()">
+    <option value="">All Subjects</option>
+    {% for s in subjects %}<option value="{{ s }}" {{ 'selected' if f_subj==s }}>{{ s[:30] }}</option>{% endfor %}
+  </select>
+  <select class="ff {{ 'on' if f_teach }}" name="teacher" onchange="this.form.submit()">
+    <option value="">All Faculty</option>
+    {% for t in teachers %}<option value="{{ t }}" {{ 'selected' if f_teach==t }}>{{ t[:24] }}</option>{% endfor %}
+  </select>
+  <select class="ff {{ 'on' if f_div }}" name="division" onchange="this.form.submit()">
+    <option value="">All Divisions</option>
+    {% for d in divs %}<option value="{{ d }}" {{ 'selected' if f_div==d }}>{{ d }}</option>{% endfor %}
+  </select>
+  <select class="ff {{ 'on' if f_day }}" name="day" onchange="this.form.submit()">
+    <option value="">All Days</option>
+    {% for d in DAYS %}<option value="{{ d }}" {{ 'selected' if f_day==d }}>{{ d }}</option>{% endfor %}
+  </select>
+  <select class="ff {{ 'on' if f_type }}" name="slot_type" onchange="this.form.submit()">
+    <option value="">All Types</option>
+    <option value="Theory"    {{ 'selected' if f_type=='Theory' }}>Theory</option>
+    <option value="Lab"       {{ 'selected' if f_type=='Lab' }}>Lab</option>
+    <option value="Elective"  {{ 'selected' if f_type=='Elective' }}>Elective</option>
+    <option value="Minor"     {{ 'selected' if f_type=='Minor' }}>Minor</option>
+  </select>
+  <select class="ff {{ 'on' if f_sem }}" name="semester" onchange="this.form.submit()">
+    <option value="">All Semesters</option>
+    {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}" {{ 'selected' if f_sem==s|string }}>Sem {{ s }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i></button>
+  {% if q or f_day or f_subj or f_teach or f_div or f_type or f_sem %}
+  <a href="/timetable" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear Filters</a>
+  <span style="font-size:12px;color:var(--blue);font-weight:600"><i class="fas fa-filter"></i> {{ entries|length }} results</span>
+  {% endif %}
+</form>
+
+<form method="POST" action="/clean_timetable" style="position: absolute; right: 44px; margin-top: -54px;" onsubmit="return confirm('Remove invalid rows?')">
+  <button type="submit" class="btn btn-am btn-sm"><i class="fas fa-broom"></i> Fix Data</button>
+</form>
+
+<!-- ═══ GRID VIEW ════════════════════════════════════════════ -->
+<div id="vwGrid" class="fu fu2">
+{% if time_slots %}
+<div class="tt-container">
+  <table class="tt-tbl" id="mainTbl">
+    <thead>
+      <tr>
+        <th>DAY / TIME</th>
+        {% for ts in time_slots %}
+        <th>{{ ts }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for day in DAYS %}
+      <tr>
+        <td class="tt-day {{ 'today' if day==today_name }}">
+          <div class="tt-day-inner">
+            <div class="tt-day-name">{{ day }}</div>
+            <div class="tt-day-sub">
+              {% if any_filter %}
+                {% set dcnt = namespace(n=0) %}
+                {% for ts2 in time_slots %}{% for s2 in grid[day][ts2] %}{% if (filtered_ids is none) or (s2.id in filtered_ids) %}{% set dcnt.n = dcnt.n+1 %}{% endif %}{% endfor %}{% endfor %}
+                {{ dcnt.n }} matches
+              {% else %}
+                {% set dcnt = namespace(n=0) %}{% for ts2 in time_slots %}{% set dcnt.n = dcnt.n + grid[day][ts2]|length %}{% endfor %}
+                {{ dcnt.n }} slots
+              {% endif %}
+            </div>
+          </div>
+        </td>
+
+        {% for ts in time_slots %}
+        <td class="tt-cell" data-day="{{ day }}" data-time="{{ ts }}">
+          {% for slot in grid[day][ts] %}
+          {% set st = slot.slot_type or 'Theory' %}
+          {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
+          {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
+          <div class="sc {{ cls }}" id="sc{{ slot.id }}" data-id="{{ slot.id }}" data-day="{{ day }}" data-time="{{ ts }}"
+               data-subject="{{ slot.subject }}" data-teacher="{{ slot.teacher }}" data-room="{{ slot.room }}"
+               data-type="{{ st }}" data-division="{{ slot.division }}">
+            <div class="sc-name">{{ slot.subject }}</div>
+            <div class="sc-details">
+              {% if slot.teacher %}<div class="sc-item"><i class="fas fa-user"></i> {{ slot.teacher }}</div>{% endif %}
+              {% if slot.room %}<div class="sc-item"><i class="fas fa-location-dot"></i> {{ slot.room }}</div>{% endif %}
+            </div>
+            
+            <div class="sc-badge-row">
+              <span class="sc-badge">{{ st }}</span>
+              {% if slot.division %}<span class="sc-div">{{ slot.division }}</span>{% endif %}
+            </div>
+
+            {% if session.role == 'admin' %}
+            <button class="dot-btn" onclick="event.stopPropagation();DD.toggle({{ slot.id }})">
+              <i class="fas fa-ellipsis-vertical"></i>
+            </button>
+            <div class="sc-drop" id="dd{{ slot.id }}">
+              <button class="ddi" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
+              <form method="POST" action="/duplicate_timetable" style="display:block">
+                <input type="hidden" name="tt_id" value="{{ slot.id }}">
+                <button type="submit" class="ddi"><i class="fas fa-copy"></i> Duplicate</button>
+              </form>
+              <button class="ddi red" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+
+          {% if session.role == 'admin' and not any_filter %}
+          <div class="cell-add" onclick="A.prefill('{{ day }}','{{ ts }}')">
+            <i class="fas fa-plus"></i>
+          </div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><div class="cb">
+  <div class="empty-state" style="padding:60px">
+    <i class="fas fa-table-cells" style="font-size:38px;color:var(--ink4)"></i>
+    <p style="font-size:15px;font-weight:700;margin-top:14px">No timetable data yet</p>
+    <p style="font-size:13px;margin-top:6px;color:var(--ink3)">Import your TY-TT Excel file or add slots manually</p>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:20px">
+      <button onclick="M.show('impModal')" class="btn btn-dark"><i class="fas fa-file-excel"></i> Import Excel</button>
+      <button onclick="M.show('addModal')" class="btn btn-out"><i class="fas fa-plus"></i> Add Manually</button>
+    </div>
+  </div>
+</div></div>
+{% endif %}
+</div>
+
+<!-- ═══ LIST VIEW ════════════════════════════════════════════ -->
+<div id="vwList" style="display:none" class="fu fu2">
+  <div class="card">
+    <div class="ch flex-sb"><div class="ct">All Slots</div><div class="cs">{{ entries|length }} records</div></div>
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl">
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th><th>Room</th><th>Type</th><th>Division</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for e in entries %}
+          <tr>
+            <td><span class="tag t-bl">{{ e.day }}</span></td>
+            <td class="mono" style="font-size:11px;white-space:nowrap">{{ e.time }}</td>
+            <td><strong>{{ e.subject }}</strong></td>
+            <td style="font-size:12px;color:var(--ink3)">{{ e.teacher or '—' }}</td>
+            <td class="mono" style="font-size:11px">{{ e.room or '—' }}</td>
+            <td><span class="tag {% if e.slot_type=='Lab' %}t-vi{% elif e.slot_type=='Elective' %}t-gr{% elif e.slot_type=='Minor' %}t-am{% else %}t-bl{% endif %}">{{ e.slot_type or 'Theory' }}</span></td>
+            <td style="font-size:11px;color:var(--ink4)">{{ e.division or '—' }}</td>
+            <td>
+              <div class="flex-ac gap5">
+                <button class="btn btn-out btn-sm" onclick="ED.open({{ e.id }})"><i class="fas fa-pen"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="DEL.show({{ e.id }},'{{ e.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8"><div class="empty-state" style="padding:28px"><p>No slots. <a href="/timetable" style="color:var(--blue)">Clear filters →</a></p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WORKLOAD VIEW ════════════════════════════════════════ -->
+<div id="vwWl" style="display:none" class="fu fu2">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">Faculty Teaching Load</div><div class="cs">Slots per week</div></div>
+      <div class="cb">
+        {% set max_wl = workload[0][1] if workload else 1 %}
+        {% for name, cnt in workload %}
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+          <div style="width:165px;font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ name }}">{{ name[:22] }}</div>
+          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:var(--blue);width:{{ (cnt/max_wl*100)|round }}%"></div></div>
+          <div style="font-size:12px;font-weight:700;color:var(--blue);width:24px;text-align:right">{{ cnt }}</div>
+        </div>
+        {% else %}<div class="empty-state" style="padding:28px"><p>No data.</p></div>{% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Day-wise Slots</div></div>
+      <div class="cb">
+        {% for day in DAYS %}
+        {% set cntns = namespace(n=0) %}{% for ts2 in time_slots %}{% set cntns.n = cntns.n + grid[day][ts2]|length %}{% endfor %}{% set cnt = cntns.n %}
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:100px;font-size:12px;font-weight:{% if day==today_name %}700{% else %}600{% endif %};color:{% if day==today_name %}var(--blue){% else %}var(--ink){% endif %}">{{ day }}{% if day==today_name %} <span style="font-size:9px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:3px">TODAY</span>{% endif %}</div>
+          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:{% if day==today_name %}var(--blue){% else %}var(--ink3){% endif %};width:{{ [cnt*5,100]|min }}%"></div></div>
+          <div style="font-size:12px;font-weight:600;color:var(--ink3);width:28px;text-align:right">{{ cnt }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════ MODALS ═══════════════════════════════════════════════ -->
+
+<!-- ADD MODAL -->
+<div class="modal-bg" id="addModal">
+  <div class="modal-box" style="width:520px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div class="ct">Add Timetable Slot</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('addModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div id="addCF"></div>
+    <form method="POST" action="/save_timetable" id="addForm">
+      <div class="cb" style="padding-top:0">
+        <div class="fg2">
+          <div class="fgrp"><label>Day *</label>
+            <select name="day" id="a-day">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
+          </div>
+          <div class="fgrp"><label>Time *</label>
+            <input type="text" name="time" id="a-time" list="tsdl" placeholder="9:30-10:30" required>
+            <datalist id="tsdl">
+              {% for ts in time_slots %}<option value="{{ ts }}">{% endfor %}
+              <option value="9:30-10:30"><option value="10:30-11:30">
+              <option value="11:45-12:45"><option value="12:45-1:45">
+              <option value="2:30-3:30"><option value="3:30-4:30">
+            </datalist>
+          </div>
+        </div>
+        <div class="fgrp"><label>Subject *</label>
+          <input type="text" name="subject" id="a-subj" list="sdl" required oninput="autoType(this,'a-type')">
+          <datalist id="sdl">{% for s in subjects %}<option value="{{ s }}">{% endfor %}</datalist>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Type</label>
+            <select name="slot_type" id="a-type"><option>Theory</option><option>Lab</option><option>Elective</option><option>Minor</option><option>Practical</option></select>
+          </div>
+          <div class="fgrp"><label>Teacher</label>
+            <input type="text" name="teacher" id="a-tchr" list="tdl">
+            <datalist id="tdl">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Room / Lab</label>
+            <input type="text" name="room" id="a-room" list="rdl" placeholder="Lab-303">
+            <datalist id="rdl">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
+          </div>
+          <div class="fgrp"><label>Division</label>
+            <input type="text" name="division" id="a-div" list="ddl" placeholder="TE CSE-A">
+            <datalist id="ddl">{% for d in divs %}<option value="{{ d }}">{% endfor %}</datalist>
+          </div>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="button" class="btn btn-dark" onclick="CF.check('add')"><i class="fas fa-plus"></i> Add Slot</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('addForm').submit()" style="color:var(--ink4)">Skip check →</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('addModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="editModal">
+  <div class="modal-box" style="width:520px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div class="ct">Edit Slot</div>
+      <div class="flex-ac gap6">
+        <button type="button" class="btn btn-danger btn-sm" id="editDelBtn"><i class="fas fa-trash"></i></button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('editModal')"><i class="fas fa-xmark"></i></button>
+      </div>
+    </div>
+    <div id="editCF"></div>
+    <form method="POST" action="/edit_timetable" id="editForm">
+      <input type="hidden" name="tt_id" id="e-id">
+      <div class="cb" style="padding-top:0">
+        <div class="fg2">
+          <div class="fgrp"><label>Day *</label>
+            <select name="day" id="e-day">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
+          </div>
+          <div class="fgrp"><label>Time *</label>
+            <input type="text" name="time" id="e-time" list="tsdl2">
+            <datalist id="tsdl2">
+              {% for ts in time_slots %}<option value="{{ ts }}">{% endfor %}
+              <option value="9:30-10:30"><option value="10:30-11:30"><option value="11:45-12:45">
+              <option value="12:45-1:45"><option value="2:30-3:30"><option value="3:30-4:30">
+            </datalist>
+          </div>
+        </div>
+        <div class="fgrp"><label>Subject *</label>
+          <input type="text" name="subject" id="e-subj" list="sdl2" required oninput="autoType(this,'e-type')">
+          <datalist id="sdl2">{% for s in subjects %}<option value="{{ s }}">{% endfor %}</datalist>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Type</label>
+            <select name="slot_type" id="e-type"><option>Theory</option><option>Lab</option><option>Elective</option><option>Minor</option><option>Practical</option></select>
+          </div>
+          <div class="fgrp"><label>Teacher</label>
+            <input type="text" name="teacher" id="e-tchr" list="tdl2">
+            <datalist id="tdl2">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Room</label>
+            <input type="text" name="room" id="e-room" list="rdl2">
+            <datalist id="rdl2">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
+          </div>
+          <div class="fgrp"><label>Division</label>
+            <input type="text" name="division" id="e-div" list="ddl2">
+            <datalist id="ddl2">{% for d in divs %}<option value="{{ d }}">{% endfor %}</datalist>
+          </div>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="button" class="btn btn-dark" onclick="CF.check('edit')"><i class="fas fa-save"></i> Save</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('editForm').submit()" style="color:var(--ink4)">Skip check →</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('editModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-bg" id="delModal">
+  <div class="modal-box" style="width:340px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">🗑️</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--ink)">Delete Slot?</div>
+    <div id="del-name" style="font-size:13px;color:var(--ink3);margin-bottom:22px"></div>
+    <form method="POST" action="/delete_timetable" id="delForm">
+      <input type="hidden" name="tt_id" id="del-id">
+      <div class="cf" style="justify-content:center">
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Yes, Delete</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('delModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- QUICK CHANGE FACULTY -->
+<div class="modal-bg" id="facModal">
+  <div class="modal-box" style="width:380px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Change Faculty</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('facModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_timetable">
+      <input type="hidden" name="tt_id" id="f-id">
+      <input type="hidden" name="day" id="f-day">
+      <input type="hidden" name="time" id="f-time">
+      <input type="hidden" name="subject" id="f-subj">
+      <input type="hidden" name="slot_type" id="f-type">
+      <input type="hidden" name="room" id="f-room">
+      <input type="hidden" name="division" id="f-div">
+      <div class="cb" style="padding-top:0">
+        <div class="fgrp"><label>New Faculty *</label>
+          <input type="text" name="teacher" id="f-tchr" list="tdl3" required>
+          <datalist id="tdl3">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+        </div>
+      </div>
+      <div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button><button type="button" class="btn btn-out" onclick="M.hide('facModal')">Cancel</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- QUICK CHANGE ROOM -->
+<div class="modal-bg" id="roomModal">
+  <div class="modal-box" style="width:380px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Change Room</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('roomModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_timetable">
+      <input type="hidden" name="tt_id" id="r-id">
+      <input type="hidden" name="day" id="r-day">
+      <input type="hidden" name="time" id="r-time">
+      <input type="hidden" name="subject" id="r-subj">
+      <input type="hidden" name="slot_type" id="r-type">
+      <input type="hidden" name="teacher" id="r-tchr">
+      <input type="hidden" name="division" id="r-div">
+      <div class="cb" style="padding-top:0">
+        <div class="fgrp"><label>Room / Lab</label>
+          <input type="text" name="room" id="r-room" list="rdl3" placeholder="e.g. Lab-303">
+          <datalist id="rdl3">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
+        </div>
+      </div>
+      <div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button><button type="button" class="btn btn-out" onclick="M.hide('roomModal')">Cancel</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="impModal">
+  <div class="modal-box" style="width:480px">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div><div class="ct">Import Timetable</div><div class="cs">TY-TT multi-sheet Excel</div></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('impModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_timetable_v2" enctype="multipart/form-data">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-warn" style="margin-bottom:12px"><i class="fas fa-triangle-exclamation"></i>
+          <span style="font-size:12px">Use <strong>Clear All</strong> before re-importing to avoid duplicates.</span>
+        </div>
+        <div class="alert al-info" style="margin-bottom:14px"><i class="fas fa-circle-info"></i>
+          <div style="font-size:12px;line-height:1.8">
+            <strong>TY-TT-07-02-2026.xlsx</strong> — all 4 sheets auto-imported<br>
+            <code>ML(ST)</code> → Machine Learning / Prof.Shakil Tamboli
+          </div>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('imp-f').click()">
+          <i class="fas fa-file-excel" style="color:#059669"></i>
+          <p>Click to select Excel file</p><small>.xlsx</small>
+          <input type="file" id="imp-f" name="file" accept=".xlsx,.xls" style="display:none"
+                 onchange="this.nextElementSibling.textContent='✓  '+this.files[0].name;document.getElementById('imp-btn').disabled=false">
+          <p style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600"></p>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" id="imp-btn" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('impModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- COPY DAY MODAL -->
+<div class="modal-bg" id="copyDayModal">
+  <div class="modal-box" style="width:400px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Copy Workday</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('copyDayModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="cb" style="padding-top:0">
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:15px">Duplicate all slots from one day to another.</p>
+      <div class="fgrp"><label>Copy From</label>
+        <select id="copy-from">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
+      </div>
+      <div class="fgrp"><label>Copy To</label>
+        <select id="copy-to">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
+      </div>
+    </div>
+    <div class="cf">
+      <button class="btn btn-dark" onclick="copyDayNow()"><i class="fas fa-copy"></i> Start Copy</button>
+      <button class="btn btn-out" onclick="M.hide('copyDayModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Slot Settings Modal -->
+<div class="modal-bg" id="slotSettingsModal">
+  <div class="modal-box" style="width:500px">
+    <div class="ch flex-sb" style="padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #eee">
+      <div class="ct"><i class="fas fa-clock"></i> Manage Time Slots</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('slotSettingsModal')">&times;</button>
+    </div>
+    <div class="cb" style="max-height:400px; overflow-y:auto; padding-top:0">
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:15px">Defined slots for the weekly view.</p>
+      <table class="tbl" style="width:100%">
+        <thead><tr><th style="text-align:left">Slot Time</th><th style="width:80px">Action</th></tr></thead>
+        <tbody>
+          {% for ts in time_slots %}
+          <tr>
+            <td class="mono" style="font-weight:700">{{ ts }}</td>
+            <td><button class="btn btn-ghost btn-sm text-danger" title="Remove" onclick="toast('Delete associated entries first','warn')"><i class="fas fa-trash"></i></button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div style="margin-top:20px; padding:15px; background:var(--bg); border:1px dashed var(--border); border-radius:8px">
+        <div style="font-weight:600; font-size:12px; margin-bottom:10px; color:var(--ink2)">Add New Time Slot</div>
+        <div class="flex-ac gap10">
+          <input type="text" id="newSlot" class="ff" placeholder="e.g. 09:00-10:00" style="flex:1">
+          <button class="btn btn-dark btn-sm" onclick="addSlot()">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+'use strict';
+
+// ── Modal ──────────────────────────────────────────────
+var M = {
+  show: function(id){ document.getElementById(id).classList.add('show'); },
+  hide: function(id){ document.getElementById(id).classList.remove('show'); }
+};
+document.querySelectorAll('.modal-bg').forEach(function(m){
+  m.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); });
+});
+
+// ── View toggle ─────────────────────────────────────────
+function setView(v, btn){
+  ['Grid','List','Wl'].forEach(function(n){
+    var el = document.getElementById('vw'+n);
+    if(el) el.style.display = (n.toLowerCase()===v) ? '' : 'none';
+  });
+  document.querySelectorAll('.vtb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+
+// ── Compact ─────────────────────────────────────────────
+var compact = false;
+function toggleCompact(){
+  compact = !compact;
+  document.body.classList.toggle('compact', compact);
+  document.getElementById('compBtn').innerHTML = compact
+    ? '<i class="fas fa-expand"></i> Expand'
+    : '<i class="fas fa-compress"></i> Compact';
+}
+
+// ── Toast ────────────────────────────────────────────────
+var _tt;
+function toast(msg, type){
+  var el = document.getElementById('toast');
+  el.className = type || 'ok';
+  el.innerHTML = (type==='err'?'❌ ':'✅ ') + msg;
+  el.style.display='block'; el.style.opacity='1';
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ el.style.opacity='0'; setTimeout(function(){ el.style.display='none'; },300); },3000);
+}
+
+// ── Dropdown ─────────────────────────────────────────────
+var DD = {
+  toggle: function(id){
+    var dd = document.getElementById('dd'+id);
+    var was = dd.classList.contains('open');
+    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+    if(!was) dd.classList.add('open');
+  }
+};
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.dot-btn') && !e.target.closest('.sc-drop')){
+    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+  }
+});
+
+// ── Add pre-fill ──────────────────────────────────────────
+var A = {
+  prefill: function(day, time){
+    document.getElementById('a-day').value = day;
+    document.getElementById('a-time').value = time;
+    document.getElementById('addCF').innerHTML = '';
+    M.show('addModal');
+  }
+};
+
+// ── Edit ──────────────────────────────────────────────────
+var _editId = null;
+var ED = {
+  open: function(id){
+    var c = document.getElementById('sc'+id);
+    if(!c){ toast('Slot not found','err'); return; }
+    var d = c.dataset;
+    _editId = id;
+    document.getElementById('e-id').value   = id;
+    document.getElementById('e-day').value  = d.day||'';
+    document.getElementById('e-time').value = d.time||'';
+    document.getElementById('e-subj').value = d.subject||'';
+    document.getElementById('e-tchr').value = d.teacher||'';
+    document.getElementById('e-room').value = d.room||'';
+    document.getElementById('e-type').value = d.type||'Theory';
+    document.getElementById('e-div').value  = d.division||'';
+    document.getElementById('editCF').innerHTML = '';
+    document.getElementById('editDelBtn').onclick = function(){
+      M.hide('editModal'); DEL.show(id, d.subject);
+    };
+    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    M.show('editModal');
+  }
+};
+
+// ── Delete ────────────────────────────────────────────────
+var DEL = {
+  show: function(id, name){
+    document.getElementById('del-id').value = id;
+    document.getElementById('del-name').textContent = name||'this slot';
+    M.show('delModal');
+  }
+};
+
+// ── Quick Faculty ─────────────────────────────────────────
+var QF = {
+  open: function(id){
+    var c = document.getElementById('sc'+id); if(!c) return;
+    var d = c.dataset;
+    ['id','day','time','subj','type','room','div'].forEach(function(k){
+      var dk = k==='subj'?'subject':k==='type'?'type':k;
+      var el = document.getElementById('f-'+k);
+      if(el) el.value = d[dk]||'';
+    });
+    document.getElementById('f-tchr').value = d.teacher||'';
+    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    M.show('facModal');
+  }
+};
+
+// ── Quick Room ────────────────────────────────────────────
+var QR = {
+  open: function(id){
+    var c = document.getElementById('sc'+id); if(!c) return;
+    var d = c.dataset;
+    ['id','day','time','subj','type','tchr','div'].forEach(function(k){
+      var dk = k==='subj'?'subject':k==='tchr'?'teacher':k==='type'?'type':k;
+      var el = document.getElementById('r-'+k);
+      if(el) el.value = d[dk]||'';
+    });
+    document.getElementById('r-room').value = d.room||'';
+    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    M.show('roomModal');
+  }
+};
+
+// ── Conflict check ────────────────────────────────────────
+var CF = {
+  check: async function(mode){
+    var p = mode==='add' ? 'a' : 'e';
+    var form = document.getElementById(mode+'Form');
+    var day  = document.getElementById(p+'-day').value;
+    var time = document.getElementById(p+'-time').value;
+    var tchr = document.getElementById(p+'-tchr').value;
+    var room = document.getElementById(p+'-room') ? document.getElementById(p+'-room').value : '';
+    var div  = document.getElementById(p+'-div')  ? document.getElementById(p+'-div').value  : '';
+    var subj = document.getElementById(p+'-subj').value;
+    var excl = mode==='edit' ? document.getElementById('e-id').value : null;
+    var cfDiv = document.getElementById(mode+'CF');
+    try {
+      var csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+      var r = await fetch('/check_conflicts_api',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
+        body:JSON.stringify({day:day,time:time,teacher:tchr,room:room,division:div,subject:subj,exclude_id:excl})});
+      var data = await r.json();
+      if(data.conflicts && data.conflicts.length){
+        cfDiv.innerHTML = '<div class="cf-box" style="display:block"><strong><i class="fas fa-triangle-exclamation"></i> Conflicts detected:</strong><ul style="list-style:disc;padding-left:16px;margin-top:4px">' +
+          data.conflicts.map(function(c){ return '<li>'+c+'</li>'; }).join('') + '</ul></div>';
+      } else {
+        cfDiv.innerHTML=''; form.submit();
+      }
+    } catch(e){ form.submit(); }
+  }
+};
+
+// ── Auto type detect ──────────────────────────────────────
+function autoType(inp, selId){
+  var v=inp.value.toLowerCase(), s=document.getElementById(selId);
+  if(!s) return;
+  if(v.includes('lab')) s.value='Lab';
+  else if(v.includes('elective')) s.value='Elective';
+  else if(v.includes('minor')) s.value='Minor';
+  else if(v.includes('practical')) s.value='Practical';
+  else s.value='Theory';
+}
+
+// ── Drag & Drop ──────────────────────────────────────────
+document.querySelectorAll('.tt-cell').forEach(function(cell){
+  cell.addEventListener('dragover', function(e){ e.preventDefault(); this.classList.add('dz-over'); });
+  cell.addEventListener('dragleave', function(){ this.classList.remove('dz-over'); });
+  cell.addEventListener('drop', async function(e){
+    e.preventDefault(); this.classList.remove('dz-over');
+    var id=e.dataTransfer.getData('text/plain'), day=this.dataset.day, time=this.dataset.time;
+    if(!id||!day||!time) return;
+    var csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+    var r=await fetch('/move_timetable',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body:JSON.stringify({id:id,day:day,time:time})});
+    var data=await r.json();
+    if(data.ok){ toast('Moved to '+day+' '+time); setTimeout(function(){ location.reload(); },700); }
+    else if(data.conflicts){ toast('Conflict: '+data.conflicts[0],'warn'); }
+    else { toast('Move failed','err'); }
+  });
+});
+
+document.querySelectorAll('.sc').forEach(function(card){
+  card.addEventListener('dragstart',function(e){
+    e.dataTransfer.setData('text/plain',this.dataset.id);
+    e.dataTransfer.effectAllowed='move';
+    setTimeout(function(){ card.classList.add('dragging'); },0);
+  });
+  card.addEventListener('dragend',function(){
+    this.classList.remove('dragging');
+    document.querySelectorAll('.dz-over').forEach(function(c){ c.classList.remove('dz-over'); });
+  });
+});
+
+// ── Conflict Highlight ─────────────────────────────────
+function highlightConflicts(){
+  const s = document.querySelectorAll('.sc');
+  s.forEach(c => c.classList.remove('conflict-border'));
+  const facultySet = new Set();
+  const roomSet = new Set();
+  
+  s.forEach(c => {
+    const d = c.dataset;
+    const fKey = `${d.day}|${d.time}|${d.teacher}`;
+    const rKey = `${d.day}|${d.time}|${d.room}`;
+    
+    if(d.teacher && d.teacher!=='—' && facultySet.has(fKey)) c.classList.add('conflict-border');
+    else if(d.teacher && d.teacher!=='—') facultySet.add(fKey);
+    
+    if(d.room && d.room!=='—' && roomSet.has(rKey)) c.classList.add('conflict-border');
+    else if(d.room && d.room!=='—') roomSet.add(rKey);
+  });
+}
+document.addEventListener('DOMContentLoaded', highlightConflicts);
+
+// ── Keyboard shortcuts ────────────────────────────────────
+document.addEventListener('keydown',function(e){
+  if(e.target.matches('input,select,textarea')) return;
+  if(e.key==='n'||e.key==='N') M.show('addModal');
+  if(e.key==='c'||e.key==='C') toggleCompact();
+  if(e.key==='Escape') {
+    document.querySelectorAll('.modal-bg').forEach(function(m){ m.classList.remove('show'); });
+    closeBroadcastModal(); M.hide('slotSettingsModal'); M.hide('copyDayModal');
+  }
+});
+
+// ── BROADCAST & SLOTS ─────────────────────────────────────
+function openBroadcastModal() { document.getElementById('broadcastModal').style.display = 'block'; }
+function closeBroadcastModal() { document.getElementById('broadcastModal').style.display = 'none'; }
+document.getElementById('broadcastForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const t = document.querySelector('button[type="submit"]', this); if(t) t.disabled=true;
+  try {
+    const fd = new FormData(this);
+    const r = await fetch('/api/send_timetable', { method: 'POST', body: fd, headers: {'X-CSRF-Token': '{{ csrf_token() }}'} });
+    const data = await r.json();
+    toast('Notification sent to ' + (data.sent||0) + ' students!', 'ok');
+    closeBroadcastModal();
+  } catch(err) { toast('Failed to send broadcast', 'err'); }
+  if(t) t.disabled = false;
+};
+
+function openSlotSettings() { M.show('slotSettingsModal'); }
+function closeSlotSettings() { M.hide('slotSettingsModal'); }
+
+async function addSlot() {
+  const val = document.getElementById('newSlot').value;
+  if(!val) return;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+  try {
+    const r = await fetch('/api/add_time_slot', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body: JSON.stringify({slot: val})
+    });
+    const res = await r.json();
+    if(res.ok) { toast('Slot added!'); setTimeout(()=>location.reload(),800); }
+    else toast(res.error||'Failed','err');
+  } catch(e) { toast('Connection error','err'); }
+}
+
+function openCopyDayModal() { M.show('copyDayModal'); }
+async function copyDayNow() {
+  const from = document.getElementById('copy-from').value;
+  const to = document.getElementById('copy-to').value;
+  if(from===to) { toast('Select different days','err'); return; }
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+  try {
+    const r = await fetch('/api/copy_day', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body: JSON.stringify({from_day:from, to_day:to})
+    });
+    const res = await r.json();
+    if(res.ok) { toast(`Copied ${res.count} slots!`); setTimeout(()=>location.reload(),800); }
+    else toast(res.error||'Copy failed','err');
+  } catch(e) { toast('Connection error','err'); }
+}
+
+// ── Init toasts ───────────────────────────────────────────
+{% if request.args.get('saved') %}toast('Slot saved');{% endif %}
+{% if request.args.get('deleted') %}toast('Slot deleted');{% endif %}
+{% if request.args.get('imported') %}toast('{{ request.args.get("imported") }} slots imported!');{% endif %}
+</script>
+
+{% endblock %}

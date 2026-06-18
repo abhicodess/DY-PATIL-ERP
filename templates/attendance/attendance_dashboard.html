@@ -1,0 +1,781 @@
+{% extends "attendance/attendance_base.html" %}
+{% block title %}Attendance Dashboard{% endblock %}
+{% block nav_dash %}active{% endblock %}
+{% block page_title %}Attendance Dashboard{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a>{% endblock %}
+{% block topbar_extras %}
+<a href="/export_attendance_excel" class="tb-icon" title="Export"><i class="fas fa-download"></i></a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .att-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr);
+    gap: 16px;
+    margin-bottom: 18px
+  }
+
+  .att-hero-card {
+    position: relative;
+    overflow: hidden;
+    padding: 26px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 58%, #2563eb 100%);
+    color: #fff;
+    box-shadow: var(--sh-md)
+  }
+
+  .att-hero-card:before {
+    content: "";
+    position: absolute;
+    inset: auto -60px -100px auto;
+    width: 220px;
+    height: 220px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08)
+  }
+
+  .att-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .72)
+  }
+
+  .att-h1 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-top: 10px;
+    max-width: 14ch
+  }
+
+  .att-copy {
+    font-size: 13px;
+    color: rgba(255, 255, 255, .82);
+    margin-top: 12px;
+    max-width: 58ch
+  }
+
+  .att-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px
+  }
+
+  .att-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    font-size: 12px;
+    font-weight: 600
+  }
+
+  .att-panel {
+    padding: 22px
+  }
+
+  .att-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px
+  }
+
+  .att-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink)
+  }
+
+  .att-panel-sub {
+    font-size: 12px;
+    color: var(--ink4);
+    margin-top: 3px
+  }
+
+  .att-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px
+  }
+
+  .att-mini {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg)
+  }
+
+  .att-mini-label {
+    font-size: 11px;
+    color: var(--ink4);
+    text-transform: uppercase;
+    letter-spacing: .08em
+  }
+
+  .att-mini-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 6px
+  }
+
+  .att-mini-note {
+    font-size: 12px;
+    color: var(--ink3);
+    margin-top: 4px
+  }
+
+  .att-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(320px, .95fr);
+    gap: 16px;
+    margin-bottom: 16px
+  }
+
+  .att-stack {
+    display: grid;
+    gap: 16px
+  }
+
+  .att-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px
+  }
+
+  .att-spotlight {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+    border: 1px solid #dbeafe
+  }
+
+  .att-spotlight h3 {
+    font-size: 16px;
+    line-height: 1.2
+  }
+
+  .att-spotlight p {
+    font-size: 12px;
+    color: var(--ink3);
+    margin-top: 6px
+  }
+
+  .att-list {
+    display: grid;
+    gap: 12px
+  }
+
+  .att-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border)
+  }
+
+  .att-list-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0
+  }
+
+  .att-list-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink2)
+  }
+
+  .att-list-sub {
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 2px
+  }
+
+  .att-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px
+  }
+
+  .att-action {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    transition: .16s
+  }
+
+  .att-action:hover {
+    border-color: #bfdbfe;
+    background: #f8fbff
+  }
+
+  .att-action-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0
+  }
+
+  .att-action-copy strong {
+    display: block;
+    font-size: 13px;
+    color: var(--ink)
+  }
+
+  .att-action-copy span {
+    display: block;
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 2px
+  }
+
+  .att-stream {
+    display: grid;
+    gap: 10px
+  }
+
+  .att-stream-row {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg)
+  }
+
+  .att-stream-row strong {
+    display: block;
+    font-size: 13px;
+    color: var(--ink)
+  }
+
+  .att-stream-row span {
+    display: block;
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 3px
+  }
+
+  .att-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap
+  }
+
+  .att-filter-input,
+  .att-filter-select {
+    font-size: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    outline: none
+  }
+
+  .att-filter-input {
+    width: 190px
+  }
+
+  .att-filter-input:focus,
+  .att-filter-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .08)
+  }
+
+  .att-health {
+    display: grid;
+    gap: 12px
+  }
+
+  .att-health-row {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg)
+  }
+
+  .att-health-row .prog-track {
+    margin-top: 8px
+  }
+
+  .att-note {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    font-size: 12px;
+    color: #1d4ed8
+  }
+
+  @media (max-width:1180px) {
+
+    .att-hero,
+    .att-layout,
+    .att-grid-2 {
+      grid-template-columns: 1fr
+    }
+  }
+
+  @media (max-width:760px) {
+
+    .att-mini-grid,
+    .att-actions {
+      grid-template-columns: 1fr
+    }
+
+    .att-toolbar {
+      align-items: stretch
+    }
+
+    .att-filter-input,
+    .att-filter-select {
+      width: 100%
+    }
+  }
+</style>
+
+{% if request.args.get('saved') %}
+<div class="alert-bar alert-bar-gr fu">
+  <i class="fas fa-circle-check"></i> Imported {{ request.args.get('saved') }} records
+  {% if request.args.get('students') %} for {{ request.args.get('students') }} students{% endif %}
+  {% if request.args.get('skipped') %} - {{ request.args.get('skipped') }} skipped{% endif %}.
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+{% if request.args.get('error') %}
+<div class="alert-bar alert-bar-re fu">
+  <i class="fas fa-circle-exclamation"></i>
+  {% if request.args.get('error') == 'bad_summary_confirm' %}
+  Wrong confirmation text. Type the exact phrase shown below the button to clear all PDF summaries.
+  {% else %}
+  Error: {{ request.args.get('error') }}
+  {% if request.args.get('msg') %} - {{ request.args.get('msg') }}{% endif %}
+  {% endif %}
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+{% if request.args.get('summary_cleared') %}
+<div class="alert-bar alert-bar-am fu">
+  <i class="fas fa-check"></i> All PDF-imported attendance summary rows were removed. Daily attendance records are
+  unchanged.
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+
+<section class="att-hero fu">
+  <div class="att-hero-card">
+    <div class="att-kicker">Attendance Command Center</div>
+    <div class="att-h1">See daily health, defaulters, and action points in one place.</div>
+    <div class="att-copy">This dashboard rolls up the live attendance summary across divisions so admin can move from
+      insight to action quickly.</div>
+    <div class="att-hero-meta">
+      <span class="att-pill"><i class="fas fa-users"></i> {{ total_students }} students tracked</span>
+      <span class="att-pill"><i class="fas fa-chart-line"></i> {{ avg_pct }}% average attendance</span>
+      <span class="att-pill"><i class="fas fa-triangle-exclamation"></i> {{ defaulters|length }} below 75%</span>
+    </div>
+  </div>
+  <div class="card att-panel fu fu1">
+    <div class="att-panel-head">
+      <div>
+        <div class="att-panel-title">Today's Snapshot</div>
+        <div class="att-panel-sub">Fast signal for how the module is behaving right now</div>
+      </div>
+      <a href="/attendance" class="btn btn-dark btn-sm"><i class="fas fa-plus"></i> Mark Attendance</a>
+    </div>
+    <div class="att-mini-grid">
+      <div class="att-mini">
+        <div class="att-mini-label">Healthy Range</div>
+        <div class="att-mini-value" style="color:var(--green)">{{ good_count }}</div>
+        <div class="att-mini-note">Students at or above 75%</div>
+      </div>
+      <div class="att-mini">
+        <div class="att-mini-label">Watchlist</div>
+        <div class="att-mini-value" style="color:var(--amber)">{{ avg_count }}</div>
+        <div class="att-mini-note">Students between 50% and 74%</div>
+      </div>
+      <div class="att-mini">
+        <div class="att-mini-label">High Risk</div>
+        <div class="att-mini-value" style="color:var(--red)">{{ low_count }}</div>
+        <div class="att-mini-note">Students below 50%</div>
+      </div>
+      <div class="att-mini">
+        <div class="att-mini-label">Divisions Active</div>
+        <div class="att-mini-value">{{ divisions|length }}</div>
+        <div class="att-mini-note">{{ divisions|join(', ') if divisions else 'No divisions tagged yet' }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="sg fu fu1">
+  <div class="sc">
+    <div>
+      <div class="sv">{{ total_students }}</div>
+      <div class="sl">Total Students</div>
+      <div class="sdelta up"><i class="fas fa-database"></i> Summary rows available</div>
+    </div>
+    <div class="sico ic-bl"><i class="fas fa-users"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#059669">{{ avg_pct }}%</div>
+      <div class="sl">Average Attendance</div>
+      <div class="sdelta up"><i class="fas fa-wave-square"></i> Live cumulative average</div>
+    </div>
+    <div class="sico ic-gr"><i class="fas fa-chart-pie"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#D97706">{{ defaulters|length }}</div>
+      <div class="sl">Defaulters</div>
+      <div class="sdelta"><i class="fas fa-bell"></i> Below 75%</div>
+    </div>
+    <div class="sico ic-am"><i class="fas fa-user-clock"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#DC2626">{{ critical|length }}</div>
+      <div class="sl">Critical Cases</div>
+      <div class="sdelta dn"><i class="fas fa-shield-heart"></i> Below 40%</div>
+    </div>
+    <div class="sico ic-re"><i class="fas fa-siren-on"></i></div>
+  </div>
+</div>
+
+{# ── ROW 1: 3-column — Top Performers | Attendance Health | Action Center ── #}
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px" class="fu fu2">
+
+  {# Top Performers #}
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Top Performers</div>
+      <div class="cs">Highest attendance percentage in the current data set</div>
+    </div>
+    <div class="cb">
+      <div style="height:250px"><canvas id="chartTop5"></canvas></div>
+    </div>
+  </div>
+
+  {# Attendance Health #}
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Attendance Health</div>
+      <div class="cs">Distribution of students by attendance band</div>
+    </div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:110px 1fr;gap:16px;align-items:center">
+        <div style="width:110px;height:110px"><canvas id="chartDonut"></canvas></div>
+        <div class="att-health">
+          <div class="att-health-row">
+            <div class="prog-hd"><span class="prog-lbl">Good - 75% and above</span><span class="prog-pct">{{ good_count }}</span></div>
+            <div class="prog-track">
+              <div class="prog-bar pb-gr" style="width:{{ (good_count/total_students*100)|round|int if total_students>0 else 0 }}%"></div>
+            </div>
+          </div>
+          <div class="att-health-row">
+            <div class="prog-hd"><span class="prog-lbl">Average - 50% to 74%</span><span class="prog-pct">{{ avg_count }}</span></div>
+            <div class="prog-track">
+              <div class="prog-bar pb-am" style="width:{{ (avg_count/total_students*100)|round|int if total_students>0 else 0 }}%"></div>
+            </div>
+          </div>
+          <div class="att-health-row">
+            <div class="prog-hd"><span class="prog-lbl">Low - below 50%</span><span class="prog-pct">{{ low_count }}</span></div>
+            <div class="prog-track">
+              <div class="prog-bar pb-re" style="width:{{ (low_count/total_students*100)|round|int if total_students>0 else 0 }}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="att-note">Use Shortage Alert for the full actionable list, and View Records for student-level edits.</div>
+    </div>
+  </div>
+
+  {# Action Center #}
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Action Center</div>
+      <div class="cs">Jump to the most common attendance workflows</div>
+    </div>
+    <div class="cb">
+      <div class="att-actions">
+        <a href="/attendance" class="att-action">
+          <div class="att-action-ico ic-bl"><i class="fas fa-calendar-check"></i></div>
+          <div class="att-action-copy"><strong>Mark Attendance</strong><span>Create single, bulk, or Excel entries</span></div>
+        </a>
+        <a href="/view_attendance" class="att-action">
+          <div class="att-action-ico ic-vi"><i class="fas fa-eye"></i></div>
+          <div class="att-action-copy"><strong>View Records</strong><span>Search, edit, and export class records</span></div>
+        </a>
+        <a href="/shortage_report" class="att-action">
+          <div class="att-action-ico ic-re"><i class="fas fa-triangle-exclamation"></i></div>
+          <div class="att-action-copy"><strong>Shortage Alert</strong><span>Open the student-level risk list</span></div>
+        </a>
+        <a href="/admin/reports/defaulters" class="att-action">
+          <div class="att-action-ico ic-am"><i class="fas fa-user-xmark"></i></div>
+          <div class="att-action-copy"><strong>Subject Defaulters</strong><span>View subject-wise attendance deficit</span></div>
+        </a>
+        <a href="/admin/reports/division_attendance" class="att-action">
+          <div class="att-action-ico ic-gr"><i class="fas fa-chart-simple"></i></div>
+          <div class="att-action-copy"><strong>Division Stats</strong><span>Compare class averages over dates</span></div>
+        </a>
+        <a href="/attendance_analytics" class="att-action">
+          <div class="att-action-ico ic-te"><i class="fas fa-chart-bar"></i></div>
+          <div class="att-action-copy"><strong>Analytics</strong><span>Review trends, branches, and subjects</span></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── ROW 2: 2-column — Critical Watchlist | Import Attendance ── #}
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px" class="fu fu2">
+
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Critical Watchlist</div>
+      <div class="cs">Students below 40% attendance</div>
+    </div>
+    <div class="cb">
+      {% if critical %}
+      <div class="att-list">
+        {% for s in critical[:6] %}
+        <div class="att-list-item">
+          <div>
+            <div class="att-list-label">{{ s.name }}</div>
+            <div class="att-list-sub">{{ s.dept }}{% if s.division %} - Division {{ s.division }}{% endif %}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="tag t-re">{{ s.pct }}%</span>
+            <div style="margin-top:8px">
+              <a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fas fa-shield-heart"></i>
+        <p>No critical students right now.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ct">Import Attendance</div>
+      <div class="cs">Upload DY Patil PDF summary and rebuild student-wise totals</div>
+    </div>
+    <div class="cb">
+      <form id="pdfImportForm" method="POST" action="/import_final_pdf" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="fgrp">
+          <label>PDF File</label>
+          <input type="file" name="file" accept=".pdf" required id="pdfImportFile">
+        </div>
+        <button type="submit" class="btn btn-dark btn-sm" style="width:100%" id="pdfImportSubmit"><i class="fas fa-upload"></i> Import PDF</button>
+      </form>
+      <div class="att-stream" style="margin-top:14px">
+        <div class="att-stream-row"><strong>Accepted format</strong><span>DY Patil attendance report PDF with subject-wise totals</span></div>
+        {% if request.args.get('batch_id') %}
+        <div class="att-stream-row"><strong>Latest upload batch</strong><span>Batch ID {{ request.args.get('batch_id') }} was stored for backup and restore.</span></div>
+        {% endif %}
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:#B91C1C;margin-bottom:8px">Danger zone</div>
+        <form method="POST" action="/clear_all_attendance_summary"
+          onsubmit="return confirm('This deletes every row in the PDF summary table for all students. Continue?');">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <label style="font-size:11px;color:var(--ink3);display:block;margin-bottom:6px">Type <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">DELETE ALL PDF SUMMARY</code> to confirm</label>
+          <input type="text" name="confirm_phrase" autocomplete="off" placeholder="DELETE ALL PDF SUMMARY" class="att-filter-input" style="width:100%;margin-bottom:8px">
+          <button type="submit" class="btn btn-out btn-sm" style="width:100%;border-color:#FECACA;color:#B91C1C"><i class="fas fa-trash-can"></i> Clear PDF summaries</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── ROW 3: Full-width — All Students Table ── #}
+<div class="card fu fu2">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">All Students</div>
+      <div class="cs">{{ total_students }} students with cumulative attendance data</div>
+    </div>
+    <div class="att-toolbar">
+      <input type="text" id="srchInput" class="att-filter-input" placeholder="Search name or roll">
+      <select id="statusFilter" class="att-filter-select">
+        <option value="">All Status</option>
+        <option value="Good">Good</option>
+        <option value="Average">Average</option>
+        <option value="Low">Low</option>
+      </select>
+      <select id="divFilter" class="att-filter-select">
+        <option value="">All Divisions</option>
+        {% for d in divisions %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl" id="studentsTable">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Student</th>
+          <th>Roll</th>
+          <th>Division</th>
+          <th>Department</th>
+          <th>Attendance</th>
+          <th>Percentage</th>
+          <th>Status</th>
+          <th>Required Action</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="studentsBody">
+        {% for s in all_students %}
+        <tr data-name="{{ s.name|lower }}" data-roll="{{ s.roll|lower }}" data-status="{{ s.status }}" data-div="{{ s.division }}">
+          <td style="font-weight:700;color:var(--ink3)">{{ s.rank }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="av av-sm" style="background:{% if s.pct>=75 %}#059669{% elif s.pct>=50 %}#D97706{% else %}#DC2626{% endif %}">{{ s.name[0]|upper }}</div>
+              <div>
+                <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
+                <div style="font-size:11px;color:var(--ink4)">{{ s.prn or s.roll or 'No PRN Number' }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px;color:var(--ink3)">{{ s.roll }}</td>
+          <td><span class="tag t-bl">{{ s.division or '-' }}</span></td>
+          <td><span class="tag t-vi">{{ s.dept }}</span></td>
+          <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
+          <td><span class="tag {% if s.pct>=75 %}t-gr{% elif s.pct>=50 %}t-am{% else %}t-re{% endif %}">{{ s.pct }}%</span></td>
+          <td>
+            <span style="font-size:12px;font-weight:600;color:{% if s.status=='Good' %}#059669{% elif s.status=='Average' %}#D97706{% else %}#DC2626{% endif %}">{{ s.status }}</span>
+          </td>
+          <td style="font-size:12px">
+            {% if s.shortage > 0 %}
+            <span style="color:#DC2626"><i class="fas fa-arrow-up" style="font-size:10px"></i> Need {{ s.shortage }} classes</span>
+            {% elif s.can_miss > 0 %}
+            <span style="color:#059669"><i class="fas fa-arrow-down" style="font-size:10px"></i> Can miss {{ s.can_miss }}</span>
+            {% else %}
+            <span style="color:var(--ink4)">Stable</span>
+            {% endif %}
+          </td>
+          <td><a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10">
+            <div class="empty-state"><i class="fas fa-inbox"></i>
+              <p>No attendance data found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var tick = { color: '#9CA3AF', font: { family: "'Plus Jakarta Sans',sans-serif", size: 11 } };
+  var grid = { color: '#F3F4F6' };
+
+  function initAttendanceCharts() {
+    var t5El = document.getElementById('chartTop5');
+    if (t5El && typeof Chart !== 'undefined') new Chart(t5El, {
+      type: 'bar',
+      animation: { duration: 400, easing: 'easeOutQuart' },
+      data: { labels: {{ top5_names| tojson }}, datasets: [{ data: {{ top5_pcts| tojson }}, backgroundColor: ['#bfdbfe', '#93c5fd', '#60a5fa', '#38bdf8', '#818cf8'], borderWidth: 0, borderRadius: 8}]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { ...tick, maxRotation: 45, minRotation: 45 }, grid: { display: false } }, y: { ticks: {...tick, callback: function(v) { return v + '%'; } }, grid: grid, beginAtZero: true, max: 100 } } }
+  });
+  var dEl = document.getElementById('chartDonut');
+  if (dEl && typeof Chart !== 'undefined') new Chart(dEl, {
+    type: 'doughnut',
+    animation: { duration: 400, easing: 'easeOutQuart' },
+    data: { labels: ['Good', 'Average', 'Low'], datasets: [{ data: [{{ good_count }}, {{ avg_count }},{{ low_count }}], backgroundColor: ['#059669', '#D97706', '#DC2626'], borderWidth: 0}]},
+    options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    cutout: '68%',
+    onClick: function (e, elements) {
+      if (elements && elements.length > 0) {
+        var idx = elements[0].index;
+        var statusVals = ['Good', 'Average', 'Low'];
+        var sf = document.getElementById('statusFilter');
+        if (sf) {
+          sf.value = statusVals[idx];
+          if (typeof applyFilters === 'function') applyFilters();
+        }
+      }
+    }
+  }
+  });
+}
+  requestAnimationFrame(function () { requestAnimationFrame(initAttendanceCharts); });
+
+  (function () {
+    var f = document.getElementById('pdfImportForm');
+    var btn = document.getElementById('pdfImportSubmit');
+    var fi = document.getElementById('pdfImportFile');
+    if (!f || !btn) return;
+    f.addEventListener('submit', function () {
+      if (!fi || !fi.files || !fi.files.length) return;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+    });
+  })();
+
+  var _filtTimer = null;
+  function applyFilters() {
+    var s = document.getElementById('srchInput').value.toLowerCase();
+    var st = document.getElementById('statusFilter').value;
+    var dv = document.getElementById('divFilter').value;
+    document.querySelectorAll('#studentsBody tr').forEach(function (r) {
+      if (!r.dataset) return;
+      var show = true;
+      if (s && r.dataset.name.indexOf(s) < 0 && r.dataset.roll.indexOf(s) < 0) show = false;
+      if (st && r.dataset.status !== st) show = false;
+      if (dv && r.dataset.div !== dv) show = false;
+      r.style.display = show ? '' : 'none';
+    });
+  }
+  function applyFiltersDebounced() {
+    clearTimeout(_filtTimer);
+    _filtTimer = setTimeout(applyFilters, 140);
+  }
+  var si = document.getElementById('srchInput');
+  if (si) si.addEventListener('input', applyFiltersDebounced);
+  var sf = document.getElementById('statusFilter');
+  if (sf) sf.addEventListener('change', applyFilters);
+  var df = document.getElementById('divFilter');
+  if (df) df.addEventListener('change', applyFilters);
+</script>
+{% endblock %}

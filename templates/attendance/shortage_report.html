@@ -1,0 +1,200 @@
+{% extends "attendance/attendance_base.html" %}
+{% block title %}Shortage Report{% endblock %}
+{% block nav_shortage %}active{% endblock %}
+{% block page_title %}Shortage Alert{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a> / Shortage{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Attendance Shortage Alert</div>
+    <div class="ph-sub">Students below attendance threshold — lectures needed to recover</div>
+  </div>
+  <div class="ph-actions">
+    <form method="POST" action="/trigger_shortage_alert" style="display:inline-block">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="department" value="{{ request.args.get('department', '') }}">
+      <input type="hidden" name="division" value="{{ request.args.get('division', '') }}">
+      <input type="hidden" name="threshold" value="{{ request.args.get('threshold', '75') }}">
+      <button type="submit" class="btn btn-dark btn-sm">
+        <i class="fas fa-envelope"></i> Send Guardian Alerts
+      </button>
+    </form>
+    <a href="/export_shortage_excel?{{ request.query_string.decode() }}" class="btn btn-out btn-sm">
+      <i class="fas fa-download"></i> Export Excel
+    </a>
+  </div>
+</div>
+
+{% if request.args.get('alert_triggered') %}
+<div class="alert-bar alert-bar-gr fu">
+  <i class="fas fa-circle-check"></i> Shortage alert triggered successfully! Watchlist/Critical notifications queued for guardians.
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card fu fu1">
+  <div class="ch"><div class="ct">Filter</div></div>
+  <div class="cb">
+    <form method="GET" action="/shortage_report">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Department</label>
+          <select name="department" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Departments</option>
+            {% for d in ['AIML','AIDS','CS','IT'] %}<option {% if request.args.get('department')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Division</label>
+          <select name="division" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="">All Divisions</option>
+            {% for d in ['A','B','C','D'] %}<option {% if request.args.get('division')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink3);display:block;margin-bottom:4px">Threshold</label>
+          <select name="threshold" style="width:100%;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box;">
+            <option value="75" {% if request.args.get('threshold','75')=='75' %}selected{% endif %}>Below 75%</option>
+            <option value="50" {% if request.args.get('threshold')=='50' %}selected{% endif %}>Below 50%</option>
+            <option value="40" {% if request.args.get('threshold')=='40' %}selected{% endif %}>Below 40%</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-magnifying-glass"></i> Filter</button>
+        <a href="/shortage_report" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if defaulters is defined and defaulters %}
+<!-- Summary stats -->
+<div class="sg fu fu2" style="margin-bottom:16px">
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#DC2626">{{ defaulters|length }}</div>
+      <div class="sl">Defaulters</div>
+      <div class="sdelta dn">Below threshold</div>
+    </div>
+    <div class="sico ic-re"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#D97706">{{ defaulters|selectattr('pct','lt',50)|list|length }}</div>
+      <div class="sl">Critical (&lt;50%)</div>
+      <div class="sdelta dn">Urgent attention</div>
+    </div>
+    <div class="sico ic-am"><i class="fas fa-circle-exclamation"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv" style="color:#DC2626">{{ defaulters|selectattr('pct','lt',40)|list|length }}</div>
+      <div class="sl">Severe (&lt;40%)</div>
+      <div class="sdelta dn">TC risk</div>
+    </div>
+    <div class="sico ic-re"><i class="fas fa-fire"></i></div>
+  </div>
+  <div class="sc">
+    <div>
+      <div class="sv text-primary">{{ (defaulters|map(attribute='shortage')|sum) }}</div>
+      <div class="sl">Total Lectures Needed</div>
+      <div class="sdelta">Across all defaulters</div>
+    </div>
+    <div class="sico ic-bl"><i class="fas fa-calendar-plus"></i></div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Defaulter table -->
+<div class="card fu fu3">
+  <div class="ch flex-sb pb0">
+    <div>
+      <div class="ct">Defaulter List</div>
+      {% if defaulters is defined %}<div class="cs">{{ defaulters|length }} students</div>{% endif %}
+    </div>
+    <a href="/attendance_report" class="btn btn-ghost btn-sm">Full Report <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Dept</th>
+          <th>Div</th>
+          <th>Attended / Total</th>
+          <th>%</th>
+          <th>Progress</th>
+          <th>Lectures Needed</th>
+          <th>Can Miss</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if defaulters %}
+          {% for s in defaulters %}
+          <tr>
+            <td style="color:var(--ink4);font-size:12px">{{ loop.index }}</td>
+            <td>
+              <div class="flex-ac gap8">
+                <div class="av av-sm" style="background:{% if s.pct<40 %}#DC2626{% elif s.pct<50 %}#B45309{% else %}#D97706{% endif %}">
+                  {{ s.name[0]|upper }}
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:13px">{{ s.name }}</div>
+                  <div style="font-size:11px;color:var(--ink4)">{{ s.roll or '' }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="tag t-bl">{{ s.dept or s.department or '—' }}</span></td>
+            <td><span class="tag t-vi">{{ s.division or '—' }}</span></td>
+            <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
+            <td>
+              <span class="tag {% if s.pct>=75 %}t-gr{% elif s.pct>=50 %}t-am{% else %}t-re{% endif %}">
+                {{ s.pct }}%
+              </span>
+            </td>
+            <td style="min-width:100px">
+              <div style="background:#F3F4F6;border-radius:99px;height:8px;overflow:hidden">
+                <div style="height:100%;border-radius:99px;background:{% if s.pct>=75 %}#059669{% elif s.pct>=50 %}#D97706{% else %}#DC2626{% endif %};width:{{ [s.pct,100]|min }}%;transition:.3s"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink4);margin-top:2px">
+                <span>0%</span><span style="color:#D97706">75%</span><span>100%</span>
+              </div>
+            </td>
+            <td>
+              {% if s.shortage > 0 %}
+              <span style="font-size:12px;font-weight:700;color:#DC2626">
+                <i class="fas fa-arrow-up" style="font-size:10px"></i> {{ s.shortage }} lectures
+              </span>
+              {% else %}
+              <span style="font-size:12px;color:#059669"><i class="fas fa-check"></i> On track</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.can_miss > 0 %}
+              <span style="font-size:12px;font-weight:700;color:#059669">{{ s.can_miss }}</span>
+              {% else %}
+              <span style="font-size:12px;color:var(--ink4)">0</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm">
+                <i class="fas fa-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="10">
+            <div class="empty-state"><i class="fas fa-circle-check"></i><p>No defaulters found at the current threshold. 🎉</p></div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

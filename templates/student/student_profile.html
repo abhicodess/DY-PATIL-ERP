@@ -1,0 +1,40 @@
+{% extends "common/base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Student Portal{% endblock %}
+{% block av_color %}#059669{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Student{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Profile{% endblock %}
+{% block topbar_extras %}{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">My Profile</div></div>
+<div class="g4060 fu fu1">
+  <div class="card" style="overflow:hidden">
+    <div class="prof-cover"></div>
+    <div class="prof-av-row">
+      <div class="av av-lg" style="background:#059669;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.15)">{{ student.name[0]|upper if student.name else "S" }}</div>
+      <div style="padding-bottom:4px"><div class="prof-name">{{ student.name }}</div><div class="prof-sub">{{ student.department }} · Year {{ student.year }}</div></div>
+    </div>
+    <div class="cb">
+      <div class="prof-chips"><span class="tag t-gr">{{ student.department }}</span><span class="tag t-am">Year {{ student.year }}</span></div>
+      <div class="divider"></div>
+      <div class="info-row"><div class="info-k">PRN Number</div><div class="info-v mono">{{ student.prn or student.roll }}</div></div>
+      <div class="info-row"><div class="info-k">Email</div><div class="info-v">{{ student.email or "—" }}</div></div>
+      <div class="info-row"><div class="info-k">Department</div><div class="info-v">{{ student.department }}</div></div>
+      <div class="info-row"><div class="info-k">Year</div><div class="info-v">{{ student.year }}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Update Account</div></div>
+    <form method="POST" action="/student_update_profile"><div class="cb">
+      {% if request.args.get('error') == 'current_invalid' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Current password is incorrect.</span></div>{% endif %}
+      {% if request.args.get('error') == 'mismatch' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>New password and confirm password do not match.</span></div>{% endif %}
+      {% if request.args.get('error') == 'short' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Password must be at least 6 characters.</span></div>{% endif %}
+      <div class="fgrp"><label>Email Address</label><input type="email" name="email" value="{{ student.email or '' }}" placeholder="your@email.com"></div>
+      <div class="divider"></div>
+      <div class="fgrp"><label>Current Password</label><input type="password" name="current_password" placeholder="Enter current password"></div>
+      <div class="fgrp"><label>New Password (leave blank to keep current)</label><input type="password" name="new_password" placeholder="Min 6 characters"></div>
+      <div class="fgrp"><label>Confirm New Password</label><input type="password" name="confirm_password" placeholder="Re-enter new password"></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Changes</button></div></form>
+  </div>
+</div>{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Faculty Workload Analysis{% endblock %}
+
+{% block report_styles %}
+.text-danger { color: red; font-weight: bold; }
+.text-success { color: green; font-weight: bold; }
+{% endblock %}
+
+{% block report_header_title %}Faculty Academic Workload{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Department:</div>
+    <div class="meta-value">{{ department }}</div>
+    <div class="meta-label">Semester:</div>
+    <div class="meta-value">Semester {{ semester }}</div>
+</div>
+<div class="meta-row">
+    <div class="meta-label">Academic Year:</div>
+    <div class="meta-value">{{ academic_year or 'N/A' }}</div>
+    <div class="meta-label">Status:</div>
+    <div class="meta-value">Official Record</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width: 25%;">Faculty Name</th>
+            <th style="width: 30%;">Subjects Assigned</th>
+            <th style="text-align: center; width: 12%;">Scheduled</th>
+            <th style="text-align: center; width: 12%;">Taken</th>
+            <th style="text-align: center; width: 11%;">Missed</th>
+            <th style="text-align: center; width: 10%;">Avg Students</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td><strong>{{ row.name }}</strong></td>
+            <td><font size="8pt">{{ row.subjects }}</font></td>
+            <td style="text-align: center; font-weight: bold;">{{ row.scheduled }}</td>
+            <td style="text-align: center; color: green; font-weight: bold;">{{ row.taken }}</td>
+            <td style="text-align: center; {% if row.missed > 0 %}color: red; font-weight: bold;{% endif %}">{{ row.missed }}</td>
+            <td style="text-align: center; font-weight: bold;">{{ "%.1f" | format(row.avg_students) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" style="text-align: center; color: #777; padding: 20px;">No workload records found matching these criteria.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block report_summary %}
+<div style="margin-top: 30px; font-size: 8pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px;" class="avoid-break">
+    <p><strong>Note:</strong> Workload calculation assumes a standard 14-week academic semester. Lectures missed due to official leaves are compensated during weekends or revision weeks.</p>
+</div>
+{% endblock %}

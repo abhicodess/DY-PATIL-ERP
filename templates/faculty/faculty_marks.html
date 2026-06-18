@@ -1,0 +1,133 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Marks{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Marks{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Marks{% endblock %}
+{% block content %}
+<!-- IMPORT MARKS MODAL -->
+<div class="modal-bg" id="impMarksModal">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:14px">
+      <div><div class="ct">Import Marks from Excel</div><div class="cs">Supports .xlsx / .xls</div></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('impMarksModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/import_marks_v2" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb" style="padding-top:0">
+        <div class="alert al-info" style="margin-bottom:14px"><i class="fas fa-circle-info"></i>
+          <span>Columns: <strong>Student Name, Roll, Subject, Marks, Total, Exam Type, Date</strong></span>
+        </div>
+        <div class="import-zone" onclick="document.getElementById('f_marks').click()">
+          <i class="fas fa-file-excel" style="color:#059669"></i>
+          <p>Click to choose Excel file</p><small>.xlsx</small>
+          <input type="file" name="file" id="f_marks" accept=".xlsx,.xls" style="display:none"
+                 onchange="document.getElementById('fn_marks').textContent='✓  '+this.files[0].name;document.getElementById('imp_marks_btn').disabled=false;">
+        </div>
+        <p id="fn_marks" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark" id="imp_marks_btn" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="button" class="btn btn-out" onclick="document.getElementById('impMarksModal').classList.remove('show')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="ph fu"><div class="ph-title">Marks Entry</div><div class="ph-actions"><a href="/export_marks_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export All</a><button class="btn btn-out btn-sm" onclick="document.getElementById('impMarksModal').classList.add('show')"><i class="fas fa-file-excel"></i> Import Excel</button></div></div>
+<div class="g4060 fu fu1">
+  <div class="card">
+    <div class="ch"><div class="ct">Enter Marks</div></div>
+    <form method="POST" action="/faculty_save_marks">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb">
+        <div class="fgrp">
+          <label>Subject *</label>
+          <select name="subject" id="subject_select" required onchange="loadStudents()">
+            <option value="">Select Subject...</option>
+            {% for s in my_subjects %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fgrp">
+          <label>Student Name *</label>
+          <select name="student_name" id="student_select" required>
+            <option value="">Choose subject first...</option>
+          </select>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Marks Obtained *</label><input type="number" name="marks" step="0.5" min="0" required></div>
+          <div class="fgrp"><label>Total Marks</label><input type="number" name="total" value="100" min="1" required></div>
+        </div>
+        <div class="fg2">
+          <div class="fgrp"><label>Exam Type</label>
+            <select name="exam_type">
+              <option>Unit Test 1</option><option>Unit Test 2</option><option>Mid Sem</option>
+              <option>End Sem</option><option>Practical</option><option>Assignment</option>
+            </select>
+          </div>
+          <div class="fgrp"><label>Date</label><input type="date" name="date" value="{{ today }}"></div>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Marks</button>
+      </div>
+    </form>
+  </div>
+
+<script>
+async function loadStudents() {
+  const subj = document.getElementById('subject_select').value;
+  const sel = document.getElementById('student_select');
+  
+  if(!subj) {
+    sel.innerHTML = '<option value="">Choose subject first...</option>';
+    return;
+  }
+  
+  sel.innerHTML = '<option value="">Loading students...</option>';
+  
+  try {
+    const res = await fetch(`/faculty/api/students_by_subject?subject=${encodeURIComponent(subj)}`);
+    const students = await res.json();
+    
+    sel.innerHTML = '<option value="">Select Student...</option>';
+    students.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = `${s.name} (${s.roll || 'No Roll'})`;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    sel.innerHTML = '<option value="">Error loading students</option>';
+  }
+}
+</script>
+  <div class="card">
+    <div class="ch"><div class="ct">Marks Records</div><div class="cs">{{ marks|length }} entries</div></div>
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl">
+        <thead><tr><th>Student</th><th>Subject</th><th>Marks</th><th>Type</th><th>Del</th></tr></thead>
+        <tbody>
+          {% for m in marks %}
+          <tr>
+            <td>{{ m.student_name }}</td>
+            <td style="font-size:12px;color:var(--ink3)">{{ m.subject }}</td>
+            <td>
+              <span class="mono" style="font-weight:700">{{ m.marks }}</span>
+              <span style="color:var(--ink4);font-size:11px">/{{ m.total }}</span>
+              {% set p = (m.marks/m.total*100)|round|int %}
+              <span class="grade {% if p>=90 %}g-ap{% elif p>=75 %}g-a{% elif p>=60 %}g-b{% elif p>=40 %}g-c{% else %}g-f{% endif %}" style="font-size:11px;margin-left:4px">{% if p>=90 %}A+{% elif p>=75 %}A{% elif p>=60 %}B+{% elif p>=40 %}B{% elif p>=33 %}C{% else %}F{% endif %}</span>
+            </td>
+            <td><span class="tag t-vi" style="font-size:10px">{{ m.exam_type }}</span></td>
+            <td><form method="POST" action="/faculty_delete_marks" onsubmit="return confirm('Delete?')"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="marks_id" value="{{ m.id }}"><button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button></form></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5"><div class="empty-state" style="padding:24px"><i class="fas fa-star"></i><p>No marks entered yet.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>{% endblock %}

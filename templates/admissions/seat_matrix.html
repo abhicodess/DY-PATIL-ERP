@@ -1,0 +1,62 @@
+{% extends "common/base.html" %}
+
+{% block title %}Admissions Seat Matrix{% endblock %}
+
+{% block page_title %}Seat Quota Matrix{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin">Dashboard</a> / <a href="{{ url_for('admissions.dashboard') }}">Admissions</a> / Seat Matrix
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div>
+    <div class="ph-title">Admissions Seat Matrix Ledger</div>
+    <div class="ph-sub">Seat quota capacity allocation layout across various branches and social categories.</div>
+  </div>
+  <div class="ph-actions">
+    <a href="{{ url_for('admissions.dashboard') }}" class="btn btn-out">
+      <i class="fa-solid fa-arrow-left"></i> Back to Ledger
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch">
+    <div class="ct">Seat Quota Limits Ledger — Academic Year {{ selected_year }}</div>
+    <div class="cs">Detailed division of intake limits, filled positions, and remaining availability.</div>
+  </div>
+  <div class="cb" style="padding:0;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Department</th>
+          <th>Caste Category</th>
+          <th>Total Seats Limit</th>
+          <th>Filled Seats</th>
+          <th>Available Vacancies</th>
+          <th>Last Synchronised</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if seat_matrix %}
+          {% for row in seat_matrix %}
+            <tr>
+              <td style="font-weight:700; color:var(--blue);">{{ row.department }}</td>
+              <td style="font-weight:600;">{{ row.category }}</td>
+              <td style="font-weight:600; font-family:var(--mono);">{{ row.total_seats }}</td>
+              <td style="color:var(--green); font-weight:600; font-family:var(--mono);">{{ row.filled_seats }}</td>
+              <td style="color:var(--blue); font-weight:700; font-family:var(--mono);">{{ row.available_seats }}</td>
+              <td style="color:var(--ink4); font-size:12px;">{{ row.last_updated.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align:center; padding:30px; color:var(--ink4);">No seat matrix values initialized for academic year {{ selected_year }}.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

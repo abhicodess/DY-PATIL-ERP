@@ -1,0 +1,41 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Profile{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Profile{% endblock %}
+{% block content %}
+<div class="ph fu"><div class="ph-title">My Profile</div></div>
+<div class="g4060 fu fu1">
+  <div class="card" style="overflow:hidden">
+    <div class="prof-cover"></div>
+    <div class="prof-av-row">
+      <div class="av av-lg" style="background:#7C3AED;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.15)">{{ profile.name[0]|upper if profile.name else "F" }}</div>
+      <div style="padding-bottom:4px"><div class="prof-name">{{ profile.name or session.name }}</div><div class="prof-sub">{{ profile.department }}</div></div>
+    </div>
+    <div class="cb">
+      <div class="prof-chips"><span class="tag t-vi">{{ profile.designation or "Faculty" }}</span><span class="tag t-gr">Active</span></div>
+      <div class="divider"></div>
+      <div class="info-row"><div class="info-k">Email</div><div class="info-v">{{ profile.email or "—" }}</div></div>
+      <div class="info-row"><div class="info-k">Phone</div><div class="info-v">{{ profile.phone or "—" }}</div></div>
+      <div class="info-row"><div class="info-k">Qualification</div><div class="info-v">{{ profile.qualification or "—" }}</div></div>
+      <div class="info-row"><div class="info-k">Joining Date</div><div class="info-v">{{ profile.joining_date or "—" }}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">Update Profile</div></div>
+    <form method="POST" action="/faculty_update_profile"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><div class="cb">
+      {% if request.args.get('error') == 'current_invalid' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Current password is incorrect.</span></div>{% endif %}
+      {% if request.args.get('error') == 'mismatch' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>New password and confirm password do not match.</span></div>{% endif %}
+      {% if request.args.get('error') == 'short' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Password must be at least 6 characters.</span></div>{% endif %}
+      <div class="fgrp"><label>Full Name</label><input type="text" name="name" value="{{ profile.name or '' }}"></div>
+      <div class="fgrp"><label>Phone</label><input type="text" name="phone" value="{{ profile.phone or '' }}"></div>
+      <div class="fgrp"><label>Qualification</label><input type="text" name="qualification" value="{{ profile.qualification or '' }}"></div>
+      <div class="divider"></div>
+      <div class="fgrp"><label>Current Password</label><input type="password" name="current_password" placeholder="Enter current password"></div>
+      <div class="fgrp"><label>New Password (leave blank to keep current)</label><input type="password" name="new_password" placeholder="At least 6 characters"></div>
+      <div class="fgrp"><label>Confirm New Password</label><input type="password" name="confirm_password" placeholder="Re-enter new password"></div>
+    </div><div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button></div></form>
+  </div>
+</div>{% endblock %}

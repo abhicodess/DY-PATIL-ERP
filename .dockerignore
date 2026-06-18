@@ -1,0 +1,50 @@
+# Ignore local Python environments
+.venv
+venv
+env
+*.pyc
+__pycache__
+
+# Ignore test caches and reports
+.pytest_cache
+.coverage
+htmlcov
+
+# Ignore database data and backups
+college.db
+postgres_data
+postgres_replica_data
+postgres_replica_data/
+postgres_data/
+postgres_data_replica/
+postgres_replica/
+grafana_data
+backups/
+
+# Ignore local logs
+*.log
+*.txt
+!requirements.txt
+logs/
+d_logs*
+
+# Ignore Frontend local packages and builds
+frontend/node_modules
+node_modules
+frontend/dist
+dist
+
+# Ignore editors and source control
+.git
+.github
+.vscode
+.idea
+.cursor
+.history
+
+# Ignore zip archives and attic
+attic.zip
+broken_files.zip
+attic/
+broken_files/
+

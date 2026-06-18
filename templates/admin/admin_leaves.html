@@ -1,0 +1,78 @@
+{% extends "common/base.html" %}
+{% block title %}Leave Applications{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Leave Applications{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Leave Applications{% endblock %}
+{% block content %}
+{% if request.args.get('updated') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Leave status updated.</span></div>{% endif %}
+<div class="ph fu">
+  <div><div class="ph-title">Leave Applications</div><div class="ph-sub">{{ leaves|length }} total</div></div>
+  <div class="ph-actions">
+    <form method="GET" action="/admin_leaves" class="flex-ac gap8">
+      <select class="tb-field" name="status" onchange="this.form.submit()">
+        <option value="">All Status</option>
+        <option value="Pending" {% if status=="Pending" %}selected{% endif %}>Pending</option>
+        <option value="Approved" {% if status=="Approved" %}selected{% endif %}>Approved</option>
+        <option value="Rejected" {% if status=="Rejected" %}selected{% endif %}>Rejected</option>
+      </select>
+      <select class="tb-field" name="dept" onchange="this.form.submit()">
+        <option value="">All Dept</option>
+        {% for d in DEPARTMENTS %}<option value="{{ d }}" {% if dept==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+<div class="card fu fu1"><div class="cb p0">
+  <table class="tbl">
+    <thead><tr><th>Student</th><th>Dates</th><th>Type</th><th>Reason</th><th>Applied</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for l in leaves %}
+      <tr>
+        <td><strong>{{ l.student_name }}</strong><br><span class="mono" style="font-size:11px;color:var(--ink3)">{{ l.roll }}</span></td>
+        <td><span class="mono" style="font-size:11px">{{ l.from_date }}<br>→ {{ l.to_date }}</span></td>
+        <td><span class="tag t-bl">{{ l.leave_type }}</span></td>
+        <td style="font-size:12px;max-width:160px">{{ l.reason[:60] }}{% if l.reason|length>60 %}…{% endif %}</td>
+        <td class="mono" style="font-size:11px;color:var(--ink4)">{{ l.applied_on }}</td>
+        <td><span class="tag {% if l.status=='Approved' %}t-gr{% elif l.status=='Rejected' %}t-re{% else %}t-am{% endif %}">{{ l.status }}</span></td>
+        <td>
+          {% if l.status == 'Pending' %}
+          <button class="btn btn-out btn-sm" onclick="openLeave({{ l.id }})"><i class="fas fa-pen"></i> Review</button>
+          {% else %}{{ l.remarks or "—" }}{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty-state"><i class="fas fa-file-pen"></i><p>No applications.</p></div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+<div class="modal-bg" id="leaveModal">
+  <div class="modal-box">
+    <div class="ch flex-sb" style="padding-bottom:14px"><div class="ct">Review Leave Application</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('leaveModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/update_leave"><div class="cb" style="padding-top:0">
+      <input type="hidden" name="leave_id" id="leave-id">
+      <div class="fgrp"><label>Decision</label>
+        <select name="status">
+          <option value="Approved">Approve</option>
+          <option value="Rejected">Reject</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Remarks (optional)</label>
+        <input type="text" name="remarks" placeholder="e.g. Medical certificate required">
+      </div>
+    </div><div class="cf">
+      <button type="submit" class="btn btn-dark"><i class="fas fa-check"></i> Submit Decision</button>
+      <button type="button" class="btn btn-out" onclick="document.getElementById('leaveModal').classList.remove('show')">Cancel</button>
+    </div></form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function openLeave(id){document.getElementById('leaveModal').classList.add('show');document.getElementById('leave-id').value=id;}
+document.getElementById('leaveModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+</script>{% endblock %}

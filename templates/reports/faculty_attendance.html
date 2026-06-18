@@ -1,0 +1,71 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Faculty Attendance Report{% endblock %}
+
+{% block report_styles %}
+.pct-good { background-color: #d4edda !important; color: #155724; font-weight: bold; }
+.pct-bad { background-color: #f8d7da !important; color: #721c24; font-weight: bold; }
+{% endblock %}
+
+{% block report_header_title %}Faculty Attendance Statement{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Department:</div>
+    <div class="meta-value">{{ department }}</div>
+    <div class="meta-label">Month:</div>
+    <div class="meta-value">{{ month }}</div>
+</div>
+<div class="meta-row">
+    <div class="meta-label">Academic Year:</div>
+    <div class="meta-value">{{ academic_year or 'N/A' }}</div>
+    <div class="meta-label">Status:</div>
+    <div class="meta-value">Approved Logs</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Faculty ID</th>
+            <th>Faculty Name</th>
+            <th>Designation</th>
+            <th style="text-align: center;">Work Days</th>
+            <th style="text-align: center;">Present</th>
+            <th style="text-align: center;">Absent</th>
+            <th style="text-align: center;">Leaves Taken</th>
+            <th style="text-align: center;">% Attendance</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td>{{ row.employee_id }}</td>
+            <td><strong>{{ row.name }}</strong></td>
+            <td>{{ row.designation }}</td>
+            <td style="text-align: center;">{{ row.working_days }}</td>
+            <td style="text-align: center; color: green; font-weight: bold;">{{ row.present }}</td>
+            <td style="text-align: center; color: red;">{{ row.absent }}</td>
+            <td style="text-align: center; font-weight: bold;">{{ row.leaves }}</td>
+            {% set pct = row.percentage | float %}
+            {% if pct >= 85.0 %}
+            <td style="text-align: center;" class="pct-good">{{ "%.2f" | format(pct) }}%</td>
+            {% else %}
+            <td style="text-align: center;" class="pct-bad">{{ "%.2f" | format(pct) }}%</td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="8" style="text-align: center; color: #777; padding: 20px;">No faculty records found matching these criteria.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block report_summary %}
+<div style="margin-top: 30px; font-size: 8pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px;" class="avoid-break">
+    <p><strong>Note:</strong> Excused leaves include medical leaves and university duty leaves. Faculty members are required to maintain a minimum of 85.00% attendance per month.</p>
+</div>
+{% endblock %}

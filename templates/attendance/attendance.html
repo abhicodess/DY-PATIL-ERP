@@ -1,0 +1,777 @@
+{% extends "attendance/attendance_base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block nav_mark %}active{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/attendance_dashboard">Attendance</a> / Mark{% endblock %}
+
+{% block content %}
+<style>
+  .att-shell {
+    display: grid;
+    gap: 16px
+  }
+
+  .att-banner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, .95fr);
+    gap: 16px
+  }
+
+  .att-banner-main {
+    padding: 24px 26px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 52%, #eef4ff 100%);
+    box-shadow: var(--sh-sm)
+  }
+
+  .att-banner-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #2563eb
+  }
+
+  .att-banner-title {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.12;
+    color: var(--ink);
+    margin-top: 8px;
+    max-width: 15ch
+  }
+
+  .att-banner-copy {
+    font-size: 13px;
+    color: var(--ink3);
+    margin-top: 10px;
+    max-width: 60ch
+  }
+
+  .att-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px
+  }
+
+  .att-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px
+  }
+
+  .att-chip-card {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    box-shadow: var(--sh-sm)
+  }
+
+  .att-chip-label {
+    font-size: 11px;
+    color: var(--ink4);
+    text-transform: uppercase;
+    letter-spacing: .08em
+  }
+
+  .att-chip-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 6px
+  }
+
+  .att-chip-note {
+    font-size: 12px;
+    color: var(--ink3);
+    margin-top: 4px
+  }
+
+  .att-command {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr);
+    gap: 16px
+  }
+
+  .att-workspace {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--sh-sm);
+    overflow: hidden
+  }
+
+  .att-tabbar {
+    display: flex;
+    gap: 4px;
+    padding: 12px 12px 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+    border-bottom: 1px solid var(--border)
+  }
+
+  .att-tab {
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink3);
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid transparent;
+    font-family: inherit
+  }
+
+  .att-tab.active {
+    color: #2563EB;
+    border-bottom-color: #2563EB;
+    background: #fff
+  }
+
+  .att-tab:hover:not(.active) {
+    color: var(--ink1)
+  }
+
+  .att-pane {
+    display: none
+  }
+
+  .att-pane.active {
+    display: block
+  }
+
+  .att-pane-body {
+    padding: 22px
+  }
+
+  .att-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink)
+  }
+
+  .att-section-sub {
+    font-size: 12px;
+    color: var(--ink4);
+    margin-top: 4px
+  }
+
+  .att-grid {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px
+  }
+
+  .att-grid.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .att-grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+  }
+
+  .att-grid.cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr))
+  }
+
+  .form-lbl {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink2);
+    display: block;
+    margin-bottom: 6px
+  }
+
+  .form-inp {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    background: var(--bg1);
+    color: var(--ink1);
+    font-family: inherit;
+    box-sizing: border-box
+  }
+
+  .form-inp:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .1)
+  }
+
+  .status-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap
+  }
+
+  .status-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: .15s;
+    background: var(--white)
+  }
+
+  .status-radio input {
+    display: none
+  }
+
+  .status-radio.checked-P {
+    background: #ECFDF5;
+    border-color: #059669;
+    color: #059669
+  }
+
+  .status-radio.checked-A {
+    background: #FEF2F2;
+    border-color: #DC2626;
+    color: #DC2626
+  }
+
+  .status-radio.checked-L {
+    background: #FFFBEB;
+    border-color: #D97706;
+    color: #D97706
+  }
+
+  .status-radio.checked-LA {
+    background: #EFF6FF;
+    border-color: #2563EB;
+    color: #2563EB
+  }
+
+  .status-radio.checked-M {
+    background: #F5F3FF;
+    border-color: #7C3AED;
+    color: #7C3AED
+  }
+
+  .att-inline-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px
+  }
+
+  .att-side {
+    display: grid;
+    gap: 16px
+  }
+
+  .att-side-card {
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: var(--sh-sm)
+  }
+
+  .att-side-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px
+  }
+
+  .att-side-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink)
+  }
+
+  .att-side-sub {
+    font-size: 12px;
+    color: var(--ink4);
+    margin-top: 3px
+  }
+
+  .att-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border)
+  }
+
+  .att-stat-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0
+  }
+
+  .att-stat-row strong {
+    font-size: 13px;
+    color: var(--ink2)
+  }
+
+  .att-stat-row span {
+    font-size: 12px;
+    color: var(--ink4)
+  }
+
+  .att-mode-list {
+    display: grid;
+    gap: 10px
+  }
+
+  .att-mode-item {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg)
+  }
+
+  .att-mode-item strong {
+    display: block;
+    font-size: 13px;
+    color: var(--ink)
+  }
+
+  .att-mode-item span {
+    display: block;
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 3px
+  }
+
+  .att-bulk-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px
+  }
+
+  .att-upload-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(260px, .95fr);
+    gap: 16px;
+    align-items: start
+  }
+
+  .att-drop {
+    padding: 18px;
+    border: 1.5px dashed #bfdbfe;
+    border-radius: 12px;
+    background: #f8fbff
+  }
+
+  .att-drop .form-lbl {
+    margin-bottom: 10px
+  }
+
+  .att-template {
+    display: grid;
+    gap: 10px
+  }
+
+  .att-template-row {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg)
+  }
+
+  .att-template-row strong {
+    display: block;
+    font-size: 12px;
+    color: var(--ink)
+  }
+
+  .att-template-row span {
+    display: block;
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 3px
+  }
+
+  @media (max-width:1180px) {
+
+    .att-banner,
+    .att-command,
+    .att-upload-grid,
+    .att-grid.cols-4 {
+      grid-template-columns: 1fr
+    }
+  }
+
+  @media (max-width:760px) {
+
+    .att-chip-grid,
+    .att-grid.cols-2,
+    .att-grid.cols-3 {
+      grid-template-columns: 1fr
+    }
+
+    .att-tabbar {
+      flex-wrap: wrap
+    }
+  }
+</style>
+
+{% if request.args.get('saved') %}
+<div class="alert-bar alert-bar-gr fu">
+  <i class="fas fa-circle-check"></i> {{ request.args.get('saved') }} record(s) saved successfully.
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+{% if request.args.get('error') %}
+<div class="alert-bar alert-bar-re fu">
+  <i class="fas fa-circle-exclamation"></i> {{ request.args.get('error') }}
+  <button class="ab-close" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>
+</div>
+{% endif %}
+
+<div class="att-shell">
+  <section class="att-banner fu">
+    <div class="att-banner-main">
+      <div class="att-banner-kicker">Attendance Workspace</div>
+      <div class="att-banner-title">Mark single entries, run a full class, or import real reports.</div>
+      <div class="att-banner-copy">Everything still posts through the existing attendance routes, but the workspace is
+        now arranged for faster daily use.</div>
+      <div class="att-banner-actions">
+        <a href="/view_attendance" class="btn btn-out btn-sm"><i class="fas fa-eye"></i> View Records</a>
+        <a href="/attendance_dashboard" class="btn btn-dark btn-sm"><i class="fas fa-chart-line"></i> Summary
+          Dashboard</a>
+      </div>
+    </div>
+    <div class="att-chip-grid">
+      <div class="att-chip-card">
+        <div class="att-chip-label">Students</div>
+        <div class="att-chip-value">{{ students|length if students is defined else all_students|length }}</div>
+        <div class="att-chip-note">Available to mark from the current master data</div>
+      </div>
+      <div class="att-chip-card">
+        <div class="att-chip-label">Subjects</div>
+        <div class="att-chip-value">{{ subjects|length if subjects is defined else my_subjects|length if my_subjects is
+          defined else 0 }}</div>
+        <div class="att-chip-note">Subjects currently available in this workspace</div>
+      </div>
+      <div class="att-chip-card">
+        <div class="att-chip-label">Divisions</div>
+        <div class="att-chip-value">{{ divs|length if divs is defined else 4 }}</div>
+        <div class="att-chip-note">Supports A, B, C and D attendance tagging</div>
+      </div>
+      <div class="att-chip-card">
+        <div class="att-chip-label">Default Date</div>
+        <div class="att-chip-value" style="font-size:18px">{{ today }}</div>
+        <div class="att-chip-note">Pre-filled for quick class entry</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="att-command fu fu1">
+    <div class="att-workspace">
+      <div class="att-tabbar">
+        <button class="att-tab active" data-tab="single" onclick="switchTab(this,'single')"><i class="fas fa-user"></i>
+          Single Entry</button>
+        <button class="att-tab" data-tab="bulk" onclick="switchTab(this,'bulk')"><i class="fas fa-users"></i> Bulk
+          Class</button>
+        <button class="att-tab" data-tab="excel" onclick="switchTab(this,'excel')"><i class="fas fa-file-excel"></i>
+          Excel Import</button>
+      </div>
+
+      <div class="att-pane active" id="pane-single">
+        <div class="att-pane-body">
+          <div class="att-section-title">Single Attendance Record</div>
+          <div class="att-section-sub">Use this when you need to update one student quickly.</div>
+          <form method="POST" action="/attendance">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="att-grid cols-3">
+              <div>
+                <label class="form-lbl">Student Name <span style="color:#DC2626">*</span></label>
+                <input type="text" name="student_name" class="form-inp" placeholder="Full name" required>
+              </div>
+              <div>
+                <label class="form-lbl">Subject <span style="color:#DC2626">*</span></label>
+                <input type="text" name="subject" class="form-inp" placeholder="Subject name" required>
+              </div>
+              <div>
+                <label class="form-lbl">Date <span style="color:#DC2626">*</span></label>
+                <input type="date" name="date" class="form-inp" value="{{ today }}" required>
+              </div>
+            </div>
+            <div class="att-grid cols-3">
+              <div>
+                <label class="form-lbl">Department</label>
+                <select name="department" class="form-inp">
+                  <option value="">- Select -</option>
+                  {% for d in ['AIML','AIDS','CS','IT'] %}<option>{{ d }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="form-lbl">Division</label>
+                <select name="division" class="form-inp">
+                  <option value="">- Any -</option>
+                  {% for d in ['A','B','C','D'] %}<option>{{ d }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="form-lbl">Time Slot</label>
+                <input type="text" name="time_slot" class="form-inp" placeholder="e.g. 10:30-11:30">
+              </div>
+            </div>
+            <div class="att-grid">
+              <div>
+                <label class="form-lbl">Status <span style="color:#DC2626">*</span></label>
+                <div class="status-group" id="statusRadios">
+                  {% for st, icon, cls in [('Present','fas fa-check','P'),('Absent','fas fa-times','A'),('Leave','fas
+                  fa-file-circle-minus','L'),('Late','fas fa-clock','LA'),('Medical','fas fa-hospital','M')] %}
+                  <label class="status-radio" id="lbl-{{ cls }}" onclick="pickStatus(this,'{{ cls }}')">
+                    <input type="radio" name="status" value="{{ st }}" {% if st=='Present' %}checked{% endif %}>
+                    <i class="{{ icon }}"></i> {{ st }}
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+              <div>
+                <label class="form-lbl">Remark</label>
+                <input type="text" name="remark" class="form-inp" placeholder="Optional note">
+              </div>
+            </div>
+            <div class="att-inline-actions">
+              <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Save Record</button>
+              <button type="reset" class="btn btn-out btn-sm" onclick="resetStatus()"><i class="fas fa-rotate-left"></i>
+                Reset</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="att-pane" id="pane-bulk">
+        <div class="att-pane-body">
+          <div class="att-section-title">Bulk Class Attendance</div>
+          <div class="att-section-sub">Load one class, mark defaults fast, then adjust exceptions before saving.</div>
+          <div class="att-grid cols-4">
+            <div>
+              <label class="form-lbl">Department <span style="color:#DC2626">*</span></label>
+              <select id="bulkDept" class="form-inp" onchange="loadBulk()">
+                <option value="">- Select -</option>
+                {% for d in ['AIML','AIDS','CS','IT'] %}<option>{{ d }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="form-lbl">Division</label>
+              <select id="bulkDiv" class="form-inp" onchange="loadBulk()">
+                <option value="">- Any -</option>
+                {% for d in ['A','B','C','D'] %}<option>{{ d }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="form-lbl">Subject <span style="color:#DC2626">*</span></label>
+              <input type="text" id="bulkSubject" class="form-inp" placeholder="Subject name">
+            </div>
+            <div>
+              <label class="form-lbl">Date</label>
+              <input type="date" id="bulkDate" class="form-inp" value="{{ today }}">
+            </div>
+          </div>
+          <div class="att-bulk-actions">
+            <button class="btn btn-out btn-sm" onclick="markAll('Present')"><i class="fas fa-check-double"></i> All
+              Present</button>
+            <button class="btn btn-out btn-sm" onclick="markAll('Absent')"><i class="fas fa-xmark"></i> All
+              Absent</button>
+          </div>
+          <div id="bulkArea" style="margin-top:16px">
+            <div class="empty-state"><i class="fas fa-users"></i>
+              <p>Select department to load students</p>
+            </div>
+          </div>
+          <form method="POST" action="/attendance_bulk" id="bulkForm">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div id="bulkHidden"></div>
+            <div class="att-inline-actions">
+              <button type="button" class="btn btn-dark btn-sm" onclick="submitBulk()"><i class="fas fa-save"></i> Save
+                Bulk Attendance</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="att-pane" id="pane-excel">
+        <div class="att-pane-body">
+          <div class="att-section-title">Excel Attendance Import</div>
+          <div class="att-section-sub">Supports the flat template and the messy final attendance report files you
+            shared.</div>
+          <div class="att-upload-grid" style="margin-top:18px">
+            <div class="att-drop">
+              <form method="POST" action="/import_attendance_excel" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <label class="form-lbl">Excel File (.xlsx)</label>
+                <input type="file" name="file" accept=".xlsx,.xls" required class="form-inp" style="background:#fff">
+                <div class="att-inline-actions">
+                  <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-upload"></i> Import File</button>
+                  <a href="/download_attendance_template" class="btn btn-out btn-sm"><i class="fas fa-download"></i>
+                    Download Template</a>
+                </div>
+              </form>
+            </div>
+            <div class="att-template">
+              <div class="att-template-row">
+                <strong>Accepted final report format</strong>
+                <span>Division A and Division B final attendance reports with metadata and shifted headers.</span>
+              </div>
+              <div class="att-template-row">
+                <strong>Simple template format</strong>
+                <span>student_name, subject, date, status, and optional remark columns.</span>
+              </div>
+              <div class="att-template-row">
+                <strong>Processing behavior</strong>
+                <span>Header detection, cleanup, normalization, duplicate-safe save, and batch backup.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="att-side">
+      <div class="att-side-card">
+        <div class="att-side-head">
+          <div>
+            <div class="att-side-title">How This Flows</div>
+            <div class="att-side-sub">A quick guide for the team using this page</div>
+          </div>
+        </div>
+        <div class="att-mode-list">
+          <div class="att-mode-item"><strong>Single Entry</strong><span>Best for corrections, medical notes, and one-off
+              cases.</span></div>
+          <div class="att-mode-item"><strong>Bulk Class</strong><span>Load a full class list, set a default, then flip
+              exceptions.</span></div>
+          <div class="att-mode-item"><strong>Excel Import</strong><span>Use for final report files or prepared template
+              sheets.</span></div>
+        </div>
+      </div>
+
+      <div class="att-side-card">
+        <div class="att-side-head">
+          <div>
+            <div class="att-side-title">What Is Ready</div>
+            <div class="att-side-sub">Data available in the current attendance workspace</div>
+          </div>
+        </div>
+        <div class="att-stat-row"><strong>Students loaded</strong><span>{{ students|length if students is defined else
+            all_students|length }}</span></div>
+        <div class="att-stat-row"><strong>Subjects available</strong><span>{{ subjects|length if subjects is defined
+            else my_subjects|length if my_subjects is defined else 0 }}</span></div>
+        <div class="att-stat-row"><strong>Valid divisions</strong><span>A, B, C, D</span></div>
+        <div class="att-stat-row"><strong>Import support</strong><span>Template + final report</span></div>
+      </div>
+
+      <div class="att-side-card">
+        <div class="att-side-head">
+          <div>
+            <div class="att-side-title">Go Next</div>
+            <div class="att-side-sub">Keep related attendance work one click away</div>
+          </div>
+        </div>
+        <div class="att-mode-list">
+          <a href="/attendance_dashboard" class="att-mode-item"><strong>Summary Dashboard</strong><span>See health,
+              defaulters, and toppers.</span></a>
+          <a href="/view_attendance" class="att-mode-item"><strong>View Records</strong><span>Search the saved entries
+              and edit them safely.</span></a>
+          <a href="/shortage_report" class="att-mode-item"><strong>Shortage Alert</strong><span>Open the attendance risk
+              list for follow-up.</span></a>
+        </div>
+      </div>
+    </aside>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var allStudents = [];
+
+  function switchTab(el, name) {
+    document.querySelectorAll('.att-tab').forEach(function (t) { t.classList.remove('active'); });
+    document.querySelectorAll('.att-pane').forEach(function (p) { p.classList.remove('active'); });
+    el.classList.add('active');
+    document.getElementById('pane-' + name).classList.add('active');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { pickStatus(document.getElementById('lbl-P'), 'P'); });
+  function pickStatus(lbl, cls) {
+    document.querySelectorAll('.status-radio').forEach(function (l) { l.className = 'status-radio'; });
+    lbl.classList.add('checked-' + cls);
+    lbl.querySelector('input').checked = true;
+  }
+  function resetStatus() { pickStatus(document.getElementById('lbl-P'), 'P'); }
+
+  function loadBulk() {
+    var dept = document.getElementById('bulkDept').value;
+    var div = document.getElementById('bulkDiv').value;
+    if (!dept) {
+      document.getElementById('bulkArea').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>Select department first</p></div>';
+      return;
+    }
+    fetch('/api/students_by_dept?dept=' + encodeURIComponent(dept) + '&div=' + encodeURIComponent(div))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { allStudents = data; renderBulk(data); })
+      .catch(function () { document.getElementById('bulkArea').innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Could not load students</p></div>'; });
+  }
+
+  var statusColors = { Present: '#059669', Absent: '#DC2626', Leave: '#D97706', Late: '#2563EB', Medical: '#7C3AED' };
+
+  function renderBulk(students) {
+    if (!students.length) {
+      document.getElementById('bulkArea').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No students found</p></div>';
+      return;
+    }
+    var html = '<table class="tbl"><thead><tr><th>#</th><th>Student</th><th>PRN Number</th><th>Division</th>';
+    ['Present', 'Absent', 'Leave', 'Late', 'Medical'].forEach(function (st) {
+      html += '<th style="text-align:center;color:' + statusColors[st] + '">' + st + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    students.forEach(function (s, i) {
+      var n = 'bst_' + s.id;
+      html += '<tr><td style="color:var(--ink4);font-size:12px">' + (i + 1) + '</td>';
+      html += '<td><div class="flex-ac gap8"><div class="av av-sm" style="background:#2563EB">' + (s.name[0]||'?').toUpperCase() + '</div>' + s.name + '</div></td>';
+      html += '<td style="font-size:11px;font-weight:700;color:var(--green)">' + (s.prn || s.roll || 'N/A') + '</td>';
+      html += '<td><span class="tag t-bl">' + (s.division || '-') + '</span></td>';
+      ['Present', 'Absent', 'Leave', 'Late', 'Medical'].forEach(function (st) {
+        html += '<td style="text-align:center"><input type="radio" name="' + n + '" value="' + st + '"' + (st === 'Present' ? ' checked' : '') + '></td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('bulkArea').innerHTML = html;
+  }
+
+  function markAll(status) {
+    allStudents.forEach(function (s) {
+      var r = document.querySelector('input[name="bst_' + s.id + '"][value="' + status + '"]');
+      if (r) r.checked = true;
+    });
+  }
+
+  function submitBulk() {
+    var subject = document.getElementById('bulkSubject').value.trim();
+    var date = document.getElementById('bulkDate').value;
+    if (!subject) { alert('Please enter a subject.'); return; }
+    if (!allStudents.length) { alert('No students loaded.'); return; }
+    var hidden = document.getElementById('bulkHidden');
+    hidden.innerHTML = '';
+    function h(n, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; hidden.appendChild(i); }
+    h('subject', subject);
+    h('date', date);
+    allStudents.forEach(function (s) {
+      var sel = document.querySelector('input[name="bst_' + s.id + '"]:checked');
+      h('student_id[]', s.id);
+      h('student_name[]', s.name);
+      h('status[]', sel ? sel.value : 'Absent');
+    });
+    document.getElementById('bulkForm').submit();
+  }
+</script>
+{% endblock %}

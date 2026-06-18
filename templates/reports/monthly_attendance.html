@@ -1,0 +1,104 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Monthly Attendance Summary{% endblock %}
+
+{% block report_styles %}
+.pct-high { background-color: #d4edda !important; color: #155724; font-weight: bold; }
+.pct-mid { background-color: #fff3cd !important; color: #856404; font-weight: bold; }
+.pct-low { background-color: #f8d7da !important; color: #721c24; font-weight: bold; }
+.chart-container {
+    text-align: center;
+    margin-top: 30px;
+    page-break-before: always;
+}
+.chart-img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+}
+{% endblock %}
+
+{% block report_header_title %}Monthly Attendance Summary{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Department:</div>
+    <div class="meta-value">{{ department }}</div>
+    <div class="meta-label">Academic Year:</div>
+    <div class="meta-value">{{ academic_year }}</div>
+</div>
+<div class="meta-row">
+    <div class="meta-label">Month:</div>
+    <div class="meta-value">{{ month }}</div>
+    <div class="meta-label">Division:</div>
+    <div class="meta-value">{{ division or 'All' }} (Year: {{ year or 'All' }})</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Roll No</th>
+            <th>Student Name</th>
+            <th style="text-align: center;">Total Classes</th>
+            <th style="text-align: center;">Present</th>
+            <th style="text-align: center;">Absent</th>
+            <th style="text-align: center;">Percentage</th>
+            <th style="text-align: center;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td>{{ row.roll }}</td>
+            <td>{{ row.name }}</td>
+            <td style="text-align: center;">{{ row.total }}</td>
+            <td style="text-align: center; color: green; font-weight: bold;">{{ row.present }}</td>
+            <td style="text-align: center; color: red;">{{ row.absent }}</td>
+            {% set pct = row.percentage | float %}
+            {% if pct >= 75.0 %}
+                <td style="text-align: center;" class="pct-high">{{ "%.2f" | format(pct) }}%</td>
+                <td style="text-align: center;"><span class="badge badge-green">&#10003; OK</span></td>
+            {% elif pct >= 60.0 %}
+                <td style="text-align: center;" class="pct-mid">{{ "%.2f" | format(pct) }}%</td>
+                <td style="text-align: center;"><span class="badge badge-amber">&#9888; Low</span></td>
+            {% else %}
+                <td style="text-align: center;" class="pct-low">{{ "%.2f" | format(pct) }}%</td>
+                <td style="text-align: center;"><span class="badge badge-red">&#10007; Defaulter</span></td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align: center; color: #777;">No student records found matching the filters.</td>
+        </tr>
+        {% endfor %}
+        
+        {% if data %}
+        <tr class="summary-row">
+            <td colspan="2">Class Metrics</td>
+            <td style="text-align: center;">{{ total_classes_avg or '-' }}</td>
+            <td style="text-align: center;">-</td>
+            <td style="text-align: center;">-</td>
+            <td style="text-align: center;">{{ "%.2f" | format(class_average) }}%</td>
+            <td style="text-align: center;">Defaulters: {{ defaulter_count }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+
+{% if chart_img %}
+<div class="chart-container">
+    <h2>Attendance Visualization</h2>
+    <img src="data:image/png;base64,{{ chart_img }}" class="chart-img" alt="Attendance Chart">
+</div>
+{% endif %}
+{% endblock %}
+
+{% block report_summary %}
+<div style="margin-top: 30px; font-size: 8pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px;" class="avoid-break">
+    <p><strong>Note:</strong> Attendance criteria requires a minimum of 75.00% as per university academic regulations. Students with less than 75.00% attendance will be subject to disciplinary action.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+# Dependency directories
+venv/
+.venv/
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+college.db
+*.sqlite3
+archive_db/
+instance/
+
+# Log files
+*.log
+logs/
+
+# Pycache / Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Uploads and Backups
+uploads/
+backups/
+config.zip
+
+# Local history/IDE files/OS metadata
+.history/
+.cursor/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test coverage reports
+htmlcov/
+.pytest_cache/
+.coverage
+

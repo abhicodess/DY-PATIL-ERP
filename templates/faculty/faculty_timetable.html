@@ -1,0 +1,496 @@
+{% extends "common/base.html" %}
+{% block title %}My Timetable{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}My Timetable{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Timetable{% endblock %}
+{% block topbar_extras %}{% endblock %}
+
+{% block content %}
+<style>
+/* ══ FACULTY TIMETABLE ═══════════════════════════════════ */
+.tt-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);box-shadow:var(--sh-sm);background:var(--white)}
+.tt-tbl{border-collapse:collapse;min-width:800px;table-layout:fixed}
+.tt-tbl thead th{
+  background:#0F172A;color:rgba(255,255,255,.88);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;padding:12px 8px;text-align:center;
+  border-right:1px solid rgba(255,255,255,.06);white-space:nowrap;min-width:150px;width:150px
+}
+.tt-tbl thead th:first-child{width:110px;min-width:110px;position:sticky;left:0;z-index:20;background:#0F172A;text-align:left;padding-left:14px}
+.tt-tbl thead th.hl{background:#5B21B6}
+.tt-time{background:#F8FAFC;padding:8px 14px;text-align:left;vertical-align:top;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:10;min-width:110px}
+.tt-day-name{font-size:13px;font-weight:700;color:var(--ink)}
+.tt-day-sub{font-size:10px;color:var(--ink4)}
+.tt-today .tt-day-name{color:#7C3AED}
+.tt-today{background:#F5F3FF}
+.today-badge{font-size:9px;background:#7C3AED;color:#fff;padding:1px 5px;border-radius:3px;margin-top:2px;display:inline-block}
+.tt-cell{padding:5px;vertical-align:top;border-right:1px solid var(--border);border-bottom:1px solid var(--border);width:150px;background:var(--white)}
+.tt-tbl tbody tr:last-child .tt-cell,.tt-tbl tbody tr:last-child .tt-time{border-bottom:none}
+
+/* Slot card — faculty style */
+.fsc{border-radius:8px;padding:9px 11px;margin-bottom:3px;border-left:3px solid #7C3AED;background:#F5F3FF;position:relative;transition:all .14s}
+.fsc:last-child{margin-bottom:0}
+.fsc:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.15)}
+.fsc.ty{background:#EFF6FF;border-left-color:#2563EB}
+.fsc.la{background:#F5F3FF;border-left-color:#7C3AED}
+.fsc.el{background:#ECFDF5;border-left-color:#059669}
+.fsc.mi{background:#FFFBEB;border-left-color:#D97706}
+.fsc.pr{background:#ECFEFF;border-left-color:#0891B2}
+.fsc-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3;padding-right:22px}
+.fsc-meta{font-size:10px;color:var(--ink3);margin-top:3px;display:flex;align-items:center;gap:4px}
+.fsc-foot{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.fsc-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.fsc-div{font-size:9px;color:var(--ink4);font-family:var(--mono)}
+.fsc-tip{position:absolute;bottom:calc(100% + 6px);left:0;background:#1E293B;color:#fff;border-radius:7px;padding:9px 13px;font-size:11px;z-index:9999;display:none;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:none;line-height:1.7}
+.fsc-tip::after{content:'';position:absolute;top:100%;left:14px;border:5px solid transparent;border-top-color:#1E293B}
+.fsc:hover .fsc-tip{display:block}
+
+/* 3-dot menu */
+.dot-btn{position:absolute;top:5px;right:4px;width:20px;height:20px;border-radius:4px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;font-size:12px;color:var(--ink3)}
+.fsc:hover .dot-btn{opacity:1}
+.dot-btn:hover{background:rgba(0,0,0,.1);color:var(--ink)}
+.sc-drop{position:absolute;top:26px;right:0;z-index:9999;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:0 10px 30px rgba(0,0,0,.13);min-width:165px;display:none}
+.sc-drop.open{display:block}
+.ddi{display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:var(--font);transition:background .1s}
+.ddi:hover{background:var(--bg)}
+
+/* Empty cell */
+.empty-cell{height:42px;border:2px dashed var(--border2);border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink4)}
+
+/* Filter bar */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)}
+.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none}
+.ff.on{border-color:#7C3AED;background:var(--violet-s);color:#7C3AED;font-weight:600}
+
+/* Stats */
+.tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tts{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 16px;flex:1;min-width:90px;display:flex;align-items:center;gap:10px}
+.tts-v{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--ink)}
+.tts-l{font-size:10px;color:var(--ink3)}
+
+/* View toggle */
+.vtog{display:flex;background:var(--bg2);border-radius:8px;padding:3px;gap:2px}
+.vtb{padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .15s;background:none;font-family:var(--font)}
+.vtb.on{background:var(--white);color:#7C3AED;box-shadow:var(--sh-sm)}
+
+/* Legend */
+.leg{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:8px 14px;background:var(--bg);border-radius:var(--r-sm);margin-bottom:12px;font-size:11px}
+.li{display:flex;align-items:center;gap:4px;font-weight:600;color:var(--ink3)}
+.ldot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
+#toast.ok{background:#ECFDF5;color:#065f46;border:1px solid #A7F3D0}
+#toast.err{background:#FEF2F2;color:#991b1b;border:1px solid #FECACA}
+
+@media print{.sidebar,.topbar,.fbar,.tts-row,.leg,.dot-btn,.modal-bg,button,form,.vtog,#toast{display:none!important}.main{margin:0!important;padding:8px!important}.fsc{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+
+<!-- HEADER -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">My Weekly Schedule</div>
+    <div class="ph-sub">{{ total }} slots · {{ days_active }} active days · {{ session.name }}</div>
+  </div>
+  <div class="ph-actions">
+    <div class="vtog">
+      <button class="vtb {{ 'on' if view=='grid' else '' }}" id="vgrid" onclick="setView('grid',this)"><i class="fas fa-table-cells"></i> Grid</button>
+      <button class="vtb {{ 'on' if view=='list' else '' }}" id="vlist" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
+    </div>
+    <button onclick="window.print()" class="btn btn-out btn-sm"><i class="fas fa-print"></i> Print</button>
+    <button onclick="openBroadcastModal()" class="btn btn-vi btn-sm"><i class="fas fa-paper-plane"></i> Broadcast to Students</button>
+    <button onclick="toggleEditMode()" id="editBtn" class="btn btn-out btn-sm"><i class="fas fa-edit"></i> Manage Timetable</button>
+    <a href="/messages" class="btn btn-dark btn-sm"><i class="fas fa-envelope"></i> Check Inbox</a>
+  </div>
+</div>
+
+<!-- Broadcast Modal -->
+<div id="broadcastModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+  <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
+      <h3 style="margin:0"><i class="fas fa-bullhorn" style="color:var(--violet)"></i> Notify Students</h3>
+      <span class="close" onclick="closeBroadcastModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+    </div>
+    <form id="broadcastForm">
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Select Branch / Department</label>
+        <select name="department" class="ff" style="width:100%">
+          <option value="All">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Select Year</label>
+        <select name="year" class="ff" style="width:100%">
+          <option value="All">All Years</option>
+          <option value="FE">First Year (FE)</option>
+          <option value="SE">Second Year (SE)</option>
+          <option value="TE">Third Year (TE)</option>
+          <option value="BE">Final Year (BE)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Select Division</label>
+        <select name="division" class="ff" style="width:100%">
+          <option value="All">All Divisions</option>
+          <option value="A">Division A</option>
+          <option value="B">Division B</option>
+          <option value="C">Division C</option>
+        </select>
+      </div>
+      <div style="font-size:11px; color:#666; margin-bottom:20px; line-height:1.4">
+        <i class="fas fa-info-circle"></i> This will send a notification to all students in the selected criteria with a link to view your live schedule.
+      </div>
+      <div style="text-align:right">
+        <button type="button" class="btn btn-out" onclick="closeBroadcastModal()">Cancel</button>
+        <button type="submit" class="btn btn-vi">Send Notification</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if request.args.get('saved') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot updated.</span></div>{% endif %}
+{% if not all_entries %}
+<div class="alert al-info fu"><i class="fas fa-circle-info"></i><span>No timetable slots assigned to you yet. Your admin needs to assign slots with your name in the Timetable module. You can also check your <a href="/messages" style="font-weight:700;color:var(--blue)">Messages</a> for your schedule from admin.</span></div>
+{% endif %}
+
+<!-- STATS -->
+<div class="tts-row fu fu1">
+  <div class="tts"><div class="sico ic-vi"><i class="fas fa-table-cells"></i></div><div><div class="tts-v">{{ total }}</div><div class="tts-l">Total Slots</div></div></div>
+  <div class="tts"><div class="sico ic-bl"><i class="fas fa-book-open"></i></div><div><div class="tts-v">{{ theory }}</div><div class="tts-l">Theory</div></div></div>
+  <div class="tts"><div class="sico ic-vi"><i class="fas fa-flask"></i></div><div><div class="tts-v">{{ lab }}</div><div class="tts-l">Lab</div></div></div>
+  <div class="tts"><div class="sico ic-gr"><i class="fas fa-calendar-days"></i></div><div><div class="tts-v">{{ days_active }}</div><div class="tts-l">Active Days</div></div></div>
+  <div class="tts"><div class="sico ic-am"><i class="fas fa-clock"></i></div><div><div class="tts-v">{{ time_slots|length }}</div><div class="tts-l">Time Slots</div></div></div>
+</div>
+
+<!-- LEGEND -->
+<div class="leg fu">
+  <strong style="color:var(--ink2);margin-right:4px">Type:</strong>
+  <div class="li"><div class="ldot" style="background:#2563EB"></div>Theory</div>
+  <div class="li"><div class="ldot" style="background:#7C3AED"></div>Lab</div>
+  <div class="li"><div class="ldot" style="background:#059669"></div>Elective</div>
+  <div class="li"><div class="ldot" style="background:#D97706"></div>Minor</div>
+</div>
+
+<!-- FILTER BAR -->
+<form method="GET" action="/faculty_timetable" class="fbar fu">
+  <input type="hidden" name="view" value="{{ view }}">
+  {% for day in DAYS %}
+  <button type="submit" name="day" value="{{ '' if f_day==day else day }}"
+          class="btn btn-sm {{ 'btn-vi' if f_day==day else 'btn-out' }}"
+          style="min-width:64px">{{ day[:3] }}</button>
+  {% endfor %}
+  <select class="ff {{ 'on' if f_type }}" name="slot_type" onchange="this.form.submit()">
+    <option value="">All Types</option>
+    <option value="Theory"   {{ 'selected' if f_type=='Theory' }}>Theory</option>
+    <option value="Lab"      {{ 'selected' if f_type=='Lab' }}>Lab</option>
+    <option value="Elective" {{ 'selected' if f_type=='Elective' }}>Elective</option>
+    <option value="Minor"    {{ 'selected' if f_type=='Minor' }}>Minor</option>
+  </select>
+  {% if f_day or f_type %}<a href="/faculty_timetable?view={{ view }}" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Reset</a>{% endif %}
+</form>
+
+{% if f_day or f_type %}
+<div class="alert al-info fu" style="margin-bottom:12px"><i class="fas fa-filter"></i> Showing <strong>{{ entries|length }}</strong> filtered slots — <a href="/faculty_timetable?view={{ view }}" style="color:var(--blue);font-weight:600">Clear →</a></div>
+{% endif %}
+
+<!-- ══ GRID VIEW ═════════════════════════════════════════ -->
+<div id="vwGrid" class="fu fu2" {% if view=='list' %}style="display:none"{% endif %}>
+{% if time_slots %}
+<div class="tt-wrap">
+  <table class="tt-tbl">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding-left:14px;font-size:11px;color:rgba(255,255,255,.5)">
+          <i class="fas fa-calendar-week" style="margin-right:6px"></i>DAY / TIME
+        </th>
+        {% for ts in time_slots %}
+        <th>{{ ts }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for day in DAYS %}
+      {% set dstot = namespace(n=0) %}{% for ts2 in time_slots %}{% set dstot.n = dstot.n + grid[day][ts2]|length %}{% endfor %}
+      <tr>
+        <td class="tt-time {{ 'tt-today' if day==today_name }}">
+          <div class="tt-day-name">{{ day }}</div>
+          <div class="tt-day-sub">{{ dstot.n }} slots</div>
+          {% if day==today_name %}<span class="today-badge">TODAY</span>{% endif %}
+        </td>
+        {% for ts in time_slots %}
+        {% set slots = grid[day][ts] %}
+        <td class="tt-cell">
+          {% set vis = namespace(n=0) %}
+          {% for slot in slots %}
+          {% if (not f_day and not f_type) or (not f_day or slot.day==f_day) and (not f_type or (slot.slot_type or 'Theory')==f_type) %}
+          {% set vis.n = vis.n+1 %}
+          {% set st = slot.slot_type or 'Theory' %}
+          {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
+          <div class="fsc {{ cls }}" id="fsc{{ slot.id }}"
+               data-id="{{ slot.id }}"
+               data-day="{{ slot.day }}"
+               data-time="{{ slot.time }}"
+               data-subject="{{ slot.subject }}"
+               data-type="{{ st }}"
+               data-room="{{ slot.room or '' }}"
+               data-division="{{ slot.division or '' }}">
+
+            <!-- Tooltip -->
+            <div class="fsc-tip">
+              <div style="font-weight:700;font-size:12px;margin-bottom:4px">{{ slot.subject }}</div>
+              {% if slot.room %}<div><i class="fas fa-door-open" style="opacity:.6;width:12px"></i> {{ slot.room }}</div>{% endif %}
+              {% if slot.division %}<div><i class="fas fa-users" style="opacity:.6;width:12px"></i> {{ slot.division }}</div>{% endif %}
+              <div style="opacity:.5;font-size:10px;margin-top:4px">{{ st }} · {{ day }} · {{ ts }}</div>
+            </div>
+
+            <!-- 3-dot menu -->
+            <button class="dot-btn" onclick="event.stopPropagation();DD.toggle({{ slot.id }})" title="Options">
+              <i class="fas fa-ellipsis-vertical"></i>
+            </button>
+            <div class="sc-drop" id="dd{{ slot.id }}">
+              <div class="ddi" style="background:var(--violet-s);color:#7C3AED;font-weight:700;font-size:11px;padding:8px 14px;cursor:default">{{ slot.subject[:28] }}</div>
+              <a class="ddi edit-only" style="display:none" href="javascript:void(0)" onclick="openEditModal({{ slot.id }})"><i class="fas fa-edit" style="color:var(--blue);width:14px"></i> Edit Slot</a>
+              <a class="ddi" href="/faculty/create_session_from_slot/{{ slot.id }}"><i class="fas fa-calendar-check" style="color:var(--green);width:14px"></i> Mark Attendance</a>
+              <a class="ddi" href="/view_attendance?subject={{ slot.subject|urlencode }}"><i class="fas fa-eye" style="color:var(--blue);width:14px"></i> View Records</a>
+              <a class="ddi" href="/faculty_marks?subject={{ slot.subject|urlencode }}"><i class="fas fa-star" style="color:var(--amber);width:14px"></i> View Marks</a>
+            </div>
+
+            <div class="fsc-name">{{ slot.subject }}</div>
+            {% if slot.room %}
+            <div class="fsc-meta"><i class="fas fa-door-open" style="font-size:9px;flex-shrink:0"></i> {{ slot.room }}</div>
+            {% endif %}
+            <div class="fsc-foot">
+              <span class="fsc-badge" style="{% if cls=='la' %}background:var(--violet-s);color:var(--violet){% elif cls=='el' %}background:var(--green-s);color:var(--green){% elif cls=='mi' %}background:var(--amber-s);color:var(--amber){% else %}background:var(--blue-s);color:var(--blue){% endif %}">{{ st }}</span>
+              {% if slot.division %}<span class="fsc-div">{{ slot.division }}</span>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% if vis.n == 0 %}
+          <div class="empty-cell">—</div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><div class="cb">
+  <div class="empty-state" style="padding:60px">
+    <i class="fas fa-table-cells" style="font-size:36px;color:var(--ink4)"></i>
+    <p style="font-size:15px;font-weight:600;margin-top:14px">No timetable assigned</p>
+    <p style="font-size:13px;margin-top:6px;color:var(--ink3)">Ask your admin to assign timetable slots with your name.</p>
+    <a href="/messages" class="btn btn-vi" style="margin-top:16px"><i class="fas fa-envelope"></i> Check Messages from Admin</a>
+  </div>
+</div></div>
+{% endif %}
+</div>
+
+<!-- ══ LIST VIEW ══════════════════════════════════════════ -->
+<div id="vwList" class="fu fu2" {% if view!='list' %}style="display:none"{% endif %}>
+  <div class="card">
+    <div class="ch flex-sb">
+      <div><div class="ct">My Schedule</div><div class="cs">{{ entries|length }} slots</div></div>
+    </div>
+    <div class="cb p0" style="padding-top:0">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Day</th><th>Time</th><th>Subject</th><th>Room</th><th>Type</th><th>Division</th><th>Quick Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set dc = {'Monday':'t-bl','Tuesday':'t-vi','Wednesday':'t-gr','Thursday':'t-am','Friday':'t-te','Saturday':'t-re'} %}
+          {% for e in entries %}
+          <tr {% if e.day==today_name %}style="background:var(--violet-s)"{% endif %}>
+            <td>
+              <span class="tag {{ dc.get(e.day,'t-nn') }}">{{ e.day }}</span>
+              {% if e.day==today_name %}<span style="font-size:9px;background:#7C3AED;color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">TODAY</span>{% endif %}
+            </td>
+            <td class="mono" style="font-size:12px;font-weight:600;white-space:nowrap">{{ e.time }}</td>
+            <td><strong>{{ e.subject }}</strong></td>
+            <td style="font-size:12px;color:var(--ink3)">{{ e.room or '—' }}</td>
+            <td>
+              <span class="tag {% if e.slot_type=='Lab' %}t-vi{% elif e.slot_type=='Elective' %}t-gr{% elif e.slot_type=='Minor' %}t-am{% else %}t-bl{% endif %}">
+                {{ e.slot_type or 'Theory' }}
+              </span>
+            </td>
+            <td style="font-size:12px;color:var(--ink4)">{{ e.division or '—' }}</td>
+            <td>
+              <div class="flex-ac gap5">
+                <a href="/faculty/create_session_from_slot/{{ e.id }}" class="btn btn-gr btn-sm" title="Mark Attendance"><i class="fas fa-calendar-check"></i></a>
+                <a href="/view_attendance?subject={{ e.subject|urlencode }}" class="btn btn-out btn-sm" title="View Records"><i class="fas fa-eye"></i></a>
+                <a href="/faculty_marks?subject={{ e.subject|urlencode }}" class="btn btn-am btn-sm" title="Marks"><i class="fas fa-star"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7">
+            <div class="empty-state" style="padding:40px">
+              <i class="fas fa-calendar"></i>
+              <p>No slots found. <a href="/faculty_timetable" style="color:var(--violet)">Clear filters →</a></p>
+            </div>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TODAY'S SCHEDULE SUMMARY ══════════════════════════ -->
+{% set today_slots = all_entries | selectattr('day','equalto',today_name) | list %}
+{% if today_slots %}
+<div class="card mt16 fu fu3" style="border-left:4px solid #7C3AED">
+  <div class="ch flex-sb">
+    <div>
+      <div class="ct" style="color:#7C3AED"><i class="fas fa-star"></i> Today — {{ today_name }}</div>
+      <div class="cs">{{ today_slots|length }} lectures scheduled</div>
+    </div>
+  </div>
+  <div class="cb p0" style="padding-top:0">
+    {% for slot in today_slots|sort(attribute='time') %}
+    <div style="display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border)">
+      <span class="mono" style="font-size:12px;font-weight:700;color:#7C3AED">{{ slot.time }}</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ slot.subject }}</div>
+        <div style="font-size:11px;color:var(--ink3)">
+          {% if slot.room %}<i class="fas fa-door-open" style="font-size:9px"></i> {{ slot.room }} &nbsp;{% endif %}
+          {% if slot.division %}<i class="fas fa-users" style="font-size:9px"></i> {{ slot.division }}{% endif %}
+        </div>
+      </div>
+      <div class="flex-ac gap5">
+        <a href="/faculty/create_session_from_slot/{{ slot.id }}" class="btn btn-vi btn-sm"><i class="fas fa-calendar-check"></i> Mark</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Edit Slot Modal -->
+<div id="editSlotModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+  <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
+      <h3 style="margin:0"><i class="fas fa-edit" style="color:var(--blue)"></i> Edit Lecture Slot</h3>
+      <span class="close" onclick="closeEditModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+    </div>
+    <form id="editSlotForm">
+      <input type="hidden" name="id" id="edit-id">
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Subject Name</label>
+        <input type="text" name="subject" id="edit-subject" class="ff" style="width:100%" required>
+      </div>
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px">
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Room / Lab</label>
+          <input type="text" name="room" id="edit-room" class="ff" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division</label>
+          <input type="text" name="division" id="edit-division" class="ff" style="width:100%">
+        </div>
+      </div>
+      <div style="text-align:right">
+        <button type="button" class="btn btn-out" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// View toggle
+function setView(v, btn){
+  document.getElementById('vwGrid').style.display = v==='grid' ? '' : 'none';
+  document.getElementById('vwList').style.display = v==='list' ? '' : 'none';
+  document.querySelectorAll('.vtb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  document.querySelectorAll('input[name="view"]').forEach(function(i){ i.value=v; });
+}
+
+// Dropdown
+var DD = {
+  toggle: function(id){
+    var dd=document.getElementById('dd'+id);
+    var was=dd.classList.contains('open');
+    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+    if(!was) dd.classList.add('open');
+  }
+};
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.dot-btn') && !e.target.closest('.sc-drop')){
+    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+  }
+});
+
+// Broadcast
+function openBroadcastModal() { document.getElementById('broadcastModal').style.display = 'block'; }
+function closeBroadcastModal() { document.getElementById('broadcastModal').style.display = 'none'; }
+document.getElementById('broadcastForm').onsubmit = function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch('/api/send_timetable', { method: 'POST', body: fd, headers: {'X-CSRF-Token': '{{ csrf_token() }}'} })
+    .then(r => r.json()).then(data => {
+      showToast('Notification sent to ' + data.sent + ' students!', 'ok');
+      closeBroadcastModal();
+    });
+};
+
+// Edit Mode
+let editMode = false;
+function toggleEditMode() {
+  editMode = !editMode;
+  document.getElementById('editBtn').classList.toggle('btn-primary', editMode);
+  document.getElementById('editBtn').classList.toggle('btn-out', !editMode);
+  document.querySelectorAll('.edit-only').forEach(el => el.style.display = editMode ? 'flex' : 'none');
+  showToast(editMode ? 'Edit Mode Enabled' : 'Edit Mode Disabled', 'warn');
+}
+
+function openEditModal(id) {
+  const card = document.getElementById('fsc' + id);
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-subject').value = card.dataset.subject;
+  document.getElementById('edit-room').value = card.dataset.room;
+  document.getElementById('edit-division').value = card.dataset.division;
+  document.getElementById('editSlotModal').style.display = 'block';
+}
+function closeEditModal() { document.getElementById('editSlotModal').style.display = 'none'; }
+
+document.getElementById('editSlotForm').onsubmit = function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch('/api/save_timetable_slot', { method: 'POST', body: fd, headers: {'X-CSRF-Token': '{{ csrf_token() }}'} })
+    .then(r => r.json()).then(data => {
+      showToast('Slot updated successfully!', 'ok');
+      setTimeout(() => location.reload(), 1000);
+    });
+};
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.className = 'ok';
+  if(type==='err') t.className = 'err';
+  if(type==='warn') t.className = 'warn';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// Keyboard
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') {
+    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+    closeBroadcastModal();
+    closeEditModal();
+  }
+});
+</script>
+{% endblock %}

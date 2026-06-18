@@ -1,0 +1,127 @@
+{% extends "common/base.html" %}
+
+{% block page_title %}Faculty Leave Requests{% endblock %}
+
+{% block content %}
+<div class="ph">
+    <div class="ph-title">
+        <div class="ct">Leave Requests</div>
+        <div class="ph-sub">Manage faculty leave applications and view history</div>
+    </div>
+</div>
+
+<div class="card mb20">
+    <div class="ch">
+        <div class="ct">Pending Requests ({{ requests|length }})</div>
+    </div>
+    <div class="cb p0">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Faculty</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Reason</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td>
+                        <b>{{ r.faculty_name }}</b>
+                        <div class="small t-nn">{{ r.department }}</div>
+                    </td>
+                    <td><span class="tag t-vi">{{ r.leave_type }}</span></td>
+                    <td>
+                        <div class="mono small">{{ r.from_date }}</div>
+                        <div class="small t-nn">to {{ r.to_date }}</div>
+                    </td>
+                    <td style="max-width:200px;"><div class="small">{{ r.reason }}</div></td>
+                    <td>
+                        <button class="btn btn-gr btn-sm" onclick="openApprovalModal('{{ r.id }}', '{{ r.faculty_name }}', 'approved')">Approve</button>
+                        <button class="btn btn-re btn-sm" onclick="openApprovalModal('{{ r.id }}', '{{ r.faculty_name }}', 'rejected')">Reject</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty-state">No pending requests.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="ch">
+        <div class="ct">Recent History</div>
+    </div>
+    <div class="cb p0">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Faculty</th>
+                    <th>Dates</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td>{{ h.faculty_name }}</td>
+                    <td><span class="small">{{ h.from_date }} - {{ h.to_date }}</span></td>
+                    <td>
+                        {% if h.status == 'approved' %}
+                        <span class="tag t-gr">Approved</span>
+                        {% else %}
+                        <span class="tag t-re">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td><div class="small">{{ h.remarks }}</div></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal-bg" id="approvalModal">
+    <div class="modal-box">
+        <div class="ch">
+            <div class="ct">Confirm Action</div>
+        </div>
+        <form action="/admin/approve_faculty_leave" method="POST">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="leave_id" id="modal_leave_id">
+            <input type="hidden" name="status" id="modal_status">
+            <div class="cb">
+                <p id="modal_text"></p>
+                <div class="fgrp">
+                    <label>Remarks (Optional)</label>
+                    <textarea name="remarks" placeholder="Add any comments..."></textarea>
+                </div>
+            </div>
+            <div class="cf">
+                <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-vi" id="modal_btn_text">Confirm</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openApprovalModal(id, name, status) {
+    document.getElementById('modal_leave_id').value = id;
+    document.getElementById('modal_status').value = status;
+    document.getElementById('modal_text').innerText = (status === 'approved' ? 'Approve' : 'Reject') + ' leave request from ' + name + '?';
+    document.getElementById('modal_btn_text').innerText = (status === 'approved' ? 'Approve' : 'Reject');
+    document.getElementById('approvalModal').classList.add('show');
+}
+function closeModal() {
+    document.getElementById('approvalModal').classList.remove('show');
+}
+</script>
+{% endblock %}

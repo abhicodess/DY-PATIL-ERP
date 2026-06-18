@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head><title>Students – College ERP</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+.scan-box{background:#f8faff;border:2px dashed #b0c4de;border-radius:12px;padding:16px 18px;margin-bottom:16px;}
+.scan-box h4{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:4px;}
+.scan-box p{font-size:12px;color:#888;margin-bottom:10px;}
+.scan-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.scan-row input[type=file]{flex:1;min-width:0;padding:7px;border:1.5px dashed #ccc;border-radius:8px;background:#fff;font-size:13px;}
+.sbtn{padding:8px 14px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;}
+.sbtn-scan{background:linear-gradient(135deg,#0f3460,#533483);}
+.sbtn-bulk{background:#27ae60;}
+.col-hint{font-size:11px;color:#aaa;margin-top:6px;}
+.scan-res{margin-top:8px;font-size:12px;padding:8px 12px;border-radius:6px;display:none;}
+.scan-res.ok{background:#d5f5e3;color:#1e8449;} .scan-res.err{background:#fadbd8;color:#c0392b;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-brand"><div class="brand-icon">🎓</div><h2>EduAdmin</h2><p>COLLEGE ERP</p></div>
+  <nav>
+    <div class="nav-section-label">Overview</div>
+    <a href="/admin"   class="nav-link"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/reports" class="nav-link"><span class="nav-icon">📊</span> Reports</a>
+    <div class="nav-section-label">Management</div>
+    <a href="/students" class="nav-link active"><span class="nav-icon">🎓</span> Students</a>
+    <a href="/faculty"  class="nav-link"><span class="nav-icon">👤</span> Faculty</a>
+    <a href="/subjects" class="nav-link"><span class="nav-icon">📚</span> Subjects</a>
+    <div class="nav-section-label">Schedule</div>
+    <a href="/timetable" class="nav-link"><span class="nav-icon">📅</span> Timetable</a>
+    <div class="nav-section-label">Attendance</div>
+    <a href="/attendance"      class="nav-link"><span class="nav-icon">✅</span> Mark Attendance</a>
+    <a href="/view_attendance" class="nav-link"><span class="nav-icon">📋</span> View Records</a>
+    <div class="nav-section-label">Account</div>
+    <a href="/admin_profile" class="nav-link"><span class="nav-icon">🔧</span> My Profile</a>
+  </nav>
+  <div class="sidebar-footer"><a href="/logout">🚪 Logout</a></div>
+</div>
+
+<div class="main-content">
+  <div class="topbar">
+    <div><h1>Students</h1><div class="breadcrumb">Admin / Students</div></div>
+    <div class="user-info"><a href="/add_student" class="btn">➕ Add Student</a><div class="avatar">AD</div></div>
+  </div>
+  <div class="page-body">
+
+    {% if success %}
+    <div style="background:#d5f5e3;border-left:4px solid #27ae60;padding:11px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#1e8449;">✅ {{ success }}</div>
+    {% endif %}
+
+    <!-- Excel Import directly on list page -->
+    <div class="scan-box">
+      <h4>📊 Import Students from Excel</h4>
+      <p>Scan to auto-fill Add Student form, or bulk import all rows at once.</p>
+      <div class="scan-row">
+        <input type="file" id="scanFile" accept=".xlsx,.xls">
+        <button class="sbtn sbtn-scan" type="button" onclick="scanAndGo()">⚡ Scan &amp; Auto-Fill Form</button>
+
+        <!-- Bulk import form -->
+        <form method="POST" action="/upload_students_excel" enctype="multipart/form-data" id="bulkForm" style="display:inline;">
+          <input type="file" name="excel_file" id="bulkFile" accept=".xlsx,.xls" style="display:none;" onchange="this.form.submit()">
+          <button type="button" class="sbtn sbtn-bulk" onclick="document.getElementById('bulkFile').click()">📥 Bulk Import All Rows</button>
+        </form>
+      </div>
+      <div class="col-hint">Excel columns: <strong>Name | Roll | Department | Year | Email | Password</strong> &nbsp;(row 1 = headers)</div>
+      <div class="scan-res" id="scanRes"></div>
+    </div>
+
+    <!-- Students table -->
+    <div class="card">
+      <div class="card-header">
+        <h3>All Students ({{ students|length }})</h3>
+        <a href="/add_student" class="btn btn-sm">➕ Add Student</a>
+      </div>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Roll No</th><th>Department</th><th>Year</th><th>Email</th><th>Login Password</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>{{ s[0] }}</td>
+            <td><strong>{{ s[1] }}</strong></td>
+            <td><span class="badge badge-blue">{{ s[2] }}</span></td>
+            <td>{{ s[3] }}</td>
+            <td>Year {{ s[4] }}</td>
+            <td>{{ s[5] if s|length > 5 and s[5] else '—' }}</td>
+            <td>
+              {% if s|length > 6 and s[6] %}
+              <span style="font-family:monospace;font-size:12px;background:#f8f9fa;padding:2px 8px;border-radius:4px;">{{ s[6] }}</span>
+              {% else %}
+              <span style="color:#aaa;font-size:12px;">student123</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="btn btn-sm" onclick="openEdit(
+                '{{ s[0] }}','{{ s[1] }}','{{ s[2] }}','{{ s[3] }}','{{ s[4] }}',
+                '{{ s[5] if s|length > 5 and s[5] else '' }}'
+              )">✏ Edit</button>
+              <form method="POST" action="/delete_student" style="display:inline;" onsubmit="return confirm('Delete this student%s')">
+                <input type="hidden" name="id" value="{{ s[0] }}">
+                <button class="btn btn-sm btn-danger" type="submit">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8">
+            <div class="empty-state"><div class="empty-icon">🎓</div><p>No students yet. Add one or import from Excel.</p></div>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Student login info box -->
+    <div style="background:#ebf5fb;border-left:4px solid #2980b9;padding:14px 18px;border-radius:10px;font-size:13px;color:#1a5276;">
+      <strong>ℹ Student Login Info:</strong><br>
+      Students log in at <code>http://127.0.0.1:5000</code> → select <strong>🎓 Student</strong> role<br>
+      <strong>Username:</strong> their Roll Number &nbsp;|&nbsp; <strong>Password:</strong> whatever is set (default: <code>student123</code>)
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <h2>✏ Edit Student</h2>
+    <form method="POST" action="/edit_student">
+      <input type="hidden" name="id" id="e_id">
+      <div class="form-row">
+        <div><label>Name</label><input type="text" name="name" id="e_name" required></div>
+        <div><label>Roll Number</label><input type="text" name="roll" id="e_roll" required></div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Department</label>
+          <select name="dept" id="e_dept">
+            <option value="AIML">AIML</option><option value="AIDS">AIDS</option>
+            <option value="CS">CS</option><option value="IT">IT</option>
+            <option value="AI&DS">AI&DS</option><option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Year</label>
+          <select name="year" id="e_year">
+            <option value="1">Year 1</option><option value="2">Year 2</option>
+            <option value="3">Year 3</option><option value="4">Year 4</option>
+          </select>
+        </div>
+      </div>
+      <label>Email</label>
+      <input type="email" name="email" id="e_email" placeholder="e.g. student@gmail.com">
+      <div class="modal-actions">
+        <button class="btn" type="submit">Update</button>
+        <button class="btn-cancel" type="button" onclick="closeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Edit modal
+function openEdit(id,name,roll,dept,year,email){
+  document.getElementById('e_id').value=id;
+  document.getElementById('e_name').value=name;
+  document.getElementById('e_roll').value=roll;
+  document.getElementById('e_email').value=email||'';
+  setSelect('e_year', String(year));
+  // dept — try exact match first, else set text
+  var ds = document.getElementById('e_dept');
+  var matched = false;
+  for(var i=0;i<ds.options.length;i++){
+    if(ds.options[i].value.toLowerCase()===String(dept).toLowerCase()){ds.selectedIndex=i;matched=true;break;}
+  }
+  if(!matched){ ds.options[ds.options.length]=new Option(dept,dept); ds.value=dept; }
+  document.getElementById('editModal').classList.add('open');
+}
+function closeModal(){ document.getElementById('editModal').classList.remove('open'); }
+function setSelect(id,val){ var s=document.getElementById(id); for(var i=0;i<s.options.length;i++){if(s.options[i].value===val){s.selectedIndex=i;return;}} }
+
+// Excel scan → redirect to add_student with data pre-filled via sessionStorage
+async function scanAndGo(){
+  const file = document.getElementById('scanFile').files[0];
+  const res  = document.getElementById('scanRes');
+  if(!file){ show(res,'err','Please choose an Excel file first.'); return; }
+  const fd = new FormData(); fd.append('excel_scan',file); fd.append('module','student');
+  show(res,'ok','⏳ Reading Excel...');
+  try{
+    const r = await fetch('/scan_excel',{method:'POST',body:fd});
+    const j = await r.json();
+    if(j.error){ show(res,'err','❌ '+j.error); return; }
+    // Store in sessionStorage and go to add_student
+    sessionStorage.setItem('scan_student', JSON.stringify(j.data));
+    show(res,'ok','✅ Data read ('+j.total_rows+' rows). Opening Add Student form...');
+    setTimeout(()=>{ window.location.href='/add_student'; }, 800);
+  }catch(e){ show(res,'err','❌ '+e.message); }
+}
+function show(el,type,msg){ el.style.display='block'; el.className='scan-res '+type; el.textContent=msg; }
+</script>
+</body>
+</html>

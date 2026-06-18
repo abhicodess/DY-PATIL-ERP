@@ -1,0 +1,47 @@
+{% extends "reports/base_report.html" %}
+
+{% block report_title %}Institution Summary - Section 3{% endblock %}
+
+{% block report_header_title %}Departmental Academic Performance Summary{% endblock %}
+
+{% block report_meta %}
+<div class="meta-row">
+    <div class="meta-label">Evaluation:</div>
+    <div class="meta-value">Academic Pass Rates</div>
+    <div class="meta-label">Section:</div>
+    <div class="meta-value">3 of 4: Results</div>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<h2>Department-Wise Pass Percentages</h2>
+<p>Below is the pass percentage of results registered for each academic department in examinations compiled to date.</p>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th style="text-align: center;">Result Records Count</th>
+            <th style="text-align: center;">Pass Percentage %</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td><strong>{{ row.department }}</strong></td>
+            <td style="text-align: center;">Published</td>
+            {% set pct = row.pass_pct | float %}
+            {% if pct >= 60.0 %}
+            <td style="text-align: center; color: green; font-weight: bold;">{{ "%.2f" | format(pct) }}%</td>
+            {% else %}
+            <td style="text-align: center; color: red; font-weight: bold;">{{ "%.2f" | format(pct) }}%</td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3" style="text-align: center; color: #777;">No result logs found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

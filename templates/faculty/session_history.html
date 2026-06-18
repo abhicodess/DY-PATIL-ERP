@@ -1,0 +1,89 @@
+
+{% extends "common/base.html" %}
+{% block title %}Session History{% endblock %}
+
+
+
+{% block page_title %}Session History{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('dashboard.faculty') }}">Home</a> / Attendance / History{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Attendance History</div>
+    <div class="ph-sub">View and export your past attendance sessions</div>
+  </div>
+</div>
+
+<div class="card fu fu1 mb20">
+  <div class="cb">
+    <form method="GET" action="{{ url_for('faculty_att.session_history') }}">
+      <div class="toolbar">
+        <div class="fgrp mb0" style="width:200px">
+          <select class="tb-field" name="subject">
+            <option value="">All Subjects</option>
+            {% for s in subjects %}
+            <option value="{{ s.subject_name }}" {% if request.args.get('subject') == s.subject_name %}selected{% endif %}>{{ s.subject_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <input type="date" name="start_date" class="tb-field" value="{{ request.args.get('start_date', '') }}" placeholder="Start Date">
+        <input type="date" name="end_date" class="tb-field" value="{{ request.args.get('end_date', '') }}" placeholder="End Date">
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-filter"></i> Filter</button>
+        <a href="{{ url_for('faculty_att.session_history') }}" class="btn btn-out btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card fu fu2">
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Subject</th>
+          <th>Class</th>
+          <th>Present / Total</th>
+          <th>Percentage</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td style="font-family:var(--mono)">{{ s.lecture_date }}</td>
+          <td><div style="font-weight:600">{{ s.subject }}</div><div style="font-size:11px;color:var(--ink4)">{{ s.lecture_type }}</div></td>
+          <td><span class="tag t-bl">{{ s.division }}</span></td>
+          <td style="font-family:var(--mono)">{{ s.present_students }} / {{ s.total_students }}</td>
+          <td>
+            <div class="flex-ac gap8">
+              <div class="prog-track" style="width:60px;margin-bottom:0">
+                <div class="prog-bar {% if s.attendance_pct >= 85 %}pb-gr{% elif s.attendance_pct >= 75 %}pb-am{% else %}pb-re{% endif %}" style="width:{{ s.attendance_pct }}%"></div>
+              </div>
+              <span style="font-weight:700">{{ s.attendance_pct }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if s.status == 'submitted' %}
+            <span class="tag t-gr">Submitted</span>
+            {% else %}
+            <span class="tag t-am">Draft</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="flex-ac gap6">
+              <a href="{{ url_for('faculty_att.marking_session', session_id=s.id) }}" class="btn btn-out btn-sm" title="Edit/View"><i class="fas fa-eye"></i></a>
+              <a href="{{ url_for('faculty_att.export_session', session_id=s.id) }}" class="btn btn-out btn-sm" title="Export Excel"><i class="fas fa-file-excel"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7"><div class="empty-state">No sessions found for the given filters.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

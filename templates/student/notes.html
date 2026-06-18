@@ -1,0 +1,31 @@
+{% extends "common/base.html" %}
+{% block title %}Study Material{% endblock %}
+{% block page_title %}Study Material{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Notes{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div><div class="ph-title">Resources & Notes</div><div class="ph-sub">Study materials shared by faculty</div></div>
+</div>
+
+<div class="card fu fu1">
+  <div class="cb p0">
+    <table class="tbl">
+      <thead><tr><th>Title</th><th>Subject</th><th>Shared By</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for n in notes %}
+        <tr>
+          <td><i class="fas fa-file-pdf r mr8" style="color:#ef4444"></i> <strong>{{ n.title }}</strong></td>
+          <td style="color:var(--ink3)">{{ n.subject }}</td>
+          <td>{{ n.faculty_name or 'Faculty' }}</td>
+          <td class="mono" style="font-size:11px">{{ n.created_at[:10] }}</td>
+          <td><a href="{{ n.file_path }}" class="btn btn-out btn-sm" download><i class="fas fa-download"></i></a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state"><i class="fas fa-file-lines"></i><p>No study material available for your department yet.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
