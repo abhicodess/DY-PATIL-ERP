@@ -59,5 +59,19 @@ Never use: python app.py in production.
    python app.py
    ```
 
+## 📸 Screenshots
+
+### Login Page
+![Login Page](static/images/login_screenshot.png)
+
+### Admissions Dashboard
+![Admissions Dashboard](static/images/dashboard_screenshot.png)
+
+## 👤 Developer Details
+
+- **Name**: Abhay Varvate (Anhay Varvate)
+- **Email**: [sirabhi618@gmail.com](mailto:sirabhi618@gmail.com)
+- **GitHub**: [@abhicodess](https://github.com/abhicodess)
+
 ## 🧹 Maintenance & Scripts
 The project includes an `archive/` folder containing legacy migration scripts for reference. New features should be added to the appropriate `routes/` or `services/` modules.
