@@ -90,6 +90,21 @@ def create_app(config_class=Config):
     def set_tenant_context():
         from flask import g
         g.tenant = request.environ.get('tenant')
+
+    @app.before_request
+    def serve_react_spa_routing():
+        if not app.config.get('SERVE_REACT_SPA'):
+            return
+        
+        path = request.path
+        # Do not intercept API, static files, health check, or openapi.json
+        if path.startswith('/api/') or path.startswith('/static/') or path.startswith('/assets/') or path == '/health' or path == '/openapi.json':
+            return
+            
+        try:
+            return send_from_directory(os.path.join(app.root_path, 'frontend', 'dist'), 'index.html')
+        except Exception:
+            return "React SPA build (frontend/dist/index.html) not found. Please run npm run build.", 500
     
     # Initialize DB schemas
     # FIX: Import all models first and run db.create_all() during testing to populate SQLite in-memory tables

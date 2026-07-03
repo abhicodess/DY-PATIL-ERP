@@ -91,6 +91,7 @@ class Config:
     DEFAULT_STUDENT_PASSWORD = os.environ.get("DEFAULT_STUDENT_PASSWORD")
     DEFAULT_FACULTY_PASSWORD = os.environ.get("DEFAULT_FACULTY_PASSWORD")
     ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
+    SERVE_REACT_SPA = os.environ.get("SERVE_REACT_SPA", "False").lower() == "true"
     
     @staticmethod
     def init_app(app):

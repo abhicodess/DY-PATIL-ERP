@@ -8,108 +8,138 @@ export const Login = () => {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student'); // Default role
+  const [role, setRole] = useState('admin'); // Default role matching legacy template
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setLoading(false);
 
     try {
       const user = await login(username, password, role);
-      // Redirect to correct dashboard based on role
       if (user.role === 'admin') navigate('/admin');
       else if (user.role === 'faculty') navigate('/faculty');
       else if (user.role === 'student') navigate('/student');
     } catch (err) {
       setError(err.response?.data?.error?.message || 'Invalid username, password, or role');
-    } finally {
-      setLoading(false);
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-      <div className="glass max-w-md w-full p-8 rounded-2xl flex flex-col gap-6 shadow-2xl relative overflow-hidden">
-        {/* Neon accent glow behind card */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-600/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-1">DY Patil University</h2>
-          <p className="text-sm text-slate-400">Enterprise College ERP</p>
+    <div className="lp">
+      <div className="lp-left">
+        <div className="lp-glow"></div>
+        <div className="lp-dots"></div>
+        <div className="lp-brand">
+          <img src="/static/images/dypatil_logo.png" className="lp-logo" alt="DY Patil University" />
+          <div>
+            <div className="lp-bname">D Y Patil University</div>
+            <div className="lp-bsub">Pune, Ambi — College ERP</div>
+          </div>
         </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-2.5 rounded-xl text-center">
-            {error}
+        <div className="lp-tagline">
+          <h1>Manage smarter.<br /><span>Educate better.</span></h1>
+          <p>A complete academic management system for DY Patil University — students, faculty, and administration in one place.</p>
+        </div>
+        <div className="lp-stats">
+          <div><div className="lp-sv">1,240+</div><div className="lp-sl">Students</div></div>
+          <div><div className="lp-sv">48</div><div className="lp-sl">Faculty</div></div>
+          <div><div className="lp-sv">4</div><div className="lp-sl">Departments</div></div>
+        </div>
+      </div>
+      <div className="lp-right">
+        <div className="lp-form">
+          <h2>Welcome back 👋</h2>
+          <p>Sign in to your account to continue</p>
+          <div className="role-row">
+            <button 
+              type="button" 
+              className={`role-pill ${role === 'admin' ? 'on' : ''}`}
+              onClick={() => setRole('admin')}
+            >
+              <i className="fas fa-shield-halved"></i>Admin
+            </button>
+            <button 
+              type="button" 
+              className={`role-pill ${role === 'faculty' ? 'on' : ''}`}
+              onClick={() => setRole('faculty')}
+            >
+              <i className="fas fa-chalkboard-user"></i>Faculty
+            </button>
+            <button 
+              type="button" 
+              className={`role-pill ${role === 'student' ? 'on' : ''}`}
+              onClick={() => setRole('student')}
+            >
+              <i className="fas fa-user-graduate"></i>Student
+            </button>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Role selector */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Portal Role</label>
-            <div className="grid grid-cols-3 gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/5">
-              {['student', 'faculty', 'admin'].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
-                    role === r
-                      ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
+          {error && (
+            <div className="al-err">
+              <i className="fas fa-exclamation-circle"></i>
+              {error}
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Username / PRN / Email</label>
-            <input
-              type="text"
-              required
-              placeholder={role === 'student' ? 'PRN / Roll Number' : role === 'faculty' ? 'Email Address' : 'Admin username'}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition"
-            />
+          <form onSubmit={handleSubmit}>
+            <div className="fg">
+              <label>Username / Email / PRN Number</label>
+              <div className="fi-wrap">
+                <input 
+                  className="fi" 
+                  type="text" 
+                  placeholder={role === 'student' ? 'PRN / Roll Number' : role === 'faculty' ? 'Email Address' : 'Admin username'}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required 
+                  autoComplete="username" 
+                />
+                <i className="fi-ico fas fa-user"></i>
+              </div>
+            </div>
+            <div className="fg">
+              <label>Password</label>
+              <div className="fi-wrap">
+                <input 
+                  className="fi" 
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                  autoComplete="current-password" 
+                />
+                <i 
+                  className={`fi-ico fi-eye fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} 
+                  onClick={togglePasswordVisibility}
+                  style={{ cursor: 'pointer' }}
+                ></i>
+              </div>
+            </div>
+            <button type="submit" className="f-btn">
+              <i className="fas fa-arrow-right-to-bracket"></i> Sign In
+            </button>
+          </form>
+          <div style={{ textAlign: 'right', marginBottom: '12px' }}>
+            <a href="/forgot_password" style={{ fontSize: '12px', color: '#2563EB', textDecoration: 'none', fontWeight: 600 }}>Forgot password?</a>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Password</label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition"
-            />
+          <div className="f-cred">
+            <div className="f-cred-ttl">Demo Credentials</div>
+            <div className="f-cred-row"><span>Admin</span><code>admin / admin123</code></div>
+            <div className="f-cred-row"><span>Faculty</span><code>email / faculty123</code></div>
+            <div className="f-cred-row"><span>Student</span><code>PRN Number / student123</code></div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-xl transition mt-2 shadow-lg shadow-purple-600/20 hover:shadow-purple-600/30 flex items-center justify-center gap-2 disabled:opacity-75"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
-                Signing In...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );
 };
+
