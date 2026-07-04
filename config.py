@@ -58,7 +58,11 @@ class Config:
     SQLALCHEMY_POOL_RECYCLE = 1800
     
     # CSRF Protection
-    WTF_CSRF_ENABLED = True
+    # Flask-WTF global CSRFProtect is DISABLED because the app uses its own
+    # custom _csrf_init_and_validate before_request hook for CSRF validation.
+    # Having both active causes 400 errors on login (Flask-WTF's session token
+    # was never seeded, so it rejects all POSTs before our middleware runs).
+    WTF_CSRF_ENABLED = False
     WTF_CSRF_TIME_LIMIT = 3600
     WTF_CSRF_FIELD_NAME = '_csrf'
     WTF_CSRF_HEADERS = ['X-CSRFToken', 'X-CSRF-Token']
