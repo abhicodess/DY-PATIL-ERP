@@ -4,7 +4,7 @@ DY Patil University ERP
 """
 
 from flask import (Blueprint, render_template, request, redirect,
-                   session, send_file, jsonify)
+                   session, send_file, jsonify, flash)
 from functools import wraps
 import psycopg2
 import psycopg2.extras, os, io
@@ -15,7 +15,7 @@ from openpyxl.utils import get_column_letter
 from datetime import datetime
 
 # ── Config ──────────────────────────────────────────────────
-from config import SEMESTERS, DEPARTMENTS, DIVISIONS
+from config import SEMESTERS, DEPARTMENTS, DIVISIONS, YEARS
 SECTIONS = DIVISIONS
 
 # Grade thresholds (DY Patil standard)
@@ -266,6 +266,311 @@ def results_dashboard():
         GRADE_TABLE=GRADE_TABLE,
     )
 
+@results_bp.route("/results_import", methods=["POST"])
+@admin_required
+def results_import():
+    from openpyxl import load_workbook
+    from flask import flash, redirect, current_app
+    import re
+    
+    f = request.files.get("file")
+    if not f:
+        flash("No file selected", "error")
+        return redirect("/results_dashboard")
+        
+    try:
+        wb = load_workbook(f, data_only=True)
+        current_app.logger.info(f"Uploaded file: {f.filename}, Sheet names: {wb.sheetnames}")
+        sheets_to_process = []
+        for name in wb.sheetnames:
+            ws = wb[name]
+            has_student_data = False
+            for r in range(1, min(ws.max_row + 1, 11)):
+                row_vals = [str(ws.cell(r, c).value or "").lower().strip() for c in range(1, min(ws.max_column + 1, 15))]
+                if any("student name" in v or "prn" in v or "roll" in v for v in row_vals):
+                    has_student_data = True
+                    break
+            if has_student_data:
+                sheets_to_process.append(ws)
+                
+        current_app.logger.info(f"Sheets containing student data to process: {[s.title for s in sheets_to_process]}")
+        if not sheets_to_process:
+            flash("No sheets with valid student name or PRN columns found in the Excel file.", "error")
+            return redirect("/results_dashboard")
+            
+        added = 0
+        for ws in sheets_to_process:
+            current_app.logger.info(f"--- Inspecting Sheet: {ws.title} ---")
+            for r in range(1, 5):
+                row_vals = [f"Col {c}: {ws.cell(r, c).value}" for c in range(1, min(ws.max_column + 1, 16)) if ws.cell(r, c).value is not None]
+                current_app.logger.info(f"Row {r} non-empty cells: {row_vals}")
+                
+            # 1. Detect header row
+            hdr_row = 1
+            for r in range(1, min(ws.max_row + 1, 11)):
+                row_vals = [str(ws.cell(r, c).value or "").lower().strip() for c in range(1, min(ws.max_column + 1, 15))]
+                if any("student name" in v or "prn" in v or "roll" in v for v in row_vals):
+                    hdr_row = r
+                    break
+                    
+            hdrs = [str(ws.cell(hdr_row, c).value or "").lower().strip() for c in range(1, ws.max_column + 1)]
+            current_app.logger.info(f"Sheet '{ws.title}': Detected hdr_row={hdr_row}")
+            current_app.logger.info(f"Sheet '{ws.title}': First 15 headers={hdrs[:15]}")
+            
+            def get_col_index(keywords):
+                for kw in keywords:
+                    for idx, h in enumerate(hdrs):
+                        if kw in h:
+                            return idx + 1
+                return None
+                
+            col_name = get_col_index(["student name", "name", "student"])
+            col_roll = get_col_index(["roll no", "roll number", "roll", "prn"])
+            col_dept = get_col_index(["department", "dept", "branch"])
+            col_year = get_col_index(["year", "class year"])
+            col_sem  = get_col_index(["semester", "sem"])
+            
+            # Detect flat format columns
+            col_sub  = get_col_index(["subject", "sub", "course"])
+            col_marks = get_col_index(["marks", "obtained", "score"])
+            col_total = get_col_index(["total", "max", "out of"])
+            col_exam = get_col_index(["exam type", "exam", "type"])
+            
+            current_app.logger.info(f"Sheet '{ws.title}': col_name={col_name}, col_roll={col_roll}, col_sub={col_sub}, col_marks={col_marks}")
+            if not col_name:
+                current_app.logger.warning(f"Sheet '{ws.title}': Skipped because name column was not found.")
+                continue
+                
+            # Global sheet level metadata resolution
+            sheet_dept = "CS"
+            title_lower = ws.title.lower()
+            if "comp" in title_lower or "cs" in title_lower:
+                sheet_dept = "CS"
+            elif "aids" in title_lower:
+                sheet_dept = "AIDS"
+            elif "aiml" in title_lower:
+                sheet_dept = "AIML"
+            elif "it" in title_lower:
+                sheet_dept = "IT"
+                
+            sheet_sem = None
+            for r in range(1, min(ws.max_row + 1, 6)):
+                for c in range(1, min(ws.max_column + 1, 16)):
+                    val = str(ws.cell(r, c).value or "").strip().lower()
+                    if not val:
+                        continue
+                    if "sem:" in val or "semester" in val:
+                        for s in SEMESTERS:
+                            if s.lower() in val:
+                                sheet_sem = s
+                                break
+                    elif "sem" in val:
+                        for s in SEMESTERS:
+                            if f"sem {s.lower()}" in val or f"sem-{s.lower()}" in val or f"sem: {s.lower()}" in val:
+                                sheet_sem = s
+                                break
+                    if "computer" in val or "comp" in val or "cs" in val:
+                        sheet_dept = "CS"
+                    elif "aids" in val or "artificial" in val:
+                        sheet_dept = "AIDS"
+                    elif "aiml" in val:
+                        sheet_dept = "AIML"
+                    elif "information technology" in val or "it" in val:
+                        sheet_dept = "IT"
+            
+            if not sheet_sem:
+                filename_lower = f.filename.lower()
+                for s in SEMESTERS:
+                    if f"sem_{s.lower()}" in filename_lower or f"sem {s.lower()}" in filename_lower or f"sem-{s.lower()}" in filename_lower or f"sem{s.lower()}" in filename_lower:
+                        sheet_sem = s
+                        break
+            
+            if not sheet_sem:
+                sheet_sem = "I"
+                
+            def sem_to_year(sem_val):
+                if sem_val in ("I", "II"): return "I"
+                if sem_val in ("III", "IV"): return "II"
+                if sem_val in ("V", "VI"): return "III"
+                if sem_val in ("VII", "VIII"): return "IV"
+                return "I"
+                
+            sheet_year = sem_to_year(sheet_sem)
+            is_flat = col_sub is not None and col_marks is not None
+            current_app.logger.info(f"Sheet '{ws.title}': is_flat={is_flat}, sheet_dept={sheet_dept}, sheet_sem={sheet_sem}")
+            
+            if is_flat:
+                # FLAT FORMAT (one row per student per subject)
+                for r_idx in range(hdr_row + 1, ws.max_row + 1):
+                    name = str(ws.cell(r_idx, col_name).value or "").strip()
+                    if not name or name.lower() in ("name", "student name", "student"):
+                        continue
+                    if any(name.lower().startswith(x) for x in ("total", "average", "class", "topper", "pass", "fail", "atkt")):
+                        continue
+                        
+                    roll = str(ws.cell(r_idx, col_roll).value or "").strip() if col_roll else ""
+                    dept = str(ws.cell(r_idx, col_dept).value or "").strip() if col_dept else ""
+                    year = str(ws.cell(r_idx, col_year).value or "").strip() if col_year else ""
+                    sem  = str(ws.cell(r_idx, col_sem).value or "").strip() if col_sem else ""
+                    sub  = str(ws.cell(r_idx, col_sub).value or "").strip() if col_sub else ""
+                    
+                    marks_val = ws.cell(r_idx, col_marks).value
+                    total_val = ws.cell(r_idx, col_total).value if col_total else None
+                    exam_val = str(ws.cell(r_idx, col_exam).value or "Semester Exam").strip() if col_exam else "Semester Exam"
+                    
+                    if str(marks_val or "").strip().upper() == "AB":
+                        marks = 0.0
+                        exam_val = "ABSENT"
+                    else:
+                        try:
+                            marks = float(marks_val) if marks_val is not None else 0.0
+                        except ValueError:
+                            continue
+                            
+                    total = 60.0
+                    if total_val is not None:
+                        try:
+                            total = float(total_val)
+                        except ValueError:
+                            pass
+                            
+                    if roll and (not dept or not year or not sem):
+                        student = _qone("SELECT department, year FROM students WHERE roll=%s", (roll,))
+                        if student:
+                            if not dept: dept = student["department"]
+                            if not year: year = student["year"]
+                    if not dept: dept = sheet_dept
+                    if not sem: sem = sheet_sem
+                    if not year: year = sem_to_year(sem)
+                    
+                    pct = (marks / total * 100) if total > 0 else 0
+                    grade, _, _ = calc_grade(pct)
+                    result = "Pass" if pct >= 40 else "Fail"
+                    
+                    existing = _qone(
+                        "SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s",
+                        (name, roll, sub, exam_val)
+                    )
+                    if existing:
+                        _exe(
+                            "UPDATE results SET department=%s, year=%s, semester=%s, marks=%s, total=%s, grade=%s, result=%s, published=1 WHERE id=%s",
+                            (dept, year, sem, marks, total, grade, result, existing["id"])
+                        )
+                    else:
+                        _exe(
+                            "INSERT INTO results (student_name, roll, department, year, semester, subject, marks, total, exam_type, grade, result, published) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                            (name, roll, dept, year, sem, sub, marks, total, exam_val, grade, result)
+                        )
+                    added += 1
+            else:
+                # CUMULATIVE GRID FORMAT (each student is one row, subjects are columns)
+                def get_subject_name(c_idx):
+                    min_col = max(col_name, col_roll) + 1
+                    # Try Row hdr_row - 1
+                    if hdr_row > 1:
+                        for temp_c in range(c_idx, min_col - 1, -1):
+                            val = ws.cell(hdr_row - 1, temp_c).value
+                            if val and str(val).strip():
+                                return str(val).strip()
+                    # Try Row hdr_row - 2
+                    if hdr_row > 2:
+                        for temp_c in range(c_idx, min_col - 1, -1):
+                            val = ws.cell(hdr_row - 2, temp_c).value
+                            if val and str(val).strip():
+                                return str(val).strip()
+                    return None
+                    
+                def parse_max_marks(h_val):
+                    m = re.search(r"\d+", h_val)
+                    if m:
+                        return float(m.group())
+                    return 60.0
+                    
+                subject_cols = []
+                for idx in range(1, ws.max_column + 1):
+                    if idx in (col_name, col_roll):
+                        continue
+                    h_val = str(ws.cell(hdr_row, idx).value or "").strip().lower()
+                    if "total" in h_val:
+                        subj_name = get_subject_name(idx)
+                        if subj_name:
+                            subject_cols.append({
+                                "col_idx": idx,
+                                "subject": subj_name,
+                                "total": parse_max_marks(h_val)
+                            })
+                            
+                current_app.logger.info(f"Sheet '{ws.title}': Detected subject columns={subject_cols}")
+                if not subject_cols:
+                    current_app.logger.warning(f"Sheet '{ws.title}': Skipped because no subject columns with 'TOTAL' in headers were found.")
+                    continue
+                    
+                for r_idx in range(hdr_row + 1, ws.max_row + 1):
+                    name = str(ws.cell(r_idx, col_name).value or "").strip()
+                    if not name or name.lower() in ("name", "student name", "student"):
+                        continue
+                    if any(name.lower().startswith(x) for x in ("total", "average", "class", "topper", "pass", "fail", "atkt")):
+                        continue
+                        
+                    roll = str(ws.cell(r_idx, col_roll).value or "").strip() if col_roll else ""
+                    dept = str(ws.cell(r_idx, col_dept).value or "").strip() if col_dept else ""
+                    year = str(ws.cell(r_idx, col_year).value or "").strip() if col_year else ""
+                    sem  = str(ws.cell(r_idx, col_sem).value or "").strip() if col_sem else ""
+                    
+                    if roll and (not dept or not year or not sem):
+                        student = _qone("SELECT department, year FROM students WHERE roll=%s", (roll,))
+                        if student:
+                            if not dept: dept = student["department"]
+                            if not year: year = student["year"]
+                    if not dept: dept = sheet_dept
+                    if not sem: sem = sheet_sem
+                    if not year: year = sem_to_year(sem)
+                    
+                    current_app.logger.info(f"Sheet '{ws.title}': Row {r_idx} student name='{name}', roll='{roll}', dept='{dept}', sem='{sem}'")
+                    for sc in subject_cols:
+                        sub = sc["subject"]
+                        total = sc["total"]
+                        marks_val = ws.cell(r_idx, sc["col_idx"]).value
+                        
+                        exam_val = "Semester Exam"
+                        if str(marks_val or "").strip().upper() == "AB":
+                            marks = 0.0
+                            exam_val = "ABSENT"
+                        else:
+                            try:
+                                marks = float(marks_val) if marks_val is not None else 0.0
+                            except ValueError:
+                                continue
+                                
+                        pct = (marks / total * 100) if total > 0 else 0
+                        grade, _, _ = calc_grade(pct)
+                        result = "Pass" if pct >= 40 else "Fail"
+                        
+                        existing = _qone(
+                            "SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s",
+                            (name, roll, sub, exam_val)
+                        )
+                        if existing:
+                            _exe(
+                                "UPDATE results SET department=%s, year=%s, semester=%s, marks=%s, total=%s, grade=%s, result=%s, published=1 WHERE id=%s",
+                                (dept, year, sem, marks, total, grade, result, existing["id"])
+                            )
+                        else:
+                            _exe(
+                                "INSERT INTO results (student_name, roll, department, year, semester, subject, marks, total, exam_type, grade, result, published) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                                (name, roll, dept, year, sem, sub, marks, total, exam_val, grade, result)
+                            )
+                        added += 1
+                        
+        flash(f"Successfully imported/updated {added} student results.", "success")
+        
+    except Exception as e:
+        import traceback
+        current_app.logger.error(f"Excel import error: {traceback.format_exc()}")
+        flash(f"Error parsing file: {str(e)}", "error")
+        
+    return redirect("/results_dashboard")
+
 # ═══════════════════════════════════════════════════════════
 #  ROUTE 2 — ANALYTICS PAGE
 # ═══════════════════════════════════════════════════════════
@@ -336,10 +641,12 @@ def results_analytics():
 
     total_students = len(students)
     avg_pct = round(sum(s["percentage"] for s in students)/total_students,1) if total_students else 0
+    fail_count = sum(1 for s in students if s["status"] == "FAIL")
 
     return render_template("results/results_analytics.html",
         dept=dept, semester=semester,
         total_students=total_students, avg_pct=avg_pct,
+        fail_count=fail_count,
         subj_analytics=subj_analytics, top10=top10,
         sec_breakdown=sec_breakdown, failed_per_subj=failed_per_subj,
         grade_dist=grade_dist,
@@ -589,3 +896,460 @@ def results_chart_data():
         },
         "total": len(students),
     })
+
+# ═══════════════════════════════════════════════════════════
+#  LEGACY RESULTS MANAGEMENT MODULE
+# ═══════════════════════════════════════════════════════════
+
+def pct(obtained, total):
+    return (obtained / total * 100) if total else 0.0
+
+def grade(obtained, total):
+    p = pct(obtained, total)
+    for threshold, letter, _, _ in GRADE_TABLE:
+        if p >= threshold:
+            return letter
+    return "F"
+
+def _do_import(f):
+    from openpyxl import load_workbook
+    from flask import flash, current_app
+    import re
+    
+    wb = load_workbook(f, data_only=True)
+    current_app.logger.info(f"Uploaded file: {f.filename}, Sheet names: {wb.sheetnames}")
+    sheets_to_process = []
+    for name in wb.sheetnames:
+        ws = wb[name]
+        has_student_data = False
+        for r in range(1, min(ws.max_row + 1, 11)):
+            row_vals = [str(ws.cell(r, c).value or "").lower().strip() for c in range(1, min(ws.max_column + 1, 15))]
+            if any("student name" in v or "prn" in v or "roll" in v for v in row_vals):
+                has_student_data = True
+                break
+        if has_student_data:
+            sheets_to_process.append(ws)
+            
+    current_app.logger.info(f"Sheets containing student data to process: {[s.title for s in sheets_to_process]}")
+    if not sheets_to_process:
+        flash("No sheets with valid student name or PRN columns found in the Excel file.", "error")
+        return False
+        
+    added = 0
+    for ws in sheets_to_process:
+        current_app.logger.info(f"--- Inspecting Sheet: {ws.title} ---")
+        for r in range(1, 5):
+            row_vals = [f"Col {c}: {ws.cell(r, c).value}" for c in range(1, min(ws.max_column + 1, 16)) if ws.cell(r, c).value is not None]
+            current_app.logger.info(f"Row {r} non-empty cells: {row_vals}")
+            
+        hdr_row = 1
+        for r in range(1, min(ws.max_row + 1, 11)):
+            row_vals = [str(ws.cell(r, c).value or "").lower().strip() for c in range(1, min(ws.max_column + 1, 15))]
+            if any("student name" in v or "prn" in v or "roll" in v for v in row_vals):
+                hdr_row = r
+                break
+                
+        hdrs = [str(ws.cell(hdr_row, c).value or "").lower().strip() for c in range(1, ws.max_column + 1)]
+        current_app.logger.info(f"Sheet '{ws.title}': Detected hdr_row={hdr_row}")
+        
+        def get_col_index(keywords):
+            for kw in keywords:
+                for idx, h in enumerate(hdrs):
+                    if kw in h:
+                        return idx + 1
+            return None
+            
+        col_name = get_col_index(["student name", "name", "student"])
+        col_roll = get_col_index(["roll no", "roll number", "roll", "prn"])
+        col_dept = get_col_index(["department", "dept", "branch"])
+        col_year = get_col_index(["year", "class year"])
+        col_sem  = get_col_index(["semester", "sem"])
+        
+        col_sub  = get_col_index(["subject", "sub", "course"])
+        col_marks = get_col_index(["marks", "obtained", "score"])
+        col_total = get_col_index(["total", "max", "out of"])
+        col_exam = get_col_index(["exam type", "exam", "type"])
+        
+        if not col_name:
+            current_app.logger.warning(f"Sheet '{ws.title}': Skipped because name column was not found.")
+            continue
+            
+        sheet_dept = "CS"
+        title_lower = ws.title.lower()
+        if "comp" in title_lower or "cs" in title_lower:
+            sheet_dept = "CS"
+        elif "aids" in title_lower:
+            sheet_dept = "AIDS"
+        elif "aiml" in title_lower:
+            sheet_dept = "AIML"
+        elif "it" in title_lower:
+            sheet_dept = "IT"
+            
+        sheet_sem = None
+        for r in range(1, min(ws.max_row + 1, 6)):
+            for c in range(1, min(ws.max_column + 1, 16)):
+                val = str(ws.cell(r, c).value or "").strip().lower()
+                if not val:
+                    continue
+                if "sem:" in val or "semester" in val:
+                    for s in SEMESTERS:
+                        if s.lower() in val:
+                            sheet_sem = s
+                            break
+                elif "sem" in val:
+                    for s in SEMESTERS:
+                        if f"sem {s.lower()}" in val or f"sem-{s.lower()}" in val or f"sem: {s.lower()}" in val:
+                            sheet_sem = s
+                            break
+                if "computer" in val or "comp" in val or "cs" in val:
+                    sheet_dept = "CS"
+                elif "aids" in val or "artificial" in val:
+                    sheet_dept = "AIDS"
+                elif "aiml" in val:
+                    sheet_dept = "AIML"
+                elif "information technology" in val or "it" in val:
+                    sheet_dept = "IT"
+        
+        if not sheet_sem:
+            filename_lower = f.filename.lower()
+            for s in SEMESTERS:
+                if f"sem_{s.lower()}" in filename_lower or f"sem {s.lower()}" in filename_lower or f"sem-{s.lower()}" in filename_lower or f"sem{s.lower()}" in filename_lower:
+                    sheet_sem = s
+                    break
+        
+        if not sheet_sem:
+            sheet_sem = "I"
+            
+        def sem_to_year(sem_val):
+            if sem_val in ("I", "II"): return "I"
+            if sem_val in ("III", "IV"): return "II"
+            if sem_val in ("V", "VI"): return "III"
+            if sem_val in ("VII", "VIII"): return "IV"
+            return "I"
+            
+        sheet_year = sem_to_year(sheet_sem)
+        is_flat = col_sub is not None and col_marks is not None
+        
+        if is_flat:
+            for r_idx in range(hdr_row + 1, ws.max_row + 1):
+                name = str(ws.cell(r_idx, col_name).value or "").strip()
+                if not name or name.lower() in ("name", "student name", "student"):
+                    continue
+                if any(name.lower().startswith(x) for x in ("total", "average", "class", "topper", "pass", "fail", "atkt")):
+                    continue
+                    
+                roll = str(ws.cell(r_idx, col_roll).value or "").strip() if col_roll else ""
+                dept = str(ws.cell(r_idx, col_dept).value or "").strip() if col_dept else ""
+                year = str(ws.cell(r_idx, col_year).value or "").strip() if col_year else ""
+                sem  = str(ws.cell(r_idx, col_sem).value or "").strip() if col_sem else ""
+                sub  = str(ws.cell(r_idx, col_sub).value or "").strip() if col_sub else ""
+                
+                marks_val = ws.cell(r_idx, col_marks).value
+                total_val = ws.cell(r_idx, col_total).value if col_total else None
+                exam_val = str(ws.cell(r_idx, col_exam).value or "Semester Exam").strip() if col_exam else "Semester Exam"
+                
+                if str(marks_val or "").strip().upper() == "AB":
+                    marks = 0.0
+                    exam_val = "ABSENT"
+                else:
+                    try:
+                        marks = float(marks_val) if marks_val is not None else 0.0
+                    except ValueError:
+                        continue
+                        
+                total = 60.0
+                if total_val is not None:
+                    try:
+                        total = float(total_val)
+                    except ValueError:
+                        pass
+                        
+                if roll and (not dept or not year or not sem):
+                    student = _qone("SELECT department, year FROM students WHERE roll=%s", (roll,))
+                    if student:
+                        if not dept: dept = student["department"]
+                        if not year: year = student["year"]
+                if not dept: dept = sheet_dept
+                if not sem: sem = sheet_sem
+                if not year: year = sem_to_year(sem)
+                
+                pct_val = (marks / total * 100) if total > 0 else 0
+                grade_letter, _, _ = calc_grade(pct_val)
+                result = "Pass" if pct_val >= 40 else "Fail"
+                
+                existing = _qone(
+                    "SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s",
+                    (name, roll, sub, exam_val)
+                )
+                if existing:
+                    _exe(
+                        "UPDATE results SET department=%s, year=%s, semester=%s, marks=%s, total=%s, grade=%s, result=%s, published=1 WHERE id=%s",
+                        (dept, year, sem, marks, total, grade_letter, result, existing["id"])
+                    )
+                else:
+                    _exe(
+                        "INSERT INTO results (student_name, roll, department, year, semester, subject, marks, total, exam_type, grade, result, published) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                        (name, roll, dept, year, sem, sub, marks, total, exam_val, grade_letter, result)
+                    )
+                added += 1
+        else:
+            def get_subject_name(c_idx):
+                min_col = max(col_name, col_roll) + 1
+                if hdr_row > 1:
+                    for temp_c in range(c_idx, min_col - 1, -1):
+                        val = ws.cell(hdr_row - 1, temp_c).value
+                        if val and str(val).strip():
+                            return str(val).strip()
+                if hdr_row > 2:
+                    for temp_c in range(c_idx, min_col - 1, -1):
+                        val = ws.cell(hdr_row - 2, temp_c).value
+                        if val and str(val).strip():
+                            return str(val).strip()
+                return None
+                
+            def parse_max_marks(h_val):
+                m = re.search(r"\d+", h_val)
+                if m: return float(m.group())
+                return 60.0
+                
+            subject_cols = []
+            for idx in range(1, ws.max_column + 1):
+                if idx in (col_name, col_roll):
+                    continue
+                h_val = str(ws.cell(hdr_row, idx).value or "").strip().lower()
+                if "total" in h_val:
+                    subj_name = get_subject_name(idx)
+                    if subj_name:
+                        subject_cols.append({
+                            "col_idx": idx,
+                            "subject": subj_name,
+                            "total": parse_max_marks(h_val)
+                        })
+                        
+            if not subject_cols:
+                continue
+                
+            for r_idx in range(hdr_row + 1, ws.max_row + 1):
+                name = str(ws.cell(r_idx, col_name).value or "").strip()
+                if not name or name.lower() in ("name", "student name", "student"):
+                    continue
+                if any(name.lower().startswith(x) for x in ("total", "average", "class", "topper", "pass", "fail", "atkt")):
+                    continue
+                    
+                roll = str(ws.cell(r_idx, col_roll).value or "").strip() if col_roll else ""
+                dept = str(ws.cell(r_idx, col_dept).value or "").strip() if col_dept else ""
+                year = str(ws.cell(r_idx, col_year).value or "").strip() if col_year else ""
+                sem  = str(ws.cell(r_idx, col_sem).value or "").strip() if col_sem else ""
+                
+                if roll and (not dept or not year or not sem):
+                    student = _qone("SELECT department, year FROM students WHERE roll=%s", (roll,))
+                    if student:
+                        if not dept: dept = student["department"]
+                        if not year: year = student["year"]
+                if not dept: dept = sheet_dept
+                if not sem: sem = sheet_sem
+                if not year: year = sem_to_year(sem)
+                
+                for sc in subject_cols:
+                    sub = sc["subject"]
+                    total = sc["total"]
+                    marks_val = ws.cell(r_idx, sc["col_idx"]).value
+                    
+                    exam_val = "Semester Exam"
+                    if str(marks_val or "").strip().upper() == "AB":
+                        marks = 0.0
+                        exam_val = "ABSENT"
+                    else:
+                        try:
+                            marks = float(marks_val) if marks_val is not None else 0.0
+                        except ValueError:
+                            continue
+                            
+                    pct_val = (marks / total * 100) if total > 0 else 0
+                    grade_letter, _, _ = calc_grade(pct_val)
+                    result = "Pass" if pct_val >= 40 else "Fail"
+                    
+                    existing = _qone(
+                        "SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s",
+                        (name, roll, sub, exam_val)
+                    )
+                    if existing:
+                        _exe(
+                            "UPDATE results SET department=%s, year=%s, semester=%s, marks=%s, total=%s, grade=%s, result=%s, published=1 WHERE id=%s",
+                            (dept, year, sem, marks, total, grade_letter, result, existing["id"])
+                        )
+                    else:
+                        _exe(
+                            "INSERT INTO results (student_name, roll, department, year, semester, subject, marks, total, exam_type, grade, result, published) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                            (name, roll, dept, year, sem, sub, marks, total, exam_val, grade_letter, result)
+                        )
+                    added += 1
+                    
+    flash(f"Successfully imported/updated {added} student results.", "success")
+    return True
+
+@results_bp.route("/admin_results")
+@admin_required
+def admin_results():
+    dept     = request.args.get("dept","").strip()
+    semester = request.args.get("semester","").strip()
+    year     = request.args.get("year","").strip()
+    q        = request.args.get("q","").strip()
+    published= request.args.get("published","").strip()
+    exam_type = request.args.get("exam_type","").strip()
+
+    sql = """SELECT r.*, f.name as faculty_name
+             FROM results r LEFT JOIN faculty f ON r.faculty_id=f.id WHERE 1=1"""
+    params = []
+    if dept:      sql += " AND r.department=%s";       params.append(dept)
+    if semester:  sql += " AND r.semester=%s";          params.append(semester)
+    if year:      sql += " AND r.year=%s";              params.append(year)
+    if q:         sql += " AND (r.student_name ILIKE %s OR r.roll ILIKE %s)"; params += [f"%{q}%",f"%{q}%"]
+    if published != "": sql += " AND r.published=%s";  params.append(int(published))
+    if exam_type: sql += " AND r.exam_type=%s";         params.append(exam_type)
+    sql += " ORDER BY r.department, r.student_name, r.semester"
+    results_list = _qry(sql, params)
+
+    # Summary counts
+    total_r    = _qone("SELECT COUNT(*) as c FROM results")["c"] or 0
+    published_r= _qone("SELECT COUNT(*) as c FROM results WHERE published=1")["c"] or 0
+    pass_r     = _qone("SELECT COUNT(*) as c FROM results WHERE result='Pass' AND published=1")["c"] or 0
+    fail_r     = _qone("SELECT COUNT(*) as c FROM results WHERE result='Fail' AND published=1")["c"] or 0
+
+    exam_types = [r["exam_type"] for r in _qry("SELECT DISTINCT exam_type FROM results WHERE exam_type IS NOT NULL AND exam_type != ''")]
+    if not exam_types:
+        exam_types = ["Semester Exam", "Internal Assessment", "Re-evaluation"]
+
+    return render_template("admin/admin_results.html",
+        results=results_list, dept=dept, semester=semester, year=year,
+        q=q, published=published, exam_type=exam_type, exam_types=exam_types,
+        total_r=total_r, published_r=published_r, pass_r=pass_r, fail_r=fail_r,
+        DEPARTMENTS=DEPARTMENTS, SEMESTERS=SEMESTERS, YEARS=YEARS)
+
+@results_bp.route("/admin_save_result", methods=["POST"])
+@admin_required
+def admin_save_result():
+    student_name = request.form.get("student_name","").strip()
+    roll_row = _qone("SELECT roll,department,year FROM students WHERE name=%s", (student_name,))
+    roll = roll_row["roll"] if roll_row else request.form.get("roll","")
+    dept = roll_row["department"] if roll_row else request.form.get("department","")
+    yr   = roll_row["year"] if roll_row else request.form.get("year","")
+    assignment_marks = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
+    attendance_marks = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
+    teacher_assessment = min(float(request.form.get("teacher_assessment", 0) or 0), 10.0)
+    ut_marks = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
+    mse_marks = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
+    tw_marks = float(request.form.get("tw_marks", 0) or 0)
+    pr_or_marks = float(request.form.get("pr_or_marks", 0) or 0)
+    
+    # Calculate sum dynamically if not directly provided
+    marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
+    if marks_val == 0:
+        marks_val = float(request.form.get("marks", 0) or 0)
+
+    marks_val = min(marks_val, 60.0)
+    total_val = 60.0
+    pct_val   = pct(marks_val, total_val)
+    g, _, _   = calc_grade(pct_val)
+    result_val= "Pass" if pct_val >= 40 else "Fail"
+    
+    _exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
+                               marks,total,exam_type,grade,result,published,
+                               assignment_marks, attendance_marks, ut_marks, mse_marks,
+                               teaching_assessment, tw_marks, pr_or_marks)
+           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (student_name, roll, dept, yr,
+         request.form.get("semester","I"),
+         request.form.get("subject",""),
+         marks_val, total_val,
+         request.form.get("exam_type","Semester Exam"),
+         g, result_val, 0, assignment_marks, attendance_marks, ut_marks, mse_marks,
+         teacher_assessment, tw_marks, pr_or_marks))
+    return redirect("/admin_results?success=1")
+
+@results_bp.route("/admin_edit_result", methods=["POST"])
+@admin_required
+def admin_edit_result():
+    rid = request.form.get("result_id","")
+    assignment_marks = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
+    attendance_marks = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
+    teacher_assessment = min(float(request.form.get("teacher_assessment", 0) or 0), 10.0)
+    ut_marks = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
+    mse_marks = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
+    tw_marks = float(request.form.get("tw_marks", 0) or 0)
+    pr_or_marks = float(request.form.get("pr_or_marks", 0) or 0)
+    
+    marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
+    if marks_val == 0:
+        marks_val = float(request.form.get("marks", 0) or 0)
+        
+    marks_val = min(marks_val, 60.0)
+    total_val = 60.0
+    pct_val = pct(marks_val, total_val)
+    g, _, _ = calc_grade(pct_val)
+    result_val = "Pass" if pct_val >= 40 else "Fail"
+    
+    _exe("""UPDATE results SET semester=%s,subject=%s,marks=%s,total=%s,
+           exam_type=%s,grade=%s,result=%s, assignment_marks=%s, attendance_marks=%s, ut_marks=%s, mse_marks=%s,
+           teaching_assessment=%s, tw_marks=%s, pr_or_marks=%s WHERE id=%s""",
+        (request.form.get("semester",""), request.form.get("subject",""),
+         marks_val, total_val, request.form.get("exam_type",""),
+         g, result_val, assignment_marks, attendance_marks, ut_marks, mse_marks,
+         teacher_assessment, tw_marks, pr_or_marks, rid))
+    return redirect("/admin_results?updated=1")
+
+@results_bp.route("/admin_delete_result", methods=["POST"])
+@admin_required
+def admin_delete_result():
+    rid = request.form.get("result_id", "")
+    _exe("DELETE FROM results WHERE id=%s", (rid,))
+    return redirect("/admin_results?deleted=1")
+
+@results_bp.route("/admin_publish_results", methods=["POST"])
+@admin_required
+def admin_publish_results():
+    semester = request.form.get("semester","").strip()
+    dept     = request.form.get("dept","").strip()
+    if semester:
+        sql = "UPDATE results SET published=1 WHERE semester=%s"
+        params = [semester]
+        if dept:
+            sql += " AND department=%s"
+            params.append(dept)
+        _exe(sql, params)
+    return redirect("/admin_results?published_ok=1")
+
+@results_bp.route("/admin_unpublish_results", methods=["POST"])
+@admin_required
+def admin_unpublish_results():
+    semester = request.form.get("semester","").strip()
+    dept     = request.form.get("dept","").strip()
+    if semester:
+        sql = "UPDATE results SET published=0 WHERE semester=%s"
+        params = [semester]
+        if dept:
+            sql += " AND department=%s"
+            params.append(dept)
+        _exe(sql, params)
+    return redirect("/admin_results?unpublished_ok=1")
+
+@results_bp.route("/admin_import_results", methods=["POST"])
+@admin_required
+def admin_import_results():
+    f = request.files.get("file")
+    if not f:
+        flash("No file selected", "error")
+        return redirect("/admin_results")
+    try:
+        _do_import(f)
+    except Exception as e:
+        import traceback
+        from flask import current_app
+        current_app.logger.error(f"Excel import error: {traceback.format_exc()}")
+        flash(f"Error parsing file: {str(e)}", "error")
+    return redirect("/admin_results")
+
+@results_bp.route("/export_results_excel")
+@admin_required
+def export_results_excel():
+    return results_export_excel()

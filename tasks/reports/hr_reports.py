@@ -83,33 +83,9 @@ def generate_faculty_attendance_report(self, filters, output_path):
     for f in faculty_members:
         fid = f["id"]
         
-        # 1. Calculate leaves approved
-        leaves = qry(
-            """
-            SELECT leave_type, from_date, to_date, status, reason
-            FROM leave_applications
-            WHERE faculty_id = %s AND status = 'approved'
-              AND ((from_date BETWEEN %s AND %s) OR (to_date BETWEEN %s AND %s))
-            """,
-            (fid, month_start, month_end, month_start, month_end)
-        )
-        
+        # 1. Calculate leaves approved (disabled as leave applications feature is removed)
+        leaves = []
         leave_days_count = 0
-        for l in leaves:
-            overlap_start = max(l["from_date"], month_start)
-            overlap_end = min(l["to_date"], month_end)
-            if overlap_start <= overlap_end:
-                days = (overlap_end - overlap_start).days + 1
-                leave_days_count += days
-                
-            leave_ledger.append({
-                "faculty_name": f["name"],
-                "from_date": l["from_date"].strftime("%d-%b-%Y") if isinstance(l["from_date"], date) else str(l["from_date"]),
-                "to_date": l["to_date"].strftime("%d-%b-%Y") if isinstance(l["to_date"], date) else str(l["to_date"]),
-                "days": (l["to_date"] - l["from_date"]).days + 1,
-                "type": l["leave_type"],
-                "status": l["status"]
-            })
             
         # 2. Get Present Days
         if has_v2:

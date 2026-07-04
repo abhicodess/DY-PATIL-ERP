@@ -88,7 +88,27 @@ class Cache:
     @staticmethod
     def set(key: str, value: Any, ttl: int = 300):
         try:
-            tenant_redis.setex(key, ttl, json.dumps(value))
+            def to_jsonable(obj):
+                if isinstance(obj, list):
+                    return [to_jsonable(x) for x in obj]
+                if isinstance(obj, tuple):
+                    return tuple(to_jsonable(x) for x in obj)
+                if isinstance(obj, dict):
+                    return {k: to_jsonable(v) for k, v in obj.items()}
+                if type(obj).__name__ == 'RowWrapper':
+                    try:
+                        return {k: to_jsonable(obj[k]) for k in obj.keys()}
+                    except Exception:
+                        try:
+                            return dict(obj)
+                        except Exception:
+                            pass
+                import datetime
+                if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+                    return obj.isoformat()
+                return obj
+
+            tenant_redis.setex(key, ttl, json.dumps(to_jsonable(value)))
         except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
             pass
         except Exception as e:

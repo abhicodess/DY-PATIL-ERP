@@ -6,6 +6,7 @@ class ERPUser(HttpUser):
     def on_start(self):
         """Executed when a user starts - simulates login."""
         self.client.post("/auth/login", data={
+            "role": "student",
             "username": "student_test",
             "password": "password123"
         })

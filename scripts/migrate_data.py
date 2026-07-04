@@ -1,6 +1,9 @@
 import sqlite3
 import psycopg2
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SQLITE_DB = "college.db"
 PG_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:2233@localhost:5432/antigravity_db")
@@ -17,9 +20,7 @@ def migrate_data():
     pg_conn = psycopg2.connect(PG_URL)
     pg_cur = pg_conn.cursor()
 
-    # Disable foreign key checks during migration if needed, but in Postgres 
-    # it's usually better to just insert in order or defer constraints:
-    # Set session replication role to replica to bypass FK checks!
+    # Disable foreign key checks during migration
     pg_cur.execute("SET session_replication_role = 'replica';")
 
     tables = [
@@ -33,17 +34,15 @@ def migrate_data():
             sqlite_cur.execute(f"SELECT * FROM {table}")
             rows = sqlite_cur.fetchall()
             if not rows:
+                print(f"Table {table} has 0 rows in SQLite. Skipping.")
                 continue
 
             columns = list(rows[0].keys())
-            
-            # Remove duplicate teacher_assessment
+            # Remove duplicate teacher_assessment if exists
             if 'teaching_assessment' in columns and 'teacher_assessment' in columns:
                 columns.remove('teacher_assessment')
                 
-            columns_mapped = columns
-            
-            col_names = ", ".join(columns_mapped)
+            col_names = ", ".join(columns)
             placeholders = ", ".join(["%s"] * len(columns))
 
             print(f"Migrating {len(rows)} rows for table: {table}...")
@@ -51,27 +50,27 @@ def migrate_data():
             # Create the insert statement
             insert_query = f"INSERT INTO {table} ({col_names}) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING"
             
-            for row in rows:
-                values = tuple(row[col] for col in columns)
-                try:
-                    pg_cur.execute("SAVEPOINT pg_migration_sp")
-                    pg_cur.execute(insert_query, values)
-                    pg_cur.execute("RELEASE SAVEPOINT pg_migration_sp")
-                except Exception as ex:
-                    pg_cur.execute("ROLLBACK TO SAVEPOINT pg_migration_sp")
-                    # If the entire table insert fails due to schema mismatch, it fails one row and logs, but continues
-                    
-                    # Alternatively, if we just want to bypass errors like "column missing":
-                    print(f"Error migrating row in {table}: {ex}")
-                    # And then we break out of this table if the schema is totally broken
-                    break
+            # Chunk insertions to keep memory footprint low and optimize DB network traffic
+            chunk_size = 2000
+            for i in range(0, len(rows), chunk_size):
+                chunk = rows[i:i + chunk_size]
+                values_list = []
+                for row in chunk:
+                    values = tuple(row[col] for col in columns)
+                    values_list.append(values)
+                
+                pg_cur.executemany(insert_query, values_list)
             
             # Update the sequence so new inserts don't fail (for SERIAL columns)
             if 'id' in columns:
                 pg_cur.execute(f"SELECT setval('{table}_id_seq', COALESCE((SELECT MAX(id)+1 FROM {table}), 1), false);")
                 
+            print(f" [OK] Migrated {table} successfully.")
         except Exception as e:
             print(f"Error migrating table {table}: {e}")
+            pg_conn.rollback()
+            pg_cur.execute("SET session_replication_role = 'replica';")
+            continue
     
     # Re-enable foreign key checks
     pg_cur.execute("SET session_replication_role = 'origin';")

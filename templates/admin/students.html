@@ -44,6 +44,7 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="closeAddModal()"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="/save_student">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div class="cb" style="padding-top:0">
         <div class="fg2">
           <div class="fgrp"><label>Full Name *</label><input type="text" name="name" required placeholder="e.g. Rahul Patil"></div>
@@ -145,6 +146,7 @@
           <th>Department</th>
           <th>Year</th>
           <th>Division</th>
+          <th>Mobile Number</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -162,6 +164,7 @@
           <td><span class="tag t-bl">{{ s.department }}</span></td>
           <td>{{ s.year }}</td>
           <td>{% if s.division %}<span class="tag t-nn">{{ s.division }}</span>{% else %}<span style="color:var(--ink4)">-</span>{% endif %}</td>
+          <td>{{ s.contact_number or '-' }}</td>
           <td>
             <div class="flex-ac gap6">
               <a href="/report_card/{{ s.id }}" class="btn btn-out btn-sm" title="Report Card"><i class="fas fa-file-alt"></i></a>
@@ -199,6 +202,7 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="/edit_student">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div class="cb" style="padding-top:0">
         <input type="hidden" name="student_id" id="eid">
         <div class="fg2">
@@ -242,6 +246,7 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('impStudSmart').classList.remove('show')"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="/import_students_smart" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div class="cb" style="padding-top:0">
         <div class="alert al-info" style="margin-bottom:14px">
           <i class="fas fa-circle-info"></i>
@@ -279,7 +284,7 @@
   </div>
 </div>
 
-<form method="POST" action="/fix_students" id="fixStudForm" style="display:none"></form>
+<form method="POST" action="/fix_students" id="fixStudForm" style="display:none"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"></form>
 {% endblock %}
 
 {% block extra_js %}

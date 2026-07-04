@@ -52,6 +52,16 @@ class Config:
     PG_URL = os.environ.get("PG_URL") or os.environ.get("DATABASE_URL")
     SQLALCHEMY_DATABASE_URI = PG_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_POOL_SIZE = 10
+    SQLALCHEMY_MAX_OVERFLOW = 20
+    SQLALCHEMY_POOL_TIMEOUT = 30
+    SQLALCHEMY_POOL_RECYCLE = 1800
+    
+    # CSRF Protection
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600
+    WTF_CSRF_FIELD_NAME = '_csrf'
+    WTF_CSRF_HEADERS = ['X-CSRFToken', 'X-CSRF-Token']
     
     # Redis & Limiter
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
@@ -91,6 +101,10 @@ class Config:
     DEFAULT_STUDENT_PASSWORD = os.environ.get("DEFAULT_STUDENT_PASSWORD")
     DEFAULT_FACULTY_PASSWORD = os.environ.get("DEFAULT_FACULTY_PASSWORD")
     ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")
+    if ADMIN_PASSWORD_HASH:
+        ADMIN_PASSWORD_HASH = ADMIN_PASSWORD_HASH.replace("$$", "$")
+    
+    # UI Mode: Serve React SPA UI instead of legacy Jinja templates
     SERVE_REACT_SPA = os.environ.get("SERVE_REACT_SPA", "False").lower() == "true"
     
     @staticmethod
@@ -98,7 +112,7 @@ class Config:
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
 class ProductionConfig(Config):
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = 28800

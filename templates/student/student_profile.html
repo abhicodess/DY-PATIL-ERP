@@ -26,7 +26,9 @@
   </div>
   <div class="card">
     <div class="ch"><div class="ct">Update Account</div></div>
-    <form method="POST" action="/student_update_profile"><div class="cb">
+    <form method="POST" action="/student_update_profile">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb">
       {% if request.args.get('error') == 'current_invalid' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Current password is incorrect.</span></div>{% endif %}
       {% if request.args.get('error') == 'mismatch' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>New password and confirm password do not match.</span></div>{% endif %}
       {% if request.args.get('error') == 'short' %}<div class="alert al-er"><i class="fas fa-triangle-exclamation"></i><span>Password must be at least 6 characters.</span></div>{% endif %}

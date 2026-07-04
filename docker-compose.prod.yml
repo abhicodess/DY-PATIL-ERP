@@ -1,9 +1,8 @@
 version: '3.8'
 
 services:
-  app:
+  app1:
     deploy:
-      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
@@ -21,6 +20,44 @@ services:
     environment:
       - FLASK_ENV=production
     ports: !reset [] # Remove port 8000 exposure in production
+
+  app2:
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      - FLASK_ENV=production
+
+  app3:
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      - FLASK_ENV=production
 
   db:
     ports: !reset [] # No port exposure for DB in prod
@@ -42,6 +79,8 @@ services:
   nginx:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/usr/share/nginx/html:ro
+      - .:/app:ro
       - ./static:/app/static:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     deploy:

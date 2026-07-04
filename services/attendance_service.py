@@ -42,6 +42,8 @@ def init_attendance_engine():
     """Initializes schema and tables for both attendance systems."""
     ensure_attendance_engine_schema()
     ensure_attendance_upload_tables()
+    from models.faculty_attendance_v2 import ensure_faculty_attendance_v2_schema
+    ensure_faculty_attendance_v2_schema()
 
 def attendance_page_context(role="admin", actor_id=None, actor_name="", **kwargs):
     """Returns data needed for attendance-related UI pages."""
@@ -551,14 +553,14 @@ class EnterpriseAttendanceService:
             session_id = session["id"]
         else:
             # 3. Auto-Create Session
-            res = exe("""
+            session_row = qone("""
                 INSERT INTO attendance_sessions (
                     subject, division, branch, lecture_date, faculty_id, 
                     timetable_id, status, lecture_type
                 ) VALUES (%s, %s, %s, CURRENT_DATE, %s, %s, 'draft', %s)
                 RETURNING id
             """, (slot["subject"], slot["division"], slot["branch"], faculty_id, timetable_id, slot["slot_type"]))
-            session_id = res.fetchone()["id"]
+            session_id = session_row["id"]
         
         # 4. Auto-Load Students (cached read)
         students = EnterpriseAttendanceService.get_cached_students(slot["branch"], slot["year"], slot["division"])

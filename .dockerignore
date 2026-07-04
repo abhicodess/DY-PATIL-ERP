@@ -45,6 +45,10 @@ dist
 # Ignore zip archives and attic
 attic.zip
 broken_files.zip
+static.zip
 attic/
 broken_files/
 
+# Ignore environment files
+.env
+.env.*

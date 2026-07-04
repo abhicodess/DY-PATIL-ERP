@@ -1,11 +1,12 @@
-from flask import Blueprint, request
+from flask_smorest import Blueprint
+from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from utils.pg_wrapper import qry, qone, qry_read, qone_read
 from utils.api_response import success_response, error_response
 from utils.cache import cache_result
 import datetime
 
-dashboard_bp = Blueprint('dashboard', __name__)
+dashboard_bp = Blueprint('dashboard_api_v1', __name__, url_prefix='/api/v1/dashboard', description="Dashboard metrics API")
 
 @cache_result("admin_stats:{date}", ttl=120)
 def _get_cached_admin_stats(date):
@@ -80,7 +81,7 @@ def get_dashboard_summary():
 
     elif role == "student":
         # Get student's details first
-        student = qone_read("SELECT division, year, department FROM students WHERE id = :id AND is_active = TRUE", {"id": identity_id})
+        student = qone_read("SELECT name, roll, division, year, department FROM students WHERE id = :id AND is_active = TRUE", {"id": identity_id})
         if not student:
             return error_response("Student not found", "NOT_FOUND", 404)
 
@@ -97,7 +98,7 @@ def get_dashboard_summary():
         att_percentage = round((pres / tot) * 100, 2) if tot > 0 else 0.0
 
         # Published results
-        results_count = qone_read("SELECT COUNT(*) as cnt FROM results WHERE student_id = :id AND is_published = TRUE", {"id": identity_id})["cnt"]
+        results_count = qone_read("SELECT COUNT(*) as cnt FROM results WHERE (roll = :roll OR student_name = :name) AND published = 1", {"roll": student["roll"], "name": student["name"]})["cnt"]
 
         # Today's lectures
         today_lectures = qone_read("""

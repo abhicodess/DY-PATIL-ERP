@@ -28,6 +28,36 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
+        lockout_key = f"lockout:{username}"
+        attempts_key = f"attempts:{username}"
+
+        # Check lockout status
+        is_locked = False
+        try:
+            from extensions import redis_client
+            if redis_client.get(lockout_key):
+                is_locked = True
+        except Exception as e:
+            import logging
+            logging.warning(f"Redis error during lockout check: {e}")
+
+        if is_locked:
+            flash("Account locked. Try again in 10 minutes.", "danger")
+            return render_template("common/login.html"), 423
+
+        def record_failure():
+            try:
+                from extensions import redis_client
+                attempts = redis_client.incr(attempts_key)
+                if attempts == 1:
+                    redis_client.expire(attempts_key, 600)
+                if attempts >= 5:
+                    redis_client.set(lockout_key, 1, ex=600)
+                    redis_client.delete(attempts_key)
+            except Exception as e:
+                import logging
+                logging.warning(f"Redis error during failure recording: {e}")
+
         user_data = None
         
         if role == "admin":
@@ -36,6 +66,7 @@ def login():
                 user_data = {"role": "admin", "name": "Administrator"}
             else:
                 flash("Invalid admin credentials.", "danger")
+                record_failure()
 
         elif role == "faculty":
             faculty = faculty_service.verify_credentials(username, password)
@@ -49,6 +80,7 @@ def login():
                 }
             else:
                 flash("Invalid faculty credentials.", "danger")
+                record_failure()
 
         elif role == "student":
             student = student_service.verify_credentials(username, password)
@@ -65,8 +97,16 @@ def login():
                 }
             else:
                 flash("Invalid student credentials.", "danger")
+                record_failure()
 
         if user_data:
+            try:
+                from extensions import redis_client
+                redis_client.delete(attempts_key)
+            except Exception as e:
+                import logging
+                logging.warning(f"Redis error during success reset: {e}")
+
             session.clear()
             for k, v in user_data.items():
                 session[k] = v

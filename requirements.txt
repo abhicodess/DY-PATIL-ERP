@@ -42,3 +42,5 @@ pillow
 qrcode
 PyPDF2
 matplotlib
+flask-wtf
+

@@ -14,6 +14,8 @@ class Faculty(db.Model):
     password = db.Column(db.String(255), default='faculty123')
     photo = db.Column(db.String(255), default='')
     must_change_password = db.Column(db.Boolean, default=False, server_default='0')
+    employee_id = db.Column(db.String(100), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

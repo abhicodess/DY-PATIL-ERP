@@ -11,9 +11,7 @@ student_service = StudentService()
 @attendance_bp.route("/")
 @login_required(["admin", "faculty"])
 def index():
-    today = get_today_str()
-    # Basic view for attendance marking
-    return render_template("attendance/attendance.html", today=today)
+    return redirect("/attendance")
 
 @attendance_bp.route("/mark", methods=["POST"])
 @faculty_required

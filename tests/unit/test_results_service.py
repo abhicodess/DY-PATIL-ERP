@@ -8,20 +8,16 @@ class TestResultsService:
 
     @pytest.mark.parametrize("score, expected_grade", [
         (95, "O"),
-        (85, "A+"),
-        (75, "A"),
-        (65, "B+"),
+        (85, "O"),
+        (75, "O"),
+        (65, "A"),
         (55, "B"),
         (45, "C"),
-        (35, "F"),
+        (35, "D"),
+        (25, "F"),
     ])
     def test_calculate_grade(self, score, expected_grade):
-        # We need to implement this in ResultsService, or test the logic here
-        # Assuming we add a helper method to ResultsService
-        if hasattr(self.service, 'calculate_grade'):
-            assert self.service.calculate_grade(score) == expected_grade
-        else:
-            pytest.skip("calculate_grade not implemented in service yet")
+        assert self.service.calculate_grade(score) == expected_grade
 
     def test_get_student_results_empty(self):
         results = self.service.get_student_results(999)

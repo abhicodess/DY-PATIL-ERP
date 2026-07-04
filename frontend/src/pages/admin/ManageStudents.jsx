@@ -103,6 +103,7 @@ export const ManageStudents = () => {
                   <th className="p-4">Department</th>
                   <th className="p-4">Year/Div</th>
                   <th className="p-4">Email</th>
+                  <th className="p-4">Mobile</th>
                   <th className="p-4 text-center">Actions</th>
                 </tr>
               </thead>
@@ -110,12 +111,12 @@ export const ManageStudents = () => {
                 {isLoading ? (
                   [1, 2, 3].map((n) => (
                     <tr key={n} className="border-b border-white/5 animate-pulse">
-                      <td colSpan={7} className="p-4"><div className="h-4 bg-slate-800 rounded w-full" /></td>
+                      <td colSpan={8} className="p-4"><div className="h-4 bg-slate-800 rounded w-full" /></td>
                     </tr>
                   ))
                 ) : data?.data?.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500">No student records found.</td>
+                    <td colSpan={8} className="p-8 text-center text-slate-500">No student records found.</td>
                   </tr>
                 ) : (
                   data?.data?.map((student) => (
@@ -126,6 +127,7 @@ export const ManageStudents = () => {
                       <td className="p-4 text-slate-400">{student.department}</td>
                       <td className="p-4 text-slate-400">{student.year} - {student.division}</td>
                       <td className="p-4 text-slate-400">{student.email}</td>
+                      <td className="p-4 text-slate-400">{student.contact_number || '-'}</td>
                       <td className="p-4 text-center">
                         <button
                           onClick={() => handleDelete(student.id, student.name)}

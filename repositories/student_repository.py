@@ -11,6 +11,9 @@ class StudentRepository(BaseRepository):
     def get_by_roll(self, roll):
         return Student.query.filter_by(roll=roll).first()
     
+    def get_by_email(self, email):
+        return Student.query.filter_by(email=email).first()
+    
     def search(self, q=None, dept=None, year=None, division=None):
         query = Student.query
         if q:

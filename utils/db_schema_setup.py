@@ -89,19 +89,6 @@ def setup_db_schemas():
                 )
             """)
 
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS leave_applications (
-                    id SERIAL PRIMARY KEY,
-                    faculty_id INTEGER REFERENCES faculty(id) ON DELETE CASCADE,
-                    leave_type TEXT,
-                    from_date DATE,
-                    to_date DATE,
-                    reason TEXT,
-                    status TEXT DEFAULT 'pending',
-                    remarks TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS events (
@@ -180,9 +167,16 @@ def setup_db_schemas():
                     action TEXT,
                     prev_status TEXT,
                     new_status TEXT,
+                    details TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            try:
+                cur.execute("ALTER TABLE attendance_audit ADD COLUMN IF NOT EXISTS details TEXT")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not add column attendance_audit.details: {e}")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS whatsapp_templates (
@@ -236,6 +230,229 @@ def setup_db_schemas():
                 except Exception as e:
                     conn.rollback()
                     logger.warning(f"Could not add column messages.{col}: {e}")
+
+            # 6. Faculty Timetable self-service & Admin Notifications
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS faculty_timetable (
+                    id            SERIAL PRIMARY KEY,
+                    faculty_id    INTEGER NOT NULL,
+                    faculty_name  TEXT NOT NULL,
+                    day           TEXT NOT NULL
+                                  CHECK (day IN ('Monday','Tuesday','Wednesday',
+                                                 'Thursday','Friday','Saturday')),
+                    time_slot     TEXT NOT NULL,
+                    subject       TEXT NOT NULL,
+                    division      TEXT NOT NULL,
+                    room          TEXT DEFAULT '',
+                    slot_type     TEXT DEFAULT 'Theory'
+                                  CHECK (slot_type IN ('Theory','Lab','Elective','Minor')),
+                    semester      TEXT DEFAULT '',
+                    academic_year TEXT DEFAULT '',
+                    status        TEXT DEFAULT 'draft'
+                                  CHECK (status IN ('draft','pending','approved','rejected')),
+                    admin_note    TEXT DEFAULT '',
+                    resubmission_count INTEGER DEFAULT 0,
+                    last_rejected_note TEXT DEFAULT '',
+                    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Recreate constraint and update default status to draft
+            try:
+                cur.execute("ALTER TABLE faculty_timetable DROP CONSTRAINT IF EXISTS faculty_timetable_status_check")
+                cur.execute("ALTER TABLE faculty_timetable ADD CONSTRAINT faculty_timetable_status_check CHECK (status IN ('draft', 'pending', 'approved', 'rejected'))")
+                cur.execute("ALTER TABLE faculty_timetable ALTER COLUMN status SET DEFAULT 'draft'")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not update status constraint on faculty_timetable: {e}")
+
+            # Add resubmission columns to faculty_timetable
+            for col, col_type in [
+                ("resubmission_count", "INTEGER DEFAULT 0"),
+                ("last_rejected_note", "TEXT DEFAULT ''")
+            ]:
+                try:
+                    cur.execute(f"ALTER TABLE faculty_timetable ADD COLUMN IF NOT EXISTS {col} {col_type}")
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    logger.warning(f"Could not add column faculty_timetable.{col}: {e}")
+
+            try:
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS
+                    uq_fac_tt_active
+                    ON faculty_timetable (faculty_id, day, time_slot)
+                    WHERE status NOT IN ('rejected','approved')
+                """)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not create uq_fac_tt_active index: {e}")
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_notifications (
+                    id            SERIAL PRIMARY KEY,
+                    event_type    TEXT NOT NULL,
+                    faculty_id    INTEGER,
+                    faculty_name  TEXT,
+                    message       TEXT NOT NULL,
+                    payload       TEXT DEFAULT '{}',
+                    is_read       BOOLEAN DEFAULT FALSE,
+                    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS student_timetable (
+                    id SERIAL PRIMARY KEY,
+                    division VARCHAR(10) NOT NULL,
+                    semester VARCHAR(10) NOT NULL,
+                    department VARCHAR(50) NOT NULL,
+                    day VARCHAR(20) NOT NULL,
+                    time_slot VARCHAR(50) NOT NULL,
+                    subject VARCHAR(100) NOT NULL,
+                    faculty_name VARCHAR(100) NOT NULL,
+                    room VARCHAR(50) NOT NULL,
+                    created_by_faculty_id INTEGER NOT NULL,
+                    approved_by_admin BOOLEAN DEFAULT FALSE,
+                    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            for col, col_type in [
+                ("status", "TEXT DEFAULT 'pending'"),
+                ("admin_note", "TEXT DEFAULT ''"),
+                ("requested_at", "TEXT"),
+                ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            ]:
+                try:
+                    cur.execute(f"ALTER TABLE faculty_subject_assignments ADD COLUMN IF NOT EXISTS {col} {col_type}")
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    logger.warning(f"Could not add column faculty_subject_assignments.{col}: {e}")
+
+            # 7. Initialize attendance engine schemas
+            try:
+                from services.attendance_service import init_attendance_engine
+                init_attendance_engine()
+            except Exception as e:
+                logger.warning(f"Could not initialize attendance engine: {e}")
+
+            # 8. Assessments Table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS assessments (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+                    subject VARCHAR(100) NOT NULL,
+                    faculty_id INTEGER REFERENCES faculty(id) ON DELETE SET NULL,
+                    assignment_1 VARCHAR(255) DEFAULT '',
+                    assignment_2 VARCHAR(255) DEFAULT '',
+                    assignment_3 VARCHAR(255) DEFAULT '',
+                    assignment_4 VARCHAR(255) DEFAULT '',
+                    assignment_5 VARCHAR(255) DEFAULT '',
+                    paper_q1 VARCHAR(255) DEFAULT '',
+                    paper_q2 VARCHAR(255) DEFAULT '',
+                    paper_q3 VARCHAR(255) DEFAULT '',
+                    paper_q4 VARCHAR(255) DEFAULT '',
+                    patent_publication VARCHAR(255) DEFAULT '',
+                    copyright VARCHAR(255) DEFAULT '',
+                    project_review_1 VARCHAR(255) DEFAULT '',
+                    project_review_2 VARCHAR(255) DEFAULT '',
+                    implementation_documentation TEXT DEFAULT '',
+                    remark TEXT DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # 9. Faculty notes attachment column
+            try:
+                cur.execute("ALTER TABLE faculty_notes ADD COLUMN IF NOT EXISTS attachment_path TEXT")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not add column faculty_notes.attachment_path: {e}")
+
+            # 10. Marks remarks column
+            try:
+                cur.execute("ALTER TABLE marks ADD COLUMN IF NOT EXISTS remarks TEXT DEFAULT ''")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not add column marks.remarks: {e}")
+
+            # 11. Marks system upgrades (subjects_master, marks columns, seed data)
+            try:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS subjects_master (
+                      id             SERIAL PRIMARY KEY,
+                      subject_code   TEXT UNIQUE NOT NULL,
+                      subject_name   TEXT NOT NULL,
+                      department     TEXT,
+                      semester       TEXT,
+                      max_assignment INTEGER DEFAULT 5,
+                      max_attendance INTEGER DEFAULT 5,
+                      max_teaching   INTEGER DEFAULT 10,
+                      max_ut         INTEGER DEFAULT 20,
+                      max_mse        INTEGER DEFAULT 20,
+                      max_total      INTEGER DEFAULT 60
+                    )
+                """)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not create subjects_master: {e}")
+
+            try:
+                cur.execute("""
+                    ALTER TABLE marks
+                      ADD COLUMN IF NOT EXISTS subject_code TEXT DEFAULT '',
+                      ADD COLUMN IF NOT EXISTS prn_number   TEXT DEFAULT '',
+                      ADD COLUMN IF NOT EXISTS ut_published  BOOLEAN DEFAULT FALSE,
+                      ADD COLUMN IF NOT EXISTS mse_published BOOLEAN DEFAULT FALSE,
+                      ADD COLUMN IF NOT EXISTS result_published BOOLEAN DEFAULT FALSE,
+                      ADD COLUMN IF NOT EXISTS grade TEXT DEFAULT '',
+                      ADD COLUMN IF NOT EXISTS result TEXT DEFAULT ''
+                """)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not add marks subject_code/prn/published/grade/result columns: {e}")
+
+            try:
+                cur.execute("""
+                    UPDATE marks SET
+                      assignment_marks   = CAST(assignment_marks AS REAL),
+                      attendance_marks   = CAST(attendance_marks AS REAL),
+                      ut_marks           = CAST(ut_marks AS REAL),
+                      mse_marks          = CAST(mse_marks AS REAL)
+                    WHERE true
+                """)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not cast text mark columns to REAL: {e}")
+
+            try:
+                cur.execute("""
+                    INSERT INTO subjects_master
+                      (subject_code, subject_name, department, semester)
+                    VALUES
+                      ('U24AIMLPC401','Statistics & Probability','AIML','SEM IV'),
+                      ('U24AIMLPC402','Introduction to AI','AIML','SEM IV'),
+                      ('U24AIMLPC403','Database Management Systems','AIML','SEM IV')
+                    ON CONFLICT (subject_code) DO NOTHING
+                """)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not seed subjects_master: {e}")
+
 
         conn.commit()
         logger.info("Database schemas validated successfully.")

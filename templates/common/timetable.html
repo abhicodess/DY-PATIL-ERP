@@ -14,7 +14,7 @@
 /* ═══════════════════════════════════════════════════════════
    TIMETABLE — Modern High-Density Grid
    Days as Rows (Sticky Left), Times as Columns (Sticky Top)
-═══════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════ */
 
 :root {
   --tt-header-bg: #0f172a;
@@ -173,11 +173,7 @@
 }
 .cell-add:hover { border-color: #3b82f6; background: #eff6ff; color: #3b82f6; }
 
-@media print {
-  .sidebar, .topbar, .fbar, .ph-actions { display: none !important; }
-  .tt-container { height: auto !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
-  .tt-tbl { min-width: 0 !important; width: 100% !important; table-layout: auto !important; }
-}
+
 
 .empty-ph{
   height:42px;border:2px dashed var(--border2);border-radius:7px;
@@ -192,11 +188,12 @@
   background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);
   padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)
 }
-.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none}
+.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none;min-width:130px;flex:1 1 auto}
 .ff:focus,.ff.on{border-color:var(--blue);background:var(--blue-s);color:var(--blue);font-weight:600}
 .fsrch{display:flex;align-items:center;gap:7px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;min-width:210px;flex:1;max-width:300px}
 .fsrch input{border:none;background:none;font-size:12px;outline:none;width:100%;font-family:var(--font)}
 .fsrch i{color:var(--ink4);font-size:11px;flex-shrink:0}
+.fbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* Stats strip */
 .tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -228,7 +225,87 @@
 .sc.conflict-border { border: 2px solid #ef4444 !important; animation: pulse-red 2s infinite; }
 @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
-@media print{.sidebar,.topbar,.fbar,.tts-row,.leg,.dot-btn,.cell-add,.empty-ph,.modal-bg,button,form,.vtog,#toast{display:none!important}.main{margin:0!important;padding:8px!important}.sc{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .sidebar, .topbar, .fbar, .tts-row, .leg, .dot-btn, .cell-add, .empty-ph, .modal-bg, button, form, .vtog, #toast, .ph-actions, .breadcrumb, .alert-bar {
+    display: none !important;
+  }
+  .shell {
+    display: block !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .card, .card-view-grid {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+    background: #fff !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .cb, div {
+    overflow: visible !important;
+  }
+  table, .tbl, .tt-tbl {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    overflow: visible !important;
+  }
+  th, td, .tbl th, .tbl td, .tt-tbl th, .tt-tbl td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+  .sc {
+    break-inside: avoid !important;
+  }
+}
+
+/* Mobile Helpers */
+.mob-view-toggle {
+  display: none;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+  .mob-view-toggle {
+    display: flex;
+  }
+}
 </style>
 
 <!-- ═══ PAGE HEADER ══════════════════════════════════════════ -->
@@ -239,25 +316,25 @@
   </div>
   <div class="ph-actions">
     <div class="vtog">
-      <button class="vtb on" id="vg" onclick="setView('grid',this)"><i class="fas fa-table-cells"></i> Grid</button>
-      <button class="vtb"    id="vl" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
-      <button class="vtb"    id="vw" onclick="setView('wl',this)"><i class="fas fa-chart-bar"></i> Load</button>
+      <button class="vtb {{ 'on' if view == 'grid' or not view }}" id="vg" onclick="setView('grid',this)"><i class="fas fa-table-cells"></i> Grid</button>
+      <button class="vtb {{ 'on' if view == 'list' }}"    id="vl" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
+      <button class="vtb {{ 'on' if view == 'wl' }}"    id="vw" onclick="setView('wl',this)"><i class="fas fa-chart-bar"></i> Load</button>
     </div>
     <button onclick="toggleCompact()" id="compBtn" class="btn btn-out btn-sm"><i class="fas fa-compress"></i> Compact</button>
     {% if session.role == 'admin' %}
     <button onclick="openBroadcastModal()" class="btn btn-vi btn-sm"><i class="fas fa-paper-plane"></i> Send to Students</button>
     <button onclick="openSlotSettings()" class="btn btn-out btn-sm"><i class="fas fa-clock"></i> Manage Slots</button>
     {% endif %}
-    <a href="/export_timetable_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export</a>
+    <a href="/export_timetable_excel?q={{ q }}&day={{ f_day }}&subject={{ f_subj }}&teacher={{ f_teach }}&division={{ f_div }}&slot_type={{ f_type }}&semester={{ f_sem }}&view={{ view }}" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export</a>
     <button onclick="window.print()" class="btn btn-out btn-sm"><i class="fas fa-print"></i> Print</button>
 
     {% if session.role == 'faculty' %}
       {% if show_personal %}
-        <a href="/timetable?all=true" class="btn btn-out btn-sm">
+        <a href="{{ request.path }}?all=true" class="btn btn-out btn-sm">
           <i class="fas fa-globe"></i> View Master Timetable
         </a>
       {% else %}
-        <a href="/timetable?personal=true" class="btn btn-out btn-sm">
+        <a href="{{ request.path }}?personal=true" class="btn btn-out btn-sm">
           <i class="fas fa-user-check"></i> View My Timetable
         </a>
       {% endif %}
@@ -323,7 +400,7 @@
   <div class="tts-card"><div class="tts-ico ic-bl"><i class="fas fa-book-open"></i></div><div><div class="tts-v">{{ theory }}</div><div class="tts-l">Theory</div></div></div>
   <div class="tts-card"><div class="tts-ico ic-vi"><i class="fas fa-flask"></i></div><div><div class="tts-v">{{ lab }}</div><div class="tts-l">Lab</div></div></div>
   <div class="tts-card"><div class="tts-ico ic-gr"><i class="fas fa-leaf"></i></div><div><div class="tts-v">{{ elec }}</div><div class="tts-l">Elective</div></div></div>
-  <div class="tts-card"><div class="tts-ico ic-am"><i class="fas fa-users"></i></div><div><div class="tts-v">{{ teachers|length }}</div><div class="tts-l">Faculty</div></div></div>
+  <div class="tts-card"><div class="tts-ico ic-am"><i class="fas fa-users"></i></div><div><div class="tts-v">{{ filtered_teachers }}</div><div class="tts-l">Faculty</div></div></div>
 </div>
 
 <!-- ═══ LEGEND ═══════════════════════════════════════════════ -->
@@ -338,7 +415,8 @@
 </div>
 
 <!-- ═══ FILTER BAR ════════════════════════════════════════════ -->
-<form method="GET" action="/timetable" id="filterForm" class="fbar fu">
+<form method="GET" action="{{ request.path }}" id="filterForm" class="fbar fu">
+  <input type="hidden" name="view" id="filterView" value="{{ view or 'grid' }}">
   <div class="fsrch">
     <i class="fas fa-magnifying-glass"></i>
     <input type="text" name="q" value="{{ q }}" placeholder="Search subject, teacher, room…">
@@ -370,98 +448,174 @@
     <option value="">All Semesters</option>
     {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}" {{ 'selected' if f_sem==s|string }}>Sem {{ s }}</option>{% endfor %}
   </select>
-  <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i></button>
-  {% if q or f_day or f_subj or f_teach or f_div or f_type or f_sem %}
-  <a href="/timetable" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear Filters</a>
-  <span style="font-size:12px;color:var(--blue);font-weight:600"><i class="fas fa-filter"></i> {{ entries|length }} results</span>
-  {% endif %}
+  <div class="fbar-actions">
+    <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i></button>
+    {% if session.role == 'admin' %}
+    <button type="button" class="btn btn-am btn-sm" onclick="if(confirm('Remove invalid rows?')) document.getElementById('fixDataForm').submit()"><i class="fas fa-broom"></i> Fix Data</button>
+    {% endif %}
+    {% if q or f_day or f_subj or f_teach or f_div or f_type or f_sem %}
+    <a href="{{ request.path }}" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear Filters</a>
+    <span style="font-size:12px;color:var(--blue);font-weight:600"><i class="fas fa-filter"></i> {{ entries|length }} results</span>
+    {% endif %}
+  </div>
 </form>
 
-<form method="POST" action="/clean_timetable" style="position: absolute; right: 44px; margin-top: -54px;" onsubmit="return confirm('Remove invalid rows?')">
-  <button type="submit" class="btn btn-am btn-sm"><i class="fas fa-broom"></i> Fix Data</button>
+<form id="fixDataForm" method="POST" action="/clean_timetable" style="display:none">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 </form>
 
 <!-- ═══ GRID VIEW ════════════════════════════════════════════ -->
-<div id="vwGrid" class="fu fu2">
+<div id="vwGrid" class="fu fu2" {% if view and view != 'grid' %}style="display:none"{% endif %}>
 {% if time_slots %}
-<div class="tt-container">
-  <table class="tt-tbl" id="mainTbl">
-    <thead>
-      <tr>
-        <th>DAY / TIME</th>
-        {% for ts in time_slots %}
-        <th>{{ ts }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for day in DAYS %}
-      <tr>
-        <td class="tt-day {{ 'today' if day==today_name }}">
-          <div class="tt-day-inner">
-            <div class="tt-day-name">{{ day }}</div>
-            <div class="tt-day-sub">
-              {% if any_filter %}
-                {% set dcnt = namespace(n=0) %}
-                {% for ts2 in time_slots %}{% for s2 in grid[day][ts2] %}{% if (filtered_ids is none) or (s2.id in filtered_ids) %}{% set dcnt.n = dcnt.n+1 %}{% endif %}{% endfor %}{% endfor %}
-                {{ dcnt.n }} matches
-              {% else %}
-                {% set dcnt = namespace(n=0) %}{% for ts2 in time_slots %}{% set dcnt.n = dcnt.n + grid[day][ts2]|length %}{% endfor %}
-                {{ dcnt.n }} slots
+
+  <!-- Mobile View Selector Toggle -->
+  <div class="mob-view-toggle">
+    <div class="vtog">
+      <button class="vtb" id="mobToggleCard" onclick="toggleTimetableMobileView('card')"><i class="fas fa-list"></i> Card View</button>
+      <button class="vtb" id="mobToggleTable" onclick="toggleTimetableMobileView('table')"><i class="fas fa-table-cells"></i> Table View</button>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW (scrollable container + sticky day column) -->
+  <div id="mobileTableView" class="tt-scroll-wrap">
+    <table class="tt-tbl" id="mainTbl">
+      <thead>
+        <tr>
+          <th>DAY / TIME</th>
+          {% for ts in time_slots %}
+          <th>{{ ts }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in DAYS %}
+        <tr>
+          <td class="tt-day {{ 'today' if day==today_name }}">
+            <div class="tt-day-inner">
+              <div class="tt-day-name">{{ day }}</div>
+              <div class="tt-day-sub">
+                {% if any_filter %}
+                  {% set dcnt = namespace(n=0) %}
+                  {% for ts2 in time_slots %}{% for s2 in grid[day][ts2] %}{% if (filtered_ids is none) or (s2.id in filtered_ids) %}{% set dcnt.n = dcnt.n+1 %}{% endif %}{% endfor %}{% endfor %}
+                  {{ dcnt.n }} matches
+                {% else %}
+                  {% set dcnt = namespace(n=0) %}{% for ts2 in time_slots %}{% set dcnt.n = dcnt.n + grid[day][ts2]|length %}{% endfor %}
+                  {{ dcnt.n }} slots
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          {% for ts in time_slots %}
+          <td class="tt-cell" data-day="{{ day }}" data-time="{{ ts }}">
+            {% for slot in grid[day][ts] %}
+            {% set st = slot.slot_type or 'Theory' %}
+            {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
+            {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
+            <div class="sc {{ cls }}" id="sc{{ slot.id }}" data-id="{{ slot.id }}" data-day="{{ day }}" data-time="{{ ts }}"
+                 data-subject="{{ slot.subject }}" data-teacher="{{ slot.teacher }}" data-room="{{ slot.room }}"
+                 data-type="{{ st }}" data-division="{{ slot.division }}">
+              <div class="sc-name">{{ slot.subject }}</div>
+              <div class="sc-details">
+                {% if slot.teacher %}<div class="sc-item"><i class="fas fa-user"></i> {{ slot.teacher }}</div>{% endif %}
+                {% if slot.room %}<div class="sc-item"><i class="fas fa-location-dot"></i> {{ slot.room }}</div>{% endif %}
+              </div>
+              
+              <div class="sc-badge-row">
+                <span class="sc-badge">{{ st }}</span>
+                {% if slot.division %}<span class="sc-div">{{ slot.division }}</span>{% endif %}
+              </div>
+
+              {% if session.role == 'admin' %}
+              <button class="dot-btn" onclick="event.stopPropagation();DD.toggle({{ slot.id }})">
+                <i class="fas fa-ellipsis-vertical"></i>
+              </button>
+              <div class="sc-drop" id="dd{{ slot.id }}">
+                <button class="ddi" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
+                <form method="POST" action="/duplicate_timetable" style="display:block">
+                  <input type="hidden" name="tt_id" value="{{ slot.id }}">
+                  <button type="submit" class="ddi"><i class="fas fa-copy"></i> Duplicate</button>
+                </form>
+                <button class="ddi red" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+              </div>
               {% endif %}
             </div>
-          </div>
-        </td>
+            {% endif %}
+            {% endfor %}
 
-        {% for ts in time_slots %}
-        <td class="tt-cell" data-day="{{ day }}" data-time="{{ ts }}">
-          {% for slot in grid[day][ts] %}
-          {% set st = slot.slot_type or 'Theory' %}
-          {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
-          {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
-          <div class="sc {{ cls }}" id="sc{{ slot.id }}" data-id="{{ slot.id }}" data-day="{{ day }}" data-time="{{ ts }}"
-               data-subject="{{ slot.subject }}" data-teacher="{{ slot.teacher }}" data-room="{{ slot.room }}"
-               data-type="{{ st }}" data-division="{{ slot.division }}">
-            <div class="sc-name">{{ slot.subject }}</div>
-            <div class="sc-details">
-              {% if slot.teacher %}<div class="sc-item"><i class="fas fa-user"></i> {{ slot.teacher }}</div>{% endif %}
-              {% if slot.room %}<div class="sc-item"><i class="fas fa-location-dot"></i> {{ slot.room }}</div>{% endif %}
-            </div>
-            
-            <div class="sc-badge-row">
-              <span class="sc-badge">{{ st }}</span>
-              {% if slot.division %}<span class="sc-div">{{ slot.division }}</span>{% endif %}
-            </div>
-
-            {% if session.role == 'admin' %}
-            <button class="dot-btn" onclick="event.stopPropagation();DD.toggle({{ slot.id }})">
-              <i class="fas fa-ellipsis-vertical"></i>
-            </button>
-            <div class="sc-drop" id="dd{{ slot.id }}">
-              <button class="ddi" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
-              <form method="POST" action="/duplicate_timetable" style="display:block">
-                <input type="hidden" name="tt_id" value="{{ slot.id }}">
-                <button type="submit" class="ddi"><i class="fas fa-copy"></i> Duplicate</button>
-              </form>
-              <button class="ddi red" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+            {% if session.role == 'admin' and not any_filter %}
+            <div class="cell-add" onclick="A.prefill('{{ day }}','{{ ts }}')">
+              <i class="fas fa-plus"></i>
             </div>
             {% endif %}
-          </div>
-          {% endif %}
+          </td>
           {% endfor %}
-
-          {% if session.role == 'admin' and not any_filter %}
-          <div class="cell-add" onclick="A.prefill('{{ day }}','{{ ts }}')">
-            <i class="fas fa-plus"></i>
-          </div>
-          {% endif %}
-        </td>
+        </tr>
         {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CARD VIEW (collapsible days accordion - default on mobile) -->
+  <div id="mobileCardView" data-today="{{ today_name }}">
+    {% for day in DAYS %}
+    <div class="tt-accordion-card">
+      <div class="tt-accordion-header" data-target="body-day-{{ day }}" data-day="{{ day }}">
+        <div class="tt-day-inner">
+          <div class="tt-day-name">{{ day }} {% if day==today_name %}<span class="tag t-bl" style="font-size:10px; margin-left:6px;">TODAY</span>{% endif %}</div>
+        </div>
+        <div>
+          {% set day_cnt = namespace(value=0) %}
+          {% for ts in time_slots %}
+            {% for slot in grid[day][ts] %}
+              {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
+                {% set day_cnt.value = day_cnt.value + 1 %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          <span style="font-size:12px; color:var(--ink3);">{{ day_cnt.value }} Periods &nbsp; <i class="fas fa-chevron-down"></i></span>
+        </div>
+      </div>
+      <div class="tt-accordion-body" id="body-day-{{ day }}">
+        {% set day_has_periods = namespace(value=false) %}
+        {% for ts in time_slots %}
+          {% for slot in grid[day][ts] %}
+            {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
+              {% set day_has_periods.value = true %}
+              {% set st = slot.slot_type or 'Theory' %}
+              {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
+              <div class="tt-period-card filterable-card">
+                <div class="tt-period-meta">
+                  <span class="tt-period-time"><i class="fas fa-clock"></i> {{ ts }}</span>
+                  <span class="tag {% if st=='Lab' %}t-vi{% elif st=='Elective' %}t-gr{% elif st=='Minor' %}t-am{% else %}t-bl{% endif %}" style="font-size:10px;">{{ st }}</span>
+                </div>
+                <div style="font-size:14px; font-weight:700; color:var(--ink); margin: 6px 0;">{{ slot.subject }}</div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--ink3);">
+                  {% if slot.teacher %}<span><i class="fas fa-user"></i> {{ slot.teacher }}</span>{% endif %}
+                  {% if slot.room %}<span><i class="fas fa-location-dot"></i> {{ slot.room }}</span>{% endif %}
+                  {% if slot.division %}<span><i class="fas fa-users"></i> Division: {{ slot.division }}</span>{% endif %}
+                </div>
+                {% if session.role == 'admin' %}
+                <div style="margin-top:10px; display:flex; gap:8px;">
+                  <button class="btn btn-out btn-sm" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {% if not day_has_periods.value %}
+          <div style="padding: 16px; text-align: center; color: var(--ink4); font-size: 13px;">No classes scheduled</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Floating Today Button -->
+  <button class="floating-today-btn mobile-only" onclick="scrollToTodayTimetable()"><i class="fas fa-calendar-day"></i> Today</button>
+
 {% else %}
 <div class="card"><div class="cb">
   <div class="empty-state" style="padding:60px">
@@ -478,31 +632,31 @@
 </div>
 
 <!-- ═══ LIST VIEW ════════════════════════════════════════════ -->
-<div id="vwList" style="display:none" class="fu fu2">
+<div id="vwList" {% if view != 'list' %}style="display:none"{% endif %} class="fu fu2">
   <div class="card">
     <div class="ch flex-sb"><div class="ct">All Slots</div><div class="cs">{{ entries|length }} records</div></div>
     <div class="cb p0" style="padding-top:0">
-      <table class="tbl">
+      <table class="tbl tbl-to-card">
         <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th><th>Room</th><th>Type</th><th>Division</th><th>Actions</th></tr></thead>
         <tbody>
           {% for e in entries %}
-          <tr>
-            <td><span class="tag t-bl">{{ e.day }}</span></td>
-            <td class="mono" style="font-size:11px;white-space:nowrap">{{ e.time }}</td>
-            <td><strong>{{ e.subject }}</strong></td>
-            <td style="font-size:12px;color:var(--ink3)">{{ e.teacher or '—' }}</td>
-            <td class="mono" style="font-size:11px">{{ e.room or '—' }}</td>
-            <td><span class="tag {% if e.slot_type=='Lab' %}t-vi{% elif e.slot_type=='Elective' %}t-gr{% elif e.slot_type=='Minor' %}t-am{% else %}t-bl{% endif %}">{{ e.slot_type or 'Theory' }}</span></td>
-            <td style="font-size:11px;color:var(--ink4)">{{ e.division or '—' }}</td>
-            <td>
-              <div class="flex-ac gap5">
+          <tr class="filterable-card">
+            <td data-label="Day"><span class="tag t-bl">{{ e.day }}</span></td>
+            <td data-label="Time" class="mono" style="font-size:11px;white-space:nowrap">{{ e.time }}</td>
+            <td data-label="Subject"><strong>{{ e.subject }}</strong></td>
+            <td data-label="Teacher" style="font-size:12px;color:var(--ink3)">{{ e.teacher or '—' }}</td>
+            <td data-label="Room" class="mono" style="font-size:11px">{{ e.room or '—' }}</td>
+            <td data-label="Type"><span class="tag {% if e.slot_type=='Lab' %}t-vi{% elif e.slot_type=='Elective' %}t-gr{% elif e.slot_type=='Minor' %}t-am{% else %}t-bl{% endif %}">{{ e.slot_type or 'Theory' }}</span></td>
+            <td data-label="Division" style="font-size:11px;color:var(--ink4)">{{ e.division or '—' }}</td>
+            <td class="action-td">
+              <div class="flex-ac gap6">
                 <button class="btn btn-out btn-sm" onclick="ED.open({{ e.id }})"><i class="fas fa-pen"></i></button>
                 <button class="btn btn-danger btn-sm" onclick="DEL.show({{ e.id }},'{{ e.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i></button>
               </div>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="8"><div class="empty-state" style="padding:28px"><p>No slots. <a href="/timetable" style="color:var(--blue)">Clear filters →</a></p></div></td></tr>
+          <tr><td colspan="8"><div class="empty-state" style="padding:28px"><p>No slots. <a href="{{ request.path }}" style="color:var(--blue)">Clear filters →</a></p></div></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -511,7 +665,7 @@
 </div>
 
 <!-- ═══ WORKLOAD VIEW ════════════════════════════════════════ -->
-<div id="vwWl" style="display:none" class="fu fu2">
+<div id="vwWl" {% if view != 'wl' %}style="display:none"{% endif %} class="fu fu2">
   <div class="g2">
     <div class="card">
       <div class="ch"><div class="ct">Faculty Teaching Load</div><div class="cs">Slots per week</div></div>
@@ -842,6 +996,8 @@ function setView(v, btn){
   });
   document.querySelectorAll('.vtb').forEach(function(b){ b.classList.remove('on'); });
   btn.classList.add('on');
+  var fv = document.getElementById('filterView');
+  if(fv) fv.value = v;
 }
 
 // ── Compact ─────────────────────────────────────────────
@@ -1059,6 +1215,7 @@ document.addEventListener('keydown',function(e){
 
 // ── BROADCAST & SLOTS ─────────────────────────────────────
 function openBroadcastModal() { document.getElementById('broadcastModal').style.display = 'block'; }
+// Keep original function signature
 function closeBroadcastModal() { document.getElementById('broadcastModal').style.display = 'none'; }
 document.getElementById('broadcastForm').onsubmit = async function(e) {
   e.preventDefault();
@@ -1110,10 +1267,72 @@ async function copyDayNow() {
   } catch(e) { toast('Connection error','err'); }
 }
 
+// ── Mobile Timetable View Logic ─────────────────────────
+function toggleTimetableMobileView(viewName) {
+  const tableView = document.getElementById('mobileTableView');
+  const cardView = document.getElementById('mobileCardView');
+  const btnTable = document.getElementById('mobToggleTable');
+  const btnCard = document.getElementById('mobToggleCard');
+  
+  if (!tableView || !cardView) return;
+  
+  if (viewName === 'table') {
+    tableView.style.display = 'block';
+    cardView.style.display = 'none';
+    if (btnTable) btnTable.classList.add('on');
+    if (btnCard) btnCard.classList.remove('on');
+  } else {
+    tableView.style.display = 'none';
+    cardView.style.display = 'block';
+    if (btnTable) btnTable.classList.remove('on');
+    if (btnCard) btnCard.classList.add('on');
+  }
+  localStorage.setItem('timetable_mobile_view', viewName);
+}
+
+function scrollToTodayTimetable() {
+  const container = document.getElementById('mobileCardView');
+  if (!container) return;
+  const today = container.dataset.today;
+  const header = document.querySelector(`.tt-accordion-header[data-day="${today}"]`);
+  if (header) {
+    const targetId = header.dataset.target;
+    const body = document.getElementById(targetId);
+    if (body && !body.classList.contains('open')) {
+      body.classList.add('open');
+      header.classList.add('active');
+      sessionStorage.setItem('accordion_' + targetId, 'open');
+    }
+    header.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast(`Scrolled to today (${today})`, 'ok');
+  } else {
+    toast(`No classes today (${today})`, 'warn');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.innerWidth <= 768) {
+    const savedView = localStorage.getItem('timetable_mobile_view') || 'card';
+    toggleTimetableMobileView(savedView);
+    
+    // Auto-open today's card on first load if card view is active
+    const today = document.getElementById('mobileCardView').dataset.today;
+    const header = document.querySelector(`.tt-accordion-header[data-day="${today}"]`);
+    if (header) {
+      const targetId = header.dataset.target;
+      const body = document.getElementById(targetId);
+      if (body && !sessionStorage.getItem('accordion_' + targetId)) {
+        body.classList.add('open');
+        header.classList.add('active');
+        sessionStorage.setItem('accordion_' + targetId, 'open');
+      }
+    }
+  }
+});
+
 // ── Init toasts ───────────────────────────────────────────
 {% if request.args.get('saved') %}toast('Slot saved');{% endif %}
 {% if request.args.get('deleted') %}toast('Slot deleted');{% endif %}
 {% if request.args.get('imported') %}toast('{{ request.args.get("imported") }} slots imported!');{% endif %}
 </script>
-
 {% endblock %}

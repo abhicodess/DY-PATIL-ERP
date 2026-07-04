@@ -18,7 +18,7 @@ def factory_reset():
     tables = [
         'subjects', 'students', 'timetable', 'faculty', 'attendance', 'marks', 
         'faculty_notices', 'faculty_notes', 'cumulative_attendance', 'results', 
-        'result_summary', 'audit_logs', 'notifications', 'leave_applications', 
+        'result_summary', 'audit_logs', 'notifications', 
         'events', 'attendance_summary', 'messages', 'timetable_notifications', 
         'classrooms', 'qr_sessions'
     ]

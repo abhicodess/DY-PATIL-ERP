@@ -8,14 +8,17 @@ from flask_socketio import SocketIO
 import os
 import logging
 
+from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 db = SQLAlchemy()
+cors = CORS()
+csrf = CSRFProtect()
 migrate = Migrate()
 # Default to memory storage to prevent crashing if Redis is down
 limiter = Limiter(
-    key_func=get_remote_address, 
-    strategy="fixed-window", 
-    storage_uri="memory://",
-    default_limits=["200 per minute"]
+    key_func=get_remote_address,
+    default_limits=["2000 per day", "500 per hour"],
+    storage_uri=os.environ.get("REDIS_URL", "memory://")
 )
 redis_client = FlaskRedis()
 jwt = JWTManager()
@@ -46,6 +49,8 @@ def init_extensions(app):
         app.logger.warning("Redis ping failed. Rate limiting will use local memory storage.")
     
     limiter.init_app(app)
+    if app.config.get("TESTING"):
+        limiter.enabled = False
     redis_client.init_app(app)
     jwt.init_app(app)
     
@@ -64,6 +69,10 @@ def init_extensions(app):
     @jwt.token_in_blocklist_loader
     def check_if_token_is_revoked(jwt_header, jwt_payload: dict):
         jti = jwt_payload["jti"]
-        token_in_redis = redis_client.get(f"jwt_blacklist:{jti}")
-        return token_in_redis is not None
+        try:
+            token_in_redis = redis_client.get(f"jwt_blacklist:{jti}")
+            return token_in_redis is not None
+        except Exception as e:
+            logging.error(f"Error checking token blocklist in Redis: {e}")
+            return False
 

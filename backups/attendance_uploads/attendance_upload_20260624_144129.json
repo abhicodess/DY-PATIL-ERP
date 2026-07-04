@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "department": "CS",
+    "semester": "II",
+    "division": "A",
+    "date_range": {
+      "start": "2026-01-19",
+      "end": "2026-04-10",
+      "raw": "19.01.2026 to 10.04.2026"
+    },
+    "raw_text": "School of Engineering & Technology\nDepartment of Computer Engineering\nAcademic Year 2025-26, Semester -II\nFinal Attendance Report\nFrom 19.01.2026 to 10.04.2026\nProgram: S. Y. B. Tech Comp. Engg. (Div. A)",
+    "source_filename": "attendance_report.xlsx"
+  },
+  "analytics": {
+    "subject_wise": {
+      "DBMS": 62.5,
+      "SE": 62.5
+    },
+    "student_wise": {
+      "A01": 75.0,
+      "A02": 50.0
+    },
+    "low_attendance": [
+      {
+        "roll_no": "A02",
+        "percentage": 50.0
+      }
+    ],
+    "total_students": 2,
+    "avg_attendance": 62.5,
+    "defaulters": 1
+  },
+  "students": [
+    {
+      "roll_no": "A01",
+      "student_name": "Alpha Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II"
+    },
+    {
+      "roll_no": "A02",
+      "student_name": "Beta Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II"
+    }
+  ],
+  "normalized_rows": [
+    {
+      "roll_no": "A01",
+      "student_name": "Alpha Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II",
+      "report_start_date": "2026-01-19",
+      "report_end_date": "2026-04-10",
+      "subject": "DBMS",
+      "subject_code": "U24CEPC401",
+      "lecture_type": "TH",
+      "attended_classes": 30,
+      "total_classes": 40,
+      "percentage": 75.0
+    },
+    {
+      "roll_no": "A01",
+      "student_name": "Alpha Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II",
+      "report_start_date": "2026-01-19",
+      "report_end_date": "2026-04-10",
+      "subject": "SE",
+      "subject_code": "U24CEPC402",
+      "lecture_type": "TH",
+      "attended_classes": 15,
+      "total_classes": 20,
+      "percentage": 75.0
+    },
+    {
+      "roll_no": "A02",
+      "student_name": "Beta Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II",
+      "report_start_date": "2026-01-19",
+      "report_end_date": "2026-04-10",
+      "subject": "DBMS",
+      "subject_code": "U24CEPC401",
+      "lecture_type": "TH",
+      "attended_classes": 20,
+      "total_classes": 40,
+      "percentage": 50.0
+    },
+    {
+      "roll_no": "A02",
+      "student_name": "Beta Student",
+      "department": "CS",
+      "division": "A",
+      "semester": "II",
+      "report_start_date": "2026-01-19",
+      "report_end_date": "2026-04-10",
+      "subject": "SE",
+      "subject_code": "U24CEPC402",
+      "lecture_type": "TH",
+      "attended_classes": 10,
+      "total_classes": 20,
+      "percentage": 50.0
+    }
+  ]
+}

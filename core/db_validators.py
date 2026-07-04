@@ -10,12 +10,8 @@ def validate_schema():
     
     # List of critical migrations that must be applied
     migrations = [
-        # Table: leave_applications
-        ("leave_applications", "faculty_id", "INTEGER"),
-        ("leave_applications", "leave_type", "TEXT"),
-        ("leave_applications", "from_date", "DATE"),
-        ("leave_applications", "to_date", "DATE"),
-        ("leave_applications", "remarks", "TEXT"),
+        # Table: faculty_notes
+        ("faculty_notes", "attachment_path", "TEXT"),
         
         # Table: attendance_sessions
         ("attendance_sessions", "lecture_date", "DATE"),

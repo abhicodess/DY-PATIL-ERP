@@ -24,7 +24,9 @@
   </div>
   <div class="card">
     <div class="ch"><div class="ct">Change Password</div></div>
-    <form method="POST" action="/admin_update_profile"><div class="cb">
+    <form method="POST" action="/admin_update_profile">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb">
       <div class="fgrp"><label>Current Password</label><input type="password" name="old_pw" placeholder="Current password"></div>
       <div class="fgrp"><label>New Password</label><input type="password" name="new_pw" placeholder="New password (min 6 chars)"></div>
       <div class="fgrp"><label>Confirm New Password</label><input type="password" name="cnf_pw" placeholder="Repeat new password"></div>

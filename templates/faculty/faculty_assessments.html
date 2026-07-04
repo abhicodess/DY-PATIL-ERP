@@ -1,0 +1,163 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Student Assessments{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Student Assessments{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / Student Assessments{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Assessment Management</div>
+    <div class="ph-sub" style="color: var(--ink3); font-size: 14px;">Manage student assignments, publications, project reviews, and implementation remarks.</div>
+  </div>
+</div>
+
+<div class="card fu fu1" style="margin-bottom: 24px;">
+  <div class="ch"><div class="ct">Filter Student List</div></div>
+  <div class="cb">
+    <form method="GET" action="/faculty/assessments" id="filter_form">
+      <div class="toolbar" style="margin-bottom: 0;">
+        <select class="tb-field" name="subject" required style="min-width: 250px;">
+          <option value="">Choose Subject *</option>
+          {% for s in subjects_list %}
+            <option value="{{ s }}" {% if selected_subject == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+
+        <select class="tb-field" name="division" style="min-width: 140px;">
+          <option value="">All Divisions</option>
+          {% for d in divisions_list %}
+            <option value="{{ d }}" {% if selected_div == d %}selected{% endif %}>Div {{ d }}</option>
+          {% endfor %}
+        </select>
+
+        <select class="tb-field" name="department" style="min-width: 150px;">
+          <option value="">All Departments</option>
+          {% for dept in departments_list %}
+            <option value="{{ dept }}" {% if selected_dept == dept %}selected{% endif %}>{{ dept }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-filter"></i> Load Students</button>
+        {% if selected_subject %}
+          <a href="/faculty/assessments" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_subject %}
+<div class="card fu fu2">
+  <div class="ch flex-sb">
+    <div>
+      <div class="ct">Students List</div>
+      <div class="cs">{{ students|length }} students in Div {{ selected_div }} ({{ selected_dept }})</div>
+    </div>
+    <div class="tag t-vi">{{ selected_subject }}</div>
+  </div>
+  <div class="cb p0">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Student Details</th>
+          <th>Assignments (1-5)</th>
+          <th>Research & IP</th>
+          <th>Project Reviews</th>
+          <th>Implementation & Remarks</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+          {% set assess = assessments_map.get(s.id) %}
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--ink);">{{ s.name }}</div>
+              <div class="mono" style="font-size: 11px; color: var(--ink3);">Roll: {{ s.roll or 'N/A' }}</div>
+            </td>
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                {% for i in range(1, 6) %}
+                  {% set val = assess['assignment_' ~ i] if assess else '' %}
+                  <span class="tag {% if val %}t-gn{% else %}t-gy{% endif %}" title="Assignment {{ i }}: {{ val or 'Pending' }}" style="font-size: 10px; cursor: help; padding: 2px 6px;">
+                    A{{ i }}: {{ val if val else '✖' }}
+                  </span>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 12px; line-height: 1.4;">
+                <div>
+                  <span style="font-weight: 600;">Papers:</span>
+                  Q1: {% if assess and assess.paper_q1 %}<span style="color: var(--green); font-weight: 700;">{{ assess.paper_q1 }}</span>{% else %}-{% endif %},
+                  Q2: {% if assess and assess.paper_q2 %}<span style="color: var(--green); font-weight: 700;">{{ assess.paper_q2 }}</span>{% else %}-{% endif %},
+                  Q3: {% if assess and assess.paper_q3 %}<span style="color: var(--green); font-weight: 700;">{{ assess.paper_q3 }}</span>{% else %}-{% endif %},
+                  Q4: {% if assess and assess.paper_q4 %}<span style="color: var(--green); font-weight: 700;">{{ assess.paper_q4 }}</span>{% else %}-{% endif %}
+                </div>
+                <div>
+                  <span style="font-weight: 600;">Patent:</span> {% if assess and assess.patent_publication %}<span style="color: var(--blue);">{{ assess.patent_publication }}</span>{% else %}-{% endif %}
+                </div>
+                <div>
+                  <span style="font-weight: 600;">Copyright:</span> {% if assess and assess.copyright %}<span style="color: var(--teal);">{{ assess.copyright }}</span>{% else %}-{% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 12px; line-height: 1.4;">
+                <div><span style="font-weight: 600;">Review 1:</span> {% if assess and assess.project_review_1 %}<span class="tag t-bl">{{ assess.project_review_1 }}</span>{% else %}<span class="tag t-gy">Pending</span>{% endif %}</div>
+                <div style="margin-top: 4px;"><span style="font-weight: 600;">Review 2:</span> {% if assess and assess.project_review_2 %}<span class="tag t-bl">{{ assess.project_review_2 }}</span>{% else %}<span class="tag t-gy">Pending</span>{% endif %}</div>
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 12px; max-width: 250px;">
+                {% if assess and (assess.implementation_documentation or assess.remark) %}
+                  {% if assess.implementation_documentation %}
+                    <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="Documentation: {{ assess.implementation_documentation }}">
+                      <i class="fas fa-file-code" style="color: var(--teal); margin-right: 4px;"></i>{{ assess.implementation_documentation }}
+                    </div>
+                  {% endif %}
+                  {% if assess.remark %}
+                    <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-style: italic; color: var(--ink3);" title="Remark: {{ assess.remark }}">
+                      <i class="fas fa-comment-dots" style="color: var(--violet); margin-right: 4px;"></i>{{ assess.remark }}
+                    </div>
+                  {% endif %}
+                {% else %}
+                  <span style="color: var(--ink4); font-style: italic;">No documentation/remarks</span>
+                {% endif %}
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <a href="/faculty/assessments/edit/{{ s.id }}/{{ selected_subject }}?selected_div={{ selected_div }}&selected_dept={{ selected_dept }}" class="btn btn-out btn-sm">
+                <i class="fas fa-edit"></i> Edit
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state" style="padding: 32px 0;">
+                <i class="fas fa-users" style="font-size: 32px; color: var(--ink4);"></i>
+                <p>No students found for this class filter.</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card fu fu2">
+  <div class="cb" style="text-align: center; padding: 48px 24px;">
+    <i class="fas fa-book-open" style="font-size: 48px; color: var(--violet); margin-bottom: 16px;"></i>
+    <h3>Welcome to Assessments Module</h3>
+    <p style="color: var(--ink3); max-width: 500px; margin: 8px auto 0 auto;">Select a subject and class combination from the dropdown above to manage assignments, papers, patent publications, and copyrights for your students.</p>
+  </div>
+</div>
+{% endif %}
+
+
+{% endblock %}

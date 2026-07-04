@@ -218,9 +218,21 @@ def create_session():
         "total_absent": total_absent
     }, "Attendance session logged successfully")
 
+def get_faculty_limit_key():
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity is not None:
+            return str(identity)
+    except Exception:
+        pass
+    from flask import request
+    return request.remote_addr
+
 @attendance_bp.route("/submit", methods=["POST"])
 @jwt_role_required(["faculty"])
-@limiter.limit("60 per minute", key_func=lambda: get_jwt_identity())
+@limiter.limit("60 per minute", key_func=get_faculty_limit_key)
 def submit_attendance():
     """
     Submit or update attendance (draft or final).

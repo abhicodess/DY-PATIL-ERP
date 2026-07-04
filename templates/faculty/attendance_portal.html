@@ -139,7 +139,7 @@
               <div style="font-size:11px;margin-top:2px"><span style="color:var(--blue)">{{ a.session_count }}</span> total sessions</div>
             </div>
             <div style="display:flex; gap:8px;">
-              <button onclick="openStartModal('{{ a.subject_name }}', '{{ a.department }} {{ a.division }}')" class="btn btn-out btn-sm">
+              <button onclick="openStartModal('{{ a.subject_name }}', '{{ a.department }}', '{{ a.division }}')" class="btn btn-out btn-sm">
                 <i class="fas fa-play"></i> Instant
               </button>
               <form action="{{ url_for('faculty_att.new_session') }}" method="POST" style="display:inline">
@@ -223,15 +223,10 @@
 </div>
 
 <script>
-function openStartModal(sub, clsInfo) {
-  // clsInfo example: "Infromation Technology A"
-  const parts = clsInfo.split(' ');
-  const div = parts.pop();
-  const dept = parts.join(' ');
-  
+function openStartModal(sub, dept, div) {
   document.getElementById('modalSubject').value = sub;
   document.getElementById('modalSubjectHidden').value = sub;
-  document.getElementById('modalClass').value = clsInfo;
+  document.getElementById('modalClass').value = dept + ' • ' + div;
   document.getElementById('modalDivisionHidden').value = div;
   document.getElementById('modalDepartmentHidden').value = dept;
   document.getElementById('startModal').classList.add('show');

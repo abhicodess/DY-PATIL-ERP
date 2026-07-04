@@ -8,7 +8,7 @@
 <div class="card fu fu1">
   <div class="cb p0">
     <table class="tbl">
-      <thead><tr><th>Subject</th><th>Exam Type</th><th>Marks</th><th>%</th><th>Grade</th><th>Date</th></tr></thead>
+      <thead><tr><th>Subject</th><th>Exam Type</th><th>Marks</th><th>%</th><th>Remarks</th><th>Date</th></tr></thead>
       <tbody>
         {% for m in marks %}
         <tr>
@@ -16,7 +16,7 @@
           <td><span class="tag t-vi" style="font-size:10px">{{ m.exam_type }}</span></td>
           <td><span class="mono" style="font-weight:700">{{ m.marks }}</span><span style="color:var(--ink4);font-size:11px">/{{ m.total }}</span></td>
           <td class="mono" style="font-weight:600;color:{% if m.pct>=75 %}var(--green){% elif m.pct>=50 %}var(--amber){% else %}var(--red){% endif %}">{{ m.pct }}%</td>
-          <td><span class="grade {% if m.grade=="A+" %}g-ap{% elif m.grade in ("A","B+") %}g-a{% elif m.grade=="B" %}g-b{% elif m.grade=="C" %}g-c{% else %}g-f{% endif %}">{{ m.grade }}</span></td>
+          <td style="font-size:13px;color:var(--ink3)">{{ m.remarks or '-' }}</td>
           <td class="mono" style="font-size:11px;color:var(--ink4)">{{ m.date }}</td>
         </tr>
         {% else %}

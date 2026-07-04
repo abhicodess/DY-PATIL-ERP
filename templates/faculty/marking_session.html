@@ -41,7 +41,7 @@
       <div id="saveStatus" class="save-status"><i class="fas fa-cloud-check"></i> Draft saved</div>
       <button class="btn btn-out btn-sm" onclick="saveDraft()"><i class="fas fa-save"></i> Save Draft</button>
       {% if sess.status != 'submitted' %}
-      <form action="/faculty/submit_session" method="POST" onsubmit="return confirm('Finalize and lock attendance? No further changes allowed.')">
+      <form id="submitSessionForm" action="/faculty/submit_session" method="POST">
         <input type="hidden" name="session_id" value="{{ sess.id }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-check-double"></i> Submit & Finalize</button>
@@ -229,6 +229,21 @@ window.addEventListener('beforeunload', (e) => {
     e.returnValue = '';
   }
 });
+
+const sForm = document.getElementById('submitSessionForm');
+if(sForm) {
+  sForm.onsubmit = async function(e) {
+    e.preventDefault();
+    if(!confirm('Finalize and lock attendance? No further changes allowed.')) return;
+    
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
+    
+    await saveDraft();
+    this.submit();
+  };
+}
 
 updateCounters();
 </script>

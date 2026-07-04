@@ -9,7 +9,7 @@ results_service = ResultsService()
 @login_required(["admin", "faculty", "student"])
 def index():
     if session.get("role") == "admin":
-        return redirect("/results_dashboard")
+        return redirect("/admin_results")
     return render_template("results/results_dashboard.html")
 
 @results_bp.route("/add", methods=["GET", "POST"])

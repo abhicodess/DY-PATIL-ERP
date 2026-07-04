@@ -60,8 +60,9 @@
 
 /* Filter bar */
 .fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)}
-.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none}
+.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none;min-width:130px;flex:1 1 auto}
 .ff.on{border-color:#7C3AED;background:var(--violet-s);color:#7C3AED;font-weight:600}
+.fbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* Stats */
 .tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -83,7 +84,75 @@
 #toast.ok{background:#ECFDF5;color:#065f46;border:1px solid #A7F3D0}
 #toast.err{background:#FEF2F2;color:#991b1b;border:1px solid #FECACA}
 
-@media print{.sidebar,.topbar,.fbar,.tts-row,.leg,.dot-btn,.modal-bg,button,form,.vtog,#toast{display:none!important}.main{margin:0!important;padding:8px!important}.fsc{break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .sidebar, .topbar, .fbar, .tts-row, .leg, .dot-btn, .modal-bg, button, form, .vtog, #toast, .ph-actions, .breadcrumb, .alert-bar {
+    display: none !important;
+  }
+  .shell {
+    display: block !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .card, .card-view-grid {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+    background: #fff !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .cb, div {
+    overflow: visible !important;
+  }
+  table, .tbl, .tt-tbl {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    overflow: visible !important;
+  }
+  th, td, .tbl th, .tbl td, .tt-tbl th, .tt-tbl td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+  .fsc {
+    break-inside: avoid !important;
+  }
+}
 </style>
 
 <!-- HEADER -->
@@ -98,8 +167,14 @@
       <button class="vtb {{ 'on' if view=='list' else '' }}" id="vlist" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
     </div>
     <button onclick="window.print()" class="btn btn-out btn-sm"><i class="fas fa-print"></i> Print</button>
-    <button onclick="openBroadcastModal()" class="btn btn-vi btn-sm"><i class="fas fa-paper-plane"></i> Broadcast to Students</button>
-    <button onclick="toggleEditMode()" id="editBtn" class="btn btn-out btn-sm"><i class="fas fa-edit"></i> Manage Timetable</button>
+    <a href="/api/faculty/my-timetable/export/excel" class="btn btn-out btn-sm" style="background:#f0fdf4; color:#15803d; border-color:#bbf7d0; text-decoration:none;"><i class="fas fa-file-excel"></i> ⬇ Excel</a>
+    <a href="/api/faculty/my-timetable/export/pdf" class="btn btn-out btn-sm" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca; text-decoration:none;"><i class="fas fa-file-pdf"></i> ⬇ PDF</a>
+    <button onclick="openBroadcastModal()" class="btn btn-out btn-sm"><i class="fas fa-paper-plane"></i> Broadcast to Students</button>
+    <button onclick="openImportModal()" class="btn btn-out btn-sm" style="background:#f0fdf4; color:#15803d; border-color:#bbf7d0;"><i class="fas fa-file-import"></i> ⬆ Import Excel</button>
+    {% if draft_count > 0 %}
+    <button id="submitApprovalBtn" onclick="submitTimetableForApproval()" class="btn btn-sm" style="background:#D97706;color:#fff;border:none"><i class="fas fa-check-double"></i> Submit for Approval ({{ draft_count }})</button>
+    {% endif %}
+    <button onclick="openAddSlotModal()" id="editBtn" class="btn btn-vi btn-sm"><i class="fas fa-plus"></i> Build My Timetable</button>
     <a href="/messages" class="btn btn-dark btn-sm"><i class="fas fa-envelope"></i> Check Inbox</a>
   </div>
 </div>
@@ -149,6 +224,30 @@
   </div>
 </div>
 
+<!-- Import Excel Modal -->
+<div id="importExcelModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+  <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:450px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
+      <h3 style="margin:0"><i class="fas fa-file-excel" style="color:var(--green)"></i> Import Timetable from Excel</h3>
+      <span class="close" onclick="closeImportModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+    </div>
+    <form action="/import_faculty_timetable" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:8px">Select Timetable Excel File (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" required style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" />
+      </div>
+      <div style="font-size:11px; color:#666; margin-bottom:20px; line-height:1.4">
+        <i class="fas fa-info-circle"></i> This will scan the uploaded timetable sheet, extract slots that match your name, and add them as <b>Draft</b> slots. You can then review and submit them for admin approval.
+      </div>
+      <div style="text-align:right">
+        <button type="button" class="btn btn-out" onclick="closeImportModal()">Cancel</button>
+        <button type="submit" class="btn btn-vi" style="background:var(--green); border-color:var(--green); color:#fff;">Upload & Parse</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% if request.args.get('saved') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot updated.</span></div>{% endif %}
 {% if not all_entries %}
 <div class="alert al-info fu"><i class="fas fa-circle-info"></i><span>No timetable slots assigned to you yet. Your admin needs to assign slots with your name in the Timetable module. You can also check your <a href="/messages" style="font-weight:700;color:var(--blue)">Messages</a> for your schedule from admin.</span></div>
@@ -161,6 +260,15 @@
   <div class="tts"><div class="sico ic-vi"><i class="fas fa-flask"></i></div><div><div class="tts-v">{{ lab }}</div><div class="tts-l">Lab</div></div></div>
   <div class="tts"><div class="sico ic-gr"><i class="fas fa-calendar-days"></i></div><div><div class="tts-v">{{ days_active }}</div><div class="tts-l">Active Days</div></div></div>
   <div class="tts"><div class="sico ic-am"><i class="fas fa-clock"></i></div><div><div class="tts-v">{{ time_slots|length }}</div><div class="tts-l">Time Slots</div></div></div>
+  {% if pending_count > 0 %}
+  <div class="tts" style="border-color:#F59E0B; background:#FEF3C7">
+    <div class="sico ic-am" style="background:#F59E0B; color:#fff"><i class="fas fa-hourglass-half"></i></div>
+    <div>
+      <div class="tts-v" style="color:#D97706">{{ pending_count }}</div>
+      <div class="tts-l" style="color:#B45309">pending</div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- LEGEND -->
@@ -187,7 +295,9 @@
     <option value="Elective" {{ 'selected' if f_type=='Elective' }}>Elective</option>
     <option value="Minor"    {{ 'selected' if f_type=='Minor' }}>Minor</option>
   </select>
-  {% if f_day or f_type %}<a href="/faculty_timetable?view={{ view }}" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Reset</a>{% endif %}
+  <div class="fbar-actions">
+    {% if f_day or f_type %}<a href="/faculty_timetable?view={{ view }}" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Reset</a>{% endif %}
+  </div>
 </form>
 
 {% if f_day or f_type %}
@@ -250,10 +360,16 @@
             </button>
             <div class="sc-drop" id="dd{{ slot.id }}">
               <div class="ddi" style="background:var(--violet-s);color:#7C3AED;font-weight:700;font-size:11px;padding:8px 14px;cursor:default">{{ slot.subject[:28] }}</div>
-              <a class="ddi edit-only" style="display:none" href="javascript:void(0)" onclick="openEditModal({{ slot.id }})"><i class="fas fa-edit" style="color:var(--blue);width:14px"></i> Edit Slot</a>
+              {% if slot.status in ['draft', 'rejected'] %}
+              <a class="ddi" href="javascript:void(0)" onclick="openEditModal({{ slot.id }}, '{{ slot.day }}', '{{ slot.time_slot }}', '{{ slot.subject|escape }}', '{{ st }}', '{{ slot.room|escape }}', '{{ slot.division }}', '{{ slot.semester }}')"><i class="fas fa-edit" style="color:var(--blue);width:14px"></i> Edit Slot</a>
+              <a class="ddi" href="javascript:void(0)" onclick="deleteSlot({{ slot.id }})"><i class="fas fa-trash" style="color:var(--red);width:14px"></i> Delete Slot</a>
+              {% elif slot.status == 'approved' %}
               <a class="ddi" href="/faculty/create_session_from_slot/{{ slot.id }}"><i class="fas fa-calendar-check" style="color:var(--green);width:14px"></i> Mark Attendance</a>
               <a class="ddi" href="/view_attendance?subject={{ slot.subject|urlencode }}"><i class="fas fa-eye" style="color:var(--blue);width:14px"></i> View Records</a>
               <a class="ddi" href="/faculty_marks?subject={{ slot.subject|urlencode }}"><i class="fas fa-star" style="color:var(--amber);width:14px"></i> View Marks</a>
+              {% else %}
+              <div class="ddi" style="opacity:.6;cursor:default"><i class="fas fa-hourglass-half" style="color:var(--amber);width:14px"></i> Pending Approval</div>
+              {% endif %}
             </div>
 
             <div class="fsc-name">{{ slot.subject }}</div>
@@ -264,6 +380,17 @@
               <span class="fsc-badge" style="{% if cls=='la' %}background:var(--violet-s);color:var(--violet){% elif cls=='el' %}background:var(--green-s);color:var(--green){% elif cls=='mi' %}background:var(--amber-s);color:var(--amber){% else %}background:var(--blue-s);color:var(--blue){% endif %}">{{ st }}</span>
               {% if slot.division %}<span class="fsc-div">{{ slot.division }}</span>{% endif %}
             </div>
+            {% if slot.status != 'approved' %}
+            <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">
+              {% if slot.status == 'draft' %}
+              <span class="fsc-badge" style="background:#F3F4F6;color:#4B5563;border:1px solid #D1D5DB;font-size:8px">Draft</span>
+              {% elif slot.status == 'pending' %}
+              <span class="fsc-badge" style="background:#FEF3C7;color:#D97706;border:1px solid #FCD34D;font-size:8px">Pending Approval</span>
+              {% elif slot.status == 'rejected' %}
+              <span class="fsc-badge" style="background:#FEE2E2;color:#DC2626;border:1px solid #FCA5A5;font-size:8px" title="Reason: {{ slot.admin_note or 'No reason provided' }}">Rejected ⓘ</span>
+              {% endif %}
+            </div>
+            {% endif %}
           </div>
           {% endif %}
           {% endfor %}
@@ -281,8 +408,15 @@
 <div class="card"><div class="cb">
   <div class="empty-state" style="padding:60px">
     <i class="fas fa-table-cells" style="font-size:36px;color:var(--ink4)"></i>
-    <p style="font-size:15px;font-weight:600;margin-top:14px">No timetable assigned</p>
-    <p style="font-size:13px;margin-top:6px;color:var(--ink3)">Ask your admin to assign timetable slots with your name.</p>
+    {% if pending_count > 0 and total_slots == 0 %}
+      <p>{{ pending_count }} slot(s) waiting for admin approval</p>
+      <p style="color: #f59e0b; font-size: 13px;">
+        You'll see them here once approved
+      </p>
+    {% elif total_slots == 0 %}
+      <p>No timetable assigned</p>
+      <p>Click "Manage Timetable" to add your schedule</p>
+    {% endif %}
     <a href="/messages" class="btn btn-vi" style="margin-top:16px"><i class="fas fa-envelope"></i> Check Messages from Admin</a>
   </div>
 </div></div>
@@ -299,7 +433,7 @@
       <table class="tbl">
         <thead>
           <tr>
-            <th>Day</th><th>Time</th><th>Subject</th><th>Room</th><th>Type</th><th>Division</th><th>Quick Actions</th>
+            <th>Day</th><th>Time</th><th>Subject</th><th>Room</th><th>Type</th><th>Division</th><th>Status</th><th>Quick Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -320,10 +454,28 @@
             </td>
             <td style="font-size:12px;color:var(--ink4)">{{ e.division or '—' }}</td>
             <td>
+              {% if e.status == 'approved' %}
+              <span class="tag t-gr">Active</span>
+              {% elif e.status == 'draft' %}
+              <span class="tag t-nn" style="background:#F3F4F6;color:#4B5563;border:1px solid #D1D5DB">Draft</span>
+              {% elif e.status == 'pending' %}
+              <span class="tag t-am" style="background:#FEF3C7;color:#D97706;border:1px solid #FCD34D">Pending</span>
+              {% elif e.status == 'rejected' %}
+              <span class="tag t-re" style="background:#FEE2E2;color:#DC2626;border:1px solid #FCA5A5" title="Reason: {{ e.admin_note or 'No reason provided' }}">Rejected ⓘ</span>
+              {% endif %}
+            </td>
+            <td>
               <div class="flex-ac gap5">
+                {% if e.status in ['draft', 'rejected'] %}
+                <button onclick="openEditModal({{ e.id }}, '{{ e.day }}', '{{ e.time_slot or e.time }}', '{{ e.subject|escape }}', '{{ e.slot_type or 'Theory' }}', '{{ e.room|escape }}', '{{ e.division }}', '{{ e.semester or '' }}')" class="btn btn-out btn-sm" title="Edit"><i class="fas fa-edit" style="color:var(--blue)"></i></button>
+                <button onclick="deleteSlot({{ e.id }})" class="btn btn-out btn-sm" title="Delete"><i class="fas fa-trash" style="color:var(--red)"></i></button>
+                {% elif e.status == 'approved' %}
                 <a href="/faculty/create_session_from_slot/{{ e.id }}" class="btn btn-gr btn-sm" title="Mark Attendance"><i class="fas fa-calendar-check"></i></a>
                 <a href="/view_attendance?subject={{ e.subject|urlencode }}" class="btn btn-out btn-sm" title="View Records"><i class="fas fa-eye"></i></a>
                 <a href="/faculty_marks?subject={{ e.subject|urlencode }}" class="btn btn-am btn-sm" title="Marks"><i class="fas fa-star"></i></a>
+                {% else %}
+                <span style="font-size:11px;color:var(--ink4)"><i class="fas fa-hourglass-half" style="color:var(--amber)"></i> Awaiting approval</span>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -363,7 +515,11 @@
         </div>
       </div>
       <div class="flex-ac gap5">
+        {% if slot.status == 'approved' %}
         <a href="/faculty/create_session_from_slot/{{ slot.id }}" class="btn btn-vi btn-sm"><i class="fas fa-calendar-check"></i> Mark</a>
+        {% else %}
+        <span class="tag t-am" style="font-size:11px"><i class="fas fa-hourglass-half" style="color:var(--amber)"></i> Pending</span>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
@@ -380,29 +536,188 @@
     </div>
     <form id="editSlotForm">
       <input type="hidden" name="id" id="edit-id">
+      
+      <!-- Day -->
       <div class="form-group" style="margin-bottom:15px">
-        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Subject Name</label>
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Day *</label>
+        <select name="day" id="edit-day" class="ff" style="width:100%" required>
+          <option value="">Select day</option>
+          <option>Monday</option><option>Tuesday</option>
+          <option>Wednesday</option><option>Thursday</option>
+          <option>Friday</option><option>Saturday</option>
+        </select>
+      </div>
+
+      <!-- Time Slot -->
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Time Slot *</label>
+        <select name="time_slot" id="edit-time" class="ff" style="width:100%" required>
+          <option value="">Select time</option>
+          <option>8:30-9:30</option><option>9:30-10:30</option>
+          <option>10:30-11:30</option><option>11:30-12:30</option>
+          <option>1:30-2:30</option><option>2:30-3:30</option>
+          <option>3:30-4:30</option><option>4:30-5:30</option>
+        </select>
+      </div>
+
+      <!-- Subject Name -->
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Subject Name *</label>
         <input type="text" name="subject" id="edit-subject" class="ff" style="width:100%" required>
       </div>
-      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px">
+
+      <!-- Type -->
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Type *</label>
+        <select name="slot_type" id="edit-type" class="ff" style="width:100%" required>
+          <option value="Theory">Theory</option>
+          <option value="Lab">Lab</option>
+          <option value="Elective">Elective</option>
+          <option value="Minor">Minor</option>
+        </select>
+      </div>
+
+      <!-- Division & Room -->
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px">
         <div class="form-group">
           <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Room / Lab</label>
           <input type="text" name="room" id="edit-room" class="ff" style="width:100%">
         </div>
         <div class="form-group">
-          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division</label>
-          <input type="text" name="division" id="edit-division" class="ff" style="width:100%">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division *</label>
+          <select name="division" id="edit-division" class="ff" style="width:100%" required>
+            <!-- Will be populated via JS -->
+          </select>
         </div>
       </div>
+
+      <!-- Semester -->
+      <div class="form-group" style="margin-bottom:20px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Semester</label>
+        <input type="text" name="semester" id="edit-semester" class="ff" style="width:100%" placeholder="e.g. Sem 4">
+      </div>
+
       <div style="text-align:right">
         <button type="button" class="btn btn-out" onclick="closeEditModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="submit" id="editSlotSubmitBtn" class="btn btn-vi">Save Changes</button>
       </div>
     </form>
   </div>
 </div>
 
 <div id="toast"></div>
+
+<div id="addSlotModal" style="display:none; position:fixed;
+  inset:0; background:rgba(0,0,0,0.5); z-index:1000;
+  align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:24px;
+    width:480px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+
+    <div style="display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:20px;">
+      <h3 style="margin:0; font-size:16px; font-weight:600;">
+        Add Timetable Slot</h3>
+      <button onclick="closeAddSlotModal()"
+        style="background:none; border:none; font-size:20px;
+        cursor:pointer; color:#6b7280;">×</button>
+    </div>
+
+    <div id="slotFormError" style="display:none; background:#fef2f2;
+      color:#dc2626; padding:8px 12px; border-radius:6px;
+      margin-bottom:16px; font-size:13px;"></div>
+
+    <!-- Day -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Day *</label>
+    <select id="slotDay" style="width:100%; padding:8px 10px;
+      border:1px solid #d1d5db; border-radius:6px;
+      margin-bottom:14px; font-size:14px;">
+      <option value="">Select day</option>
+      <option>Monday</option><option>Tuesday</option>
+      <option>Wednesday</option><option>Thursday</option>
+      <option>Friday</option><option>Saturday</option>
+    </select>
+
+    <!-- Time Slot -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Time Slot *</label>
+    <select id="slotTime" style="width:100%; padding:8px 10px;
+      border:1px solid #d1d5db; border-radius:6px;
+      margin-bottom:14px; font-size:14px;">
+      <option value="">Select time</option>
+      <option>8:30-9:30</option><option>9:30-10:30</option>
+      <option>10:30-11:30</option><option>11:30-12:30</option>
+      <option>1:30-2:30</option><option>2:30-3:30</option>
+      <option>3:30-4:30</option><option>4:30-5:30</option>
+    </select>
+
+    <!-- Subject -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Subject *</label>
+    <input id="slotSubject" type="text" placeholder="e.g. Database Management"
+      style="width:100%; padding:8px 10px; border:1px solid #d1d5db;
+      border-radius:6px; margin-bottom:14px; font-size:14px;
+      box-sizing:border-box;" />
+
+    <!-- Division -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Division *</label>
+    <select id="slotDivision" style="width:100%; padding:8px 10px;
+      border:1px solid #d1d5db; border-radius:6px;
+      margin-bottom:14px; font-size:14px;">
+      <option value="">Loading divisions...</option>
+    </select>
+
+    <!-- Room (optional) -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Room <span style="color:#9ca3af;
+      font-weight:400;">(optional)</span></label>
+    <input id="slotRoom" type="text" placeholder="e.g. Lab 3, Room 204"
+      style="width:100%; padding:8px 10px; border:1px solid #d1d5db;
+      border-radius:6px; margin-bottom:14px; font-size:14px;
+      box-sizing:border-box;" />
+
+    <!-- Type -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Type *</label>
+    <select id="slotType" style="width:100%; padding:8px 10px;
+      border:1px solid #d1d5db; border-radius:6px;
+      margin-bottom:14px; font-size:14px;">
+      <option value="Theory">Theory</option>
+      <option value="Lab">Lab</option>
+      <option value="Elective">Elective</option>
+      <option value="Minor">Minor</option>
+    </select>
+
+    <!-- Semester -->
+    <label style="display:block; font-size:13px; font-weight:500;
+      margin-bottom:4px;">Semester <span style="color:#9ca3af;
+      font-weight:400;">(optional)</span></label>
+    <input id="slotSemester" type="text" placeholder="e.g. Sem 4"
+      style="width:100%; padding:8px 10px; border:1px solid #d1d5db;
+      border-radius:6px; margin-bottom:20px; font-size:14px;
+      box-sizing:border-box;" />
+
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="closeAddSlotModal()"
+        style="padding:9px 20px; border:1px solid #d1d5db;
+        border-radius:6px; background:#fff; color:#374151;
+        font-size:14px; cursor:pointer;">Cancel</button>
+      <button onclick="submitAddSlot(event)"
+        id="addSlotSubmitBtn"
+        style="padding:9px 20px; background:#7C3AED; color:#fff;
+        border:none; border-radius:6px; font-size:14px;
+        cursor:pointer; font-weight:500;">Add Slot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="erpToast" style="display:none; position:fixed;
+  top:20px; right:20px; padding:12px 20px; border-radius:8px;
+  font-size:14px; font-weight:500; z-index:2000;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  transition:opacity 0.3s ease;"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -434,6 +749,10 @@ document.addEventListener('click',function(e){
 // Broadcast
 function openBroadcastModal() { document.getElementById('broadcastModal').style.display = 'block'; }
 function closeBroadcastModal() { document.getElementById('broadcastModal').style.display = 'none'; }
+
+// Import Excel
+function openImportModal() { document.getElementById('importExcelModal').style.display = 'block'; }
+function closeImportModal() { document.getElementById('importExcelModal').style.display = 'none'; }
 document.getElementById('broadcastForm').onsubmit = function(e) {
   e.preventDefault();
   const fd = new FormData(this);
@@ -454,34 +773,261 @@ function toggleEditMode() {
   showToast(editMode ? 'Edit Mode Enabled' : 'Edit Mode Disabled', 'warn');
 }
 
-function openEditModal(id) {
-  const card = document.getElementById('fsc' + id);
+function openEditModal(id, day, time_slot, subject, slot_type, room, division, semester) {
   document.getElementById('edit-id').value = id;
-  document.getElementById('edit-subject').value = card.dataset.subject;
-  document.getElementById('edit-room').value = card.dataset.room;
-  document.getElementById('edit-division').value = card.dataset.division;
+  document.getElementById('edit-day').value = day;
+  document.getElementById('edit-time').value = time_slot;
+  document.getElementById('edit-subject').value = subject;
+  document.getElementById('edit-type').value = slot_type;
+  document.getElementById('edit-room').value = room || '';
+  document.getElementById('edit-division').value = division || '';
+  document.getElementById('edit-semester').value = semester || '';
   document.getElementById('editSlotModal').style.display = 'block';
 }
 function closeEditModal() { document.getElementById('editSlotModal').style.display = 'none'; }
 
 document.getElementById('editSlotForm').onsubmit = function(e) {
   e.preventDefault();
-  const fd = new FormData(this);
-  fetch('/api/save_timetable_slot', { method: 'POST', body: fd, headers: {'X-CSRF-Token': '{{ csrf_token() }}'} })
-    .then(r => r.json()).then(data => {
-      showToast('Slot updated successfully!', 'ok');
+  const id = document.getElementById('edit-id').value;
+  const payload = {
+    day: document.getElementById('edit-day').value,
+    time_slot: document.getElementById('edit-time').value,
+    subject: document.getElementById('edit-subject').value.trim(),
+    slot_type: document.getElementById('edit-type').value,
+    room: document.getElementById('edit-room').value.trim(),
+    division: document.getElementById('edit-division').value,
+    semester: document.getElementById('edit-semester').value.trim(),
+  };
+  
+  const btn = document.getElementById('editSlotSubmitBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+  
+  fetch('/api/faculty/my-timetable/' + id, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(res => {
+    if (res.status === 200) {
+      showToast('Slot updated successfully!', 'success');
+      closeEditModal();
       setTimeout(() => location.reload(), 1000);
-    });
+    } else {
+      res.json().then(data => {
+        showToast(data.error || 'Failed to update slot.', 'err');
+      });
+    }
+  })
+  .catch(() => {
+    showToast('Network error — please try again', 'err');
+  })
+  .finally(() => {
+    btn.textContent = 'Save Changes';
+    btn.disabled = false;
+  });
 };
 
-function showToast(msg, type) {
+function deleteSlot(id) {
+  if (!confirm('Are you sure you want to delete this draft slot?')) return;
+  
+  fetch('/api/faculty/my-timetable/' + id, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-Token': '{{ csrf_token() }}'
+    }
+  })
+  .then(res => {
+    if (res.status === 204) {
+      showToast('Slot deleted successfully ✓', 'success');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showToast('Failed to delete slot', 'err');
+    }
+  })
+  .catch(() => {
+    showToast('Network error — please try again', 'err');
+  });
+}
+
+function submitTimetableForApproval() {
+  if (!confirm('Submit all draft and rejected slots for admin approval?')) return;
+  
+  const btn = document.getElementById('submitApprovalBtn');
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  btn.disabled = true;
+  
+  fetch('/api/faculty/my-timetable/submit', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': '{{ csrf_token() }}'
+    }
+  })
+  .then(res => {
+    if (res.ok) {
+      showToast('Timetable submitted for approval ✓', 'success');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      res.json().then(data => {
+        showToast(data.error || 'Failed to submit timetable', 'err');
+      });
+    }
+  })
+  .catch(() => {
+    showToast('Network error — please try again', 'err');
+  })
+  .finally(() => {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+  });
+}
+
+function showToast(message, type) {
+  const toast = document.getElementById('erpToast');
+  if (toast) {
+    toast.textContent = message;
+    toast.style.background = (type === 'success' || type === 'ok') ? '#059669' : '#dc2626';
+    toast.style.color = '#fff';
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3000);
+    return;
+  }
   const t = document.getElementById('toast');
-  t.innerText = msg;
-  t.className = 'ok';
-  if(type==='err') t.className = 'err';
-  if(type==='warn') t.className = 'warn';
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
+  if (t) {
+    t.innerText = message;
+    t.className = 'ok';
+    if(type==='err') t.className = 'err';
+    if(type==='warn') t.className = 'warn';
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+  }
+}
+
+// Load divisions on page load
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/faculty/divisions')
+    .then(r => r.json())
+    .then(data => {
+      const sel = document.getElementById('slotDivision');
+      const selEdit = document.getElementById('edit-division');
+      const populateOptions = (element) => {
+        if (element) {
+          element.innerHTML = '<option value="">Select division</option>';
+          (data.divisions || []).forEach(d => {
+            element.innerHTML += `<option value="${d}">${d}</option>`;
+          });
+          if (!data.divisions || !data.divisions.length) {
+            ['SE CSE-A','SE CSE-B','SE AIDS','SE IT'].forEach(d => {
+              element.innerHTML += `<option value="${d}">${d}</option>`;
+            });
+          }
+        }
+      };
+      populateOptions(sel);
+      populateOptions(selEdit);
+    })
+    .catch(() => {
+      const sel = document.getElementById('slotDivision');
+      const selEdit = document.getElementById('edit-division');
+      const populateOptions = (element) => {
+        if (element) {
+          element.innerHTML = '<option value="">Select division</option>';
+          ['SE CSE-A','SE CSE-B','SE AIDS','SE IT'].forEach(d => {
+            element.innerHTML += `<option value="${d}">${d}</option>`;
+          });
+        }
+      };
+      populateOptions(sel);
+      populateOptions(selEdit);
+    });
+});
+
+function openAddSlotModal() {
+  const modal = document.getElementById('addSlotModal');
+  modal.style.display = 'flex';
+  document.getElementById('slotFormError').style.display = 'none';
+  // Reset form
+  ['slotDay','slotTime','slotDivision'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  ['slotSubject','slotRoom','slotSemester'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('slotType').value = 'Theory';
+}
+
+function closeAddSlotModal() {
+  document.getElementById('addSlotModal').style.display = 'none';
+}
+
+// Close modal on backdrop click
+document.getElementById('addSlotModal')
+  .addEventListener('click', function(e) {
+    if (e.target === this) closeAddSlotModal();
+  });
+
+async function submitAddSlot(event) {
+  event.preventDefault();
+  const btn = document.getElementById('addSlotSubmitBtn');
+  const errDiv = document.getElementById('slotFormError');
+  errDiv.style.display = 'none';
+
+  const payload = {
+    day       : document.getElementById('slotDay').value,
+    time_slot : document.getElementById('slotTime').value,
+    subject   : document.getElementById('slotSubject').value.trim(),
+    division  : document.getElementById('slotDivision').value,
+    room      : document.getElementById('slotRoom').value.trim(),
+    slot_type : document.getElementById('slotType').value,
+    semester  : document.getElementById('slotSemester').value.trim(),
+  };
+
+  // Client-side validation
+  const required = ['day','time_slot','subject','division','slot_type'];
+  const missing = required.filter(k => !payload[k]);
+  if (missing.length) {
+    errDiv.textContent = 'Please fill in: ' + missing.join(', ');
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/faculty/my-timetable', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (res.status === 201) {
+      closeAddSlotModal();
+      showToast('Slot submitted for admin approval ✓', 'success');
+      setTimeout(() => location.reload(), 1800);
+    } else if (res.status === 409) {
+      errDiv.textContent = data.error || 'Duplicate slot';
+      errDiv.style.display = 'block';
+    } else {
+      errDiv.textContent = data.error || 'Could not add slot. Try again.';
+      errDiv.style.display = 'block';
+    }
+  } catch(e) {
+    errDiv.textContent = 'Network error — please try again';
+    errDiv.style.display = 'block';
+  } finally {
+    btn.textContent = 'Add Slot';
+    btn.disabled = false;
+  }
 }
 
 // Keyboard

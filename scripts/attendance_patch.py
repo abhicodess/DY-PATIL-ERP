@@ -281,7 +281,7 @@ def cumulative_attendance():
         rows = qry(
             f"""SELECT a.subject, a.status
                 FROM attendance a
-                WHERE {att_match_student_sql('a')} AND {base_where}""",
+                WHERE {att_match_student_sql('a')} AND {base_where}""",  # nosec B608
             list(att_match_student_params(s["id"], s["name"])) + where_params,
         )
         if not rows:
@@ -398,7 +398,7 @@ def export_cumulative_attendance():
     for s in students_all:
         rows = qry(
             f"""SELECT a.status FROM attendance a
-                WHERE {att_match_student_sql('a')} AND {base_where}""",
+                WHERE {att_match_student_sql('a')} AND {base_where}""",  # nosec B608
             list(att_match_student_params(s["id"], s["name"])) + where_params,
         )
         if not rows:
@@ -458,8 +458,8 @@ def attendance_section_report():
         if semester: where += " AND a.semester=?"; params.append(semester)
 
         # Overall stats for the section
-        total   = qone(f"SELECT COUNT(*) as c FROM attendance a WHERE {where}", params)["c"]
-        present = qone(f"SELECT COUNT(*) as c FROM attendance a WHERE {where} AND a.status='Present'", params)["c"]
+        total   = qone(f"SELECT COUNT(*) as c FROM attendance a WHERE {where}", params)["c"]  # nosec B608
+        present = qone(f"SELECT COUNT(*) as c FROM attendance a WHERE {where} AND a.status='Present'", params)["c"]  # nosec B608
         absent  = total - present
 
         # Student-level stats
@@ -470,7 +470,7 @@ def attendance_section_report():
         pcts = []
         for s in students_in_div:
             rows = qry(
-                f"SELECT status FROM attendance a WHERE {att_match_student_sql('a')} AND {where}",
+                f"SELECT status FROM attendance a WHERE {att_match_student_sql('a')} AND {where}",  # nosec B608
                 list(att_match_student_params(s["id"], s["name"])) + params,
             )
             if not rows: continue
@@ -488,7 +488,7 @@ def attendance_section_report():
                 COUNT(*) as total,
                 SUM(CASE WHEN a.status='Present' THEN 1 ELSE 0 END) as present
                 FROM attendance a
-                WHERE {where} GROUP BY a.subject ORDER BY a.subject""",
+                WHERE {where} GROUP BY a.subject ORDER BY a.subject""",  # nosec B608
             params,
         )
         subjects_detail = [

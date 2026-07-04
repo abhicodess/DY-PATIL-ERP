@@ -2,6 +2,7 @@ from flask import render_template, request, session
 from blueprints.faculty import faculty_bp
 from blueprints.auth.decorators import login_required, faculty_required
 from services.faculty_service import FacultyService
+from config import DEPARTMENTS, DESIGNATIONS
 
 faculty_service = FacultyService()
 
@@ -18,4 +19,5 @@ def profile():
 def list_faculty():
     filters = request.args.to_dict()
     rows = faculty_service.get_all_faculty(filters)
-    return render_template("faculty/faculty.html", faculty_list=rows)
+    return render_template("faculty/faculty.html", faculty_list=rows, DEPARTMENTS=DEPARTMENTS, DESIGNATIONS=DESIGNATIONS)
+

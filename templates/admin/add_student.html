@@ -8,6 +8,7 @@
 <div class="card fu fu1" style="max-width:700px">
   <div class="ch"><div class="ct">Student Information</div><div class="cs">Fill in all required fields</div></div>
   <form method="POST" action="/save_student">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <div class="cb">
       <div class="fg2">
         <div class="fgrp"><label>Full Name *</label><input type="text" name="name" placeholder="e.g. Riya Sharma" required></div>

@@ -91,6 +91,7 @@ def init_db():
                 teaching_assessment REAL DEFAULT 0,
                 ut_marks            REAL DEFAULT 0,
                 mse_marks           REAL DEFAULT 0,
+                remarks             TEXT DEFAULT '',
                 student_id   INTEGER REFERENCES students(id)
             );
 
@@ -109,6 +110,7 @@ def init_db():
                 title      TEXT NOT NULL,
                 content    TEXT NOT NULL,
                 note_type  TEXT DEFAULT 'Lecture Note',
+                attachment_path TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -186,21 +188,6 @@ def init_db():
                 title TEXT, 
                 message TEXT, 
                 role_target TEXT, 
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS leave_applications (
-                id SERIAL PRIMARY KEY,
-                student_id INTEGER,
-                faculty_id INTEGER,
-                student_name TEXT,
-                roll TEXT,
-                leave_type TEXT,
-                reason TEXT,
-                from_date DATE,
-                to_date DATE,
-                status TEXT DEFAULT 'pending',
-                remarks TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 

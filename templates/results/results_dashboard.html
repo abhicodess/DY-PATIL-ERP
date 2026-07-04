@@ -136,6 +136,13 @@
     </p>
   </div>
   <div class="ph-actions">
+    <form action="/results_import" method="POST" enctype="multipart/form-data" style="display:inline-flex; align-items:center;" id="importForm">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="file" name="file" id="importFile" accept=".xlsx, .xls" style="display:none;" onchange="document.getElementById('importForm').submit();">
+      <button type="button" class="btn btn-dark btn-sm" onclick="document.getElementById('importFile').click();">
+        <i class="fa-solid fa-file-import"></i> Import Excel
+      </button>
+    </form>
     <a href="/results_analytics?dept={{ dept }}&semester={{ semester }}"
        class="btn btn-out btn-sm">
       <i class="fa-solid fa-chart-line"></i> Analytics
@@ -337,7 +344,7 @@
       Page {{ page }}/{{ total_pages }}
     </span>
   </div>
-  <div style="overflow-x:auto; max-height:560px;">
+  <div style="overflow-x:auto; max-height:560px; width:100%; max-width:100%; display:block;">
     <table class="tbl rtable">
       <thead>
         <tr>
@@ -346,7 +353,9 @@
           <th>Student Name</th>
           <th>Sec</th>
           {% for subj in subjects %}
-          <th title="{{ subj }}">{{ subj|truncate(14, True) }}</th>
+          <th title="{{ subj }}" style="white-space: normal; min-width: 120px; max-width: 160px; line-height: 1.25; vertical-align: bottom; font-size: 10px; text-align: center; padding: 10px 8px;">
+            {{ subj }}
+          </th>
           {% endfor %}
           <th>Total</th>
           <th>Max</th>

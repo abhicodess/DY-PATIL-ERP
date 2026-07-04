@@ -1,6 +1,6 @@
 from flask import Flask, render_template, session, request, redirect, url_for, jsonify, make_response, send_from_directory
 from config import Config
-from extensions import db, limiter, redis_client, init_extensions, api
+from extensions import db, limiter, redis_client, init_extensions, api, cors, csrf
 from utils.security_headers import register_security_headers
 from utils.apm import init_apm
 from routes.upload_attendance import process_attendance_upload
@@ -27,14 +27,22 @@ def create_app(config_class=Config):
             config_class = ProductionConfig
             
     app = Flask(__name__)
+    
+    cors.init_app(app,
+        origins=os.environ.get("ALLOWED_ORIGINS",
+            "http://localhost:8000").split(","),
+        supports_credentials=True,
+        allow_headers=["Content-Type","X-CSRFToken"]
+    )
+    csrf.init_app(app)
     app.config.from_object(config_class)
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     
     import sys
-    is_testing = ('pytest' in sys.modules or 
-                  'unittest' in sys.modules or 
-                  os.environ.get("FLASK_ENV") == "testing" or 
+    is_testing = (os.environ.get("FLASK_ENV") == "testing" or 
                   app.config.get('TESTING') or
-                  getattr(config_class, 'TESTING', False))
+                  getattr(config_class, 'TESTING', False) or
+                  'pytest' in sys.modules or 'unittest' in sys.modules)
     
     # FIX: Use StaticPool and check_same_thread=False for SQLite in-memory database to prevent schema isolation across connection scopes
     if is_testing:
@@ -69,7 +77,7 @@ def create_app(config_class=Config):
         from config import ProductionConfig, secrets_check
         ProductionConfig.validate()
         secrets_check()
-        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['SESSION_COOKIE_SECURE'] = os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
     else:
         app.config['SESSION_COOKIE_SECURE'] = False
         
@@ -90,21 +98,6 @@ def create_app(config_class=Config):
     def set_tenant_context():
         from flask import g
         g.tenant = request.environ.get('tenant')
-
-    @app.before_request
-    def serve_react_spa_routing():
-        if not app.config.get('SERVE_REACT_SPA'):
-            return
-        
-        path = request.path
-        # Do not intercept API, static files, health check, or openapi.json
-        if path.startswith('/api/') or path.startswith('/static/') or path.startswith('/assets/') or path == '/health' or path == '/openapi.json':
-            return
-            
-        try:
-            return send_from_directory(os.path.join(app.root_path, 'frontend', 'dist'), 'index.html')
-        except Exception:
-            return "React SPA build (frontend/dist/index.html) not found. Please run npm run build.", 500
     
     # Initialize DB schemas
     # FIX: Import all models first and run db.create_all() during testing to populate SQLite in-memory tables
@@ -116,14 +109,28 @@ def create_app(config_class=Config):
             from models.student import Student
             from models.faculty import Faculty
             from models.attendance import Attendance
-            from models.timetable import Timetable, FacultySubjectAssignment
+            from models.timetable import Timetable, FacultySubjectAssignment, FacultyTimetable, AdminNotification
+            from models.extra_models import Subject, Result, FacultyNotice, FacultyNote
             from models.exams import Exam, ExamSlot
             from models.admissions import Application
             from models.payroll import FacultySalary, Payslip
             from models.notifications import NotificationToken
-            from models.results import Mark, ResultSummary
+            from models.results import Mark, ResultSummary, SubjectMaster
+            from models.assessment import Assessment
             db.create_all()
-            # FIX: Create legacy cumulative_attendance table for tests
+            # Seed testing database with subjects_master entries
+            db.session.execute(db.text("""
+                INSERT INTO subjects_master (subject_code, subject_name, department, semester)
+                VALUES 
+                  ('U24AIMLPC401','Statistics & Probability','AIML','SEM IV'),
+                  ('U24AIMLPC402','Introduction to AI','AIML','SEM IV'),
+                  ('U24AIMLPC403','Database Management Systems','AIML','SEM IV')
+                ON CONFLICT (subject_code) DO NOTHING;
+            """))
+            db.session.commit()
+            from services.attendance_service import init_attendance_engine
+            init_attendance_engine()
+            # FIX: Create legacy cumulative_attendance and reports tables for tests
             db.session.execute(db.text("""
                 CREATE TABLE IF NOT EXISTS cumulative_attendance (
                     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +149,40 @@ def create_app(config_class=Config):
                     UNIQUE(roll, subject_code, semester, acad_year)
                 );
             """))
+            db.session.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id       TEXT UNIQUE NOT NULL,
+                    report_type  TEXT NOT NULL,
+                    format       TEXT NOT NULL,
+                    filters      TEXT NOT NULL,
+                    status       TEXT NOT NULL DEFAULT 'queued',
+                    progress     INTEGER NOT NULL DEFAULT 0,
+                    file_path    TEXT,
+                    file_size    INTEGER,
+                    created_by   INTEGER,
+                    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at   TIMESTAMP DEFAULT (datetime('now', '+24 hours')),
+                    error_msg    TEXT
+                );
+            """))
+            db.session.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS student_timetable (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    division VARCHAR(10) NOT NULL,
+                    semester VARCHAR(10) NOT NULL,
+                    department VARCHAR(50) NOT NULL,
+                    day VARCHAR(20) NOT NULL,
+                    time_slot VARCHAR(50) NOT NULL,
+                    subject VARCHAR(100) NOT NULL,
+                    faculty_name VARCHAR(100) NOT NULL,
+                    room VARCHAR(50) NOT NULL,
+                    created_by_faculty_id INTEGER NOT NULL,
+                    approved_by_admin BOOLEAN DEFAULT FALSE,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """))
             db.session.commit()
     
     # Register MVC (Web UI) Blueprints
@@ -154,8 +195,10 @@ def create_app(config_class=Config):
     from blueprints.admin import admin_bp
     from blueprints.dashboard import dashboard_bp
     from blueprints.api import api_bp
+    from api import api_internal_bp
     from routes.admin_intel import admin_intel_bp
     from routes.student_extra import student_extra_bp
+    from blueprints.student_timetable import student_timetable_bp
     
     from blueprints.admissions import admissions_bp
     from blueprints.exams import exams_bp
@@ -173,6 +216,10 @@ def create_app(config_class=Config):
     from routes.timetable_v2 import timetable_v2_bp
     from routes.admin_extra import admin_extra_bp
     from routes.imports import imports_bp
+    from routes.advanced_attendance_marks import advanced_att_marks_bp
+
+    from routes.faculty_timetable_self import faculty_timetable_self_bp
+    app.register_blueprint(faculty_timetable_self_bp)
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(students_bp, url_prefix='/students')
@@ -183,8 +230,10 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(api_internal_bp)
     app.register_blueprint(admin_intel_bp)
     app.register_blueprint(student_extra_bp)
+    app.register_blueprint(student_timetable_bp)
     app.register_blueprint(admissions_bp, url_prefix='/admissions')
     app.register_blueprint(exams_bp, url_prefix='/exams')
     app.register_blueprint(hr_bp, url_prefix='/hr')
@@ -201,6 +250,7 @@ def create_app(config_class=Config):
     app.register_blueprint(timetable_v2_bp)
     app.register_blueprint(admin_extra_bp)
     app.register_blueprint(imports_bp)
+    app.register_blueprint(advanced_att_marks_bp)
 
     # Register versioned API blueprints
     from utils.version_router import register_versioned_blueprints
@@ -275,6 +325,13 @@ def create_app(config_class=Config):
         import secrets
         from flask import abort
         
+        # Bypass CSRF for stateless login/refresh APIs and requests with JWT Bearer token
+        if request.path in (
+            "/api/v1/auth/login", "/api/v1_internal/v1/auth/login",
+            "/api/v1/auth/refresh", "/api/v1_internal/v1/auth/refresh"
+        ) or request.headers.get("Authorization"):
+            return
+            
         # FIX: Enforce CSRF validation for specific routes during testing to satisfy security tests
         if app.config.get("WTF_CSRF_ENABLED") is False:
             if request.path not in ("/delete_student", "/cumulative_commit", "/clear_all_attendance_summary"):
@@ -295,6 +352,14 @@ def create_app(config_class=Config):
             app.logger.warning(f"CSRF failure: expected {tok}, sent {sent}")
             abort(400)
 
+    @app.after_request
+    def add_header(response):
+        if response.headers.get('Content-Type', '').startswith('text/html'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+
     # Legacy & Sidebar Redirects to Blueprints (Keeping non-clashing only)
     # Serve React SPA assets
     @app.route('/assets/<path:filename>')
@@ -305,21 +370,25 @@ def create_app(config_class=Config):
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def catch_all(path):
-        prefixes = ('api/', 'auth/', 'admin/', 'attendance/', 'results/', 'timetable/', 'students/', 'faculty/', 'dashboard/', 'admissions/', 'exams/', 'hr/', 'static/', 'assets/', 'openapi.json')
+        prefixes = ('api/', 'static/', 'assets/', 'openapi.json')
         if any(path.startswith(p) for p in prefixes) or path == 'health':
             return render_template('errors/404.html'), 404
-        try:
-            return send_from_directory(os.path.join(app.root_path, 'frontend', 'dist'), 'index.html')
-        except Exception:
-            # Fallback when React SPA is not built yet (dev/test environment)
-            if path == '':
-                if session.get("role"):
-                    r = session["role"]
-                    if r == "admin": return redirect(url_for('admin.dashboard'))
-                    if r == "faculty": return redirect(url_for('dashboard.faculty'))
-                    if r == "student": return redirect(url_for('dashboard.student'))
-                return redirect(url_for('auth.login'))
-            return render_template('errors/404.html'), 404
+        
+        if app.config.get('SERVE_REACT_SPA', False):
+            try:
+                return send_from_directory(os.path.join(app.root_path, 'frontend', 'dist'), 'index.html')
+            except Exception:
+                pass
+                
+        # Fallback/Legacy UI Routing: when React SPA is not served or not built yet
+        if path == '':
+            if session.get("role"):
+                r = session["role"]
+                if r == "admin": return redirect(url_for('admin.dashboard'))
+                if r == "faculty": return redirect(url_for('dashboard.faculty'))
+                if r == "student": return redirect(url_for('dashboard.student'))
+            return redirect(url_for('auth.login'))
+        return render_template('errors/404.html'), 404
 
     @app.route("/faculty_dashboard")
     def faculty_dash_redir(): return redirect(url_for('dashboard.faculty'))
@@ -329,16 +398,34 @@ def create_app(config_class=Config):
 
     @app.route("/login", methods=["GET", "POST"])
     def legacy_login_redir():
+        if app.config.get('SERVE_REACT_SPA', False) and request.method == "GET":
+            try:
+                return send_from_directory(os.path.join(app.root_path, 'frontend', 'dist'), 'index.html')
+            except Exception:
+                pass
         return redirect(url_for('auth.login', **request.args), code=307)
 
     @app.route("/logout")
     def legacy_logout_redir():
         return redirect(url_for('auth.logout'))
 
-    # Health Check (for Docker)
+    @app.route("/subjects")
+    @app.route("/subjects/")
+    def legacy_subjects_redir():
+        return redirect(url_for('admin.subjects', **request.args))
+
+    # Health Check (for Render / Docker)
     @app.route("/health")
     def health_check():
-        return jsonify(status="healthy"), 200
+        from datetime import datetime
+        try:
+            from extensions import db
+            db.session.execute(db.text("SELECT 1"))
+            db.session.commit()
+        except Exception:
+            pass
+        current_time = datetime.utcnow().isoformat() + "Z"
+        return jsonify({"status": "ok", "timestamp": current_time}), 200
 
     # Job Status API
     @app.route("/api/jobs/<job_id>")
@@ -353,9 +440,27 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_utils():
         from services.notification_service import NotificationService
+        from utils.pg_wrapper import qone
+        
+        def pending_faculty_timetable_count():
+            try:
+                row = qone("SELECT COUNT(*) as c FROM faculty_timetable WHERE status = 'pending'")
+                return row["c"] if row else 0
+            except Exception:
+                return 0
+                
+        def pending_student_timetable_count():
+            try:
+                row = qone("SELECT COUNT(*) as c FROM student_timetable WHERE status = 'pending'")
+                return row["c"] if row else 0
+            except Exception:
+                return 0
+
         return dict(
             unread_count=NotificationService.get_unread_count,
-            csrf_token=lambda: session.get("_csrf_token", "")
+            csrf_token=lambda: session.get("_csrf_token", ""),
+            pending_faculty_timetable_count=pending_faculty_timetable_count,
+            pending_student_timetable_count=pending_student_timetable_count
         )
 
     # Error Handlers

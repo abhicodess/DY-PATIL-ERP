@@ -1,0 +1,195 @@
+{% extends "common/base.html" %}
+{% block title %}Edit Student Assessment{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Edit Assessment{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / <a href="/faculty/assessments?subject={{ subject }}&division={{ request.args.get('selected_div', '') }}&department={{ request.args.get('selected_dept', '') }}">Assessments</a> / Edit{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Edit Assessment Record</div>
+    <div class="ph-sub" style="color: var(--ink3); font-size: 14px;">Updating details for <strong>{{ student.name }}</strong> in <strong>{{ subject }}</strong></div>
+  </div>
+</div>
+
+<div class="g4060 fu fu1" style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+  <form method="POST" action="/faculty/assessments/save">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="student_id" value="{{ student.id }}">
+    <input type="hidden" name="subject" value="{{ subject }}">
+    <input type="hidden" name="selected_div" value="{{ request.args.get('selected_div', '') }}">
+    <input type="hidden" name="selected_dept" value="{{ request.args.get('selected_dept', '') }}">
+
+    <!-- STUDENT CARD -->
+    <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--violet);">
+      <div class="ch"><div class="ct">Student Profile Details</div></div>
+      <div class="cb">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+          <div><span style="font-weight: 600; color: var(--ink3); font-size: 12px; display: block; text-transform: uppercase;">Name</span><strong>{{ student.name }}</strong></div>
+          <div><span style="font-weight: 600; color: var(--ink3); font-size: 12px; display: block; text-transform: uppercase;">Roll Number</span><strong>{{ student.roll or 'N/A' }}</strong></div>
+          <div><span style="font-weight: 600; color: var(--ink3); font-size: 12px; display: block; text-transform: uppercase;">Division / Dept</span><strong>Div {{ student.division or '-' }} / {{ student.department or '-' }}</strong></div>
+          <div><span style="font-weight: 600; color: var(--ink3); font-size: 12px; display: block; text-transform: uppercase;">Year</span><strong>Year {{ student.year or '-' }}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS CONTAINER -->
+    <div class="card">
+      <div class="ch" style="border-bottom: 1px solid var(--border); padding-bottom: 0;">
+        <div style="display: flex; gap: 16px;">
+          <button type="button" class="tab-btn active" onclick="switchTab('assignments')" id="btn_assignments">Assignments</button>
+          <button type="button" class="tab-btn" onclick="switchTab('research')" id="btn_research">Research & IP</button>
+          <button type="button" class="tab-btn" onclick="switchTab('project')" id="btn_project">Project & Docs</button>
+          <button type="button" class="tab-btn" onclick="switchTab('remark')" id="btn_remark">Remarks</button>
+        </div>
+      </div>
+
+      <div class="cb">
+        <!-- TAB 1: ASSIGNMENTS -->
+        <div id="tab_assignments" class="tab-content">
+          <p style="color: var(--ink3); font-size: 13px; margin-bottom: 16px;">Enter marks, grade, or status (e.g. "Completed", "A+", "9/10") for assignments 1 through 5.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+            <div class="fgrp">
+              <label for="assignment_1">Assignment 1</label>
+              <input type="text" name="assignment_1" id="assignment_1" value="{{ assessment.assignment_1 or '' }}" placeholder="e.g. Submitted, 9/10">
+            </div>
+            <div class="fgrp">
+              <label for="assignment_2">Assignment 2</label>
+              <input type="text" name="assignment_2" id="assignment_2" value="{{ assessment.assignment_2 or '' }}" placeholder="e.g. Submitted, 8.5/10">
+            </div>
+            <div class="fgrp">
+              <label for="assignment_3">Assignment 3</label>
+              <input type="text" name="assignment_3" id="assignment_3" value="{{ assessment.assignment_3 or '' }}" placeholder="e.g. Pending, Completed">
+            </div>
+            <div class="fgrp">
+              <label for="assignment_4">Assignment 4</label>
+              <input type="text" name="assignment_4" id="assignment_4" value="{{ assessment.assignment_4 or '' }}" placeholder="e.g. Pending">
+            </div>
+            <div class="fgrp">
+              <label for="assignment_5">Assignment 5</label>
+              <input type="text" name="assignment_5" id="assignment_5" value="{{ assessment.assignment_5 or '' }}" placeholder="e.g. Pending">
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: RESEARCH & IP -->
+        <div id="tab_research" class="tab-content" style="display: none;">
+          <p style="color: var(--ink3); font-size: 13px; margin-bottom: 16px;">Record paper publications across Q1, Q2, Q3, Q4 journal rankings, patents, and copyright statuses.</p>
+          
+          <div class="fg2" style="margin-bottom: 16px;">
+            <div class="fgrp">
+              <label for="paper_q1">Q1 Journal Publications</label>
+              <input type="text" name="paper_q1" id="paper_q1" value="{{ assessment.paper_q1 or '' }}" placeholder="e.g. 1 Published, IEEE Access">
+            </div>
+            <div class="fgrp">
+              <label for="paper_q2">Q2 Journal Publications</label>
+              <input type="text" name="paper_q2" id="paper_q2" value="{{ assessment.paper_q2 or '' }}" placeholder="e.g. None, Under Review">
+            </div>
+          </div>
+          
+          <div class="fg2" style="margin-bottom: 16px;">
+            <div class="fgrp">
+              <label for="paper_q3">Q3 Journal Publications</label>
+              <input type="text" name="paper_q3" id="paper_q3" value="{{ assessment.paper_q3 or '' }}" placeholder="e.g. None">
+            </div>
+            <div class="fgrp">
+              <label for="paper_q4">Q4 Journal Publications</label>
+              <input type="text" name="paper_q4" id="paper_q4" value="{{ assessment.paper_q4 or '' }}" placeholder="e.g. None">
+            </div>
+          </div>
+
+          <div class="fg2">
+            <div class="fgrp">
+              <label for="patent_publication">Patent Publications</label>
+              <input type="text" name="patent_publication" id="patent_publication" value="{{ assessment.patent_publication or '' }}" placeholder="e.g. Published (App No: 12345)">
+            </div>
+            <div class="fgrp">
+              <label for="copyright">Copyright Status</label>
+              <input type="text" name="copyright" id="copyright" value="{{ assessment.copyright or '' }}" placeholder="e.g. Registered, Submitted">
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: PROJECT & DOCS -->
+        <div id="tab_project" class="tab-content" style="display: none;">
+          <p style="color: var(--ink3); font-size: 13px; margin-bottom: 16px;">Document project reviews and implementation records.</p>
+          
+          <div class="fg2" style="margin-bottom: 16px;">
+            <div class="fgrp">
+              <label for="project_review_1">Project Review 1</label>
+              <input type="text" name="project_review_1" id="project_review_1" value="{{ assessment.project_review_1 or '' }}" placeholder="e.g. Approved (8/10)">
+            </div>
+            <div class="fgrp">
+              <label for="project_review_2">Project Review 2</label>
+              <input type="text" name="project_review_2" id="project_review_2" value="{{ assessment.project_review_2 or '' }}" placeholder="e.g. Pending, Completed">
+            </div>
+          </div>
+
+          <div class="fgrp">
+            <label for="implementation_documentation">Implementation & Documentation Link / Remarks</label>
+            <textarea name="implementation_documentation" id="implementation_documentation" rows="4" placeholder="Enter implementation detail, code repository link, or documentation summary..." style="width: 100%; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px; font-family: var(--font);">{{ assessment.implementation_documentation or '' }}</textarea>
+          </div>
+        </div>
+
+        <!-- TAB 4: REMARK -->
+        <div id="tab_remark" class="tab-content" style="display: none;">
+          <p style="color: var(--ink3); font-size: 13px; margin-bottom: 16px;">General faculty feedback and remarks on the student's performance.</p>
+          
+          <div class="fgrp">
+            <label for="remark">Faculty Remarks</label>
+            <textarea name="remark" id="remark" rows="4" placeholder="Enter feedback remark..." style="width: 100%; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px; font-family: var(--font);">{{ assessment.remark or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="cf" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Changes</button>
+        <a href="/faculty/assessments?subject={{ subject }}&division={{ request.args.get('selected_div', '') }}&department={{ request.args.get('selected_dept', '') }}" class="btn btn-out">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font);
+}
+.tab-btn:hover {
+  color: var(--ink);
+}
+.tab-btn.active {
+  color: var(--violet);
+  border-bottom-color: var(--violet);
+}
+</style>
+
+<script>
+function switchTab(tabId) {
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  // Show target tab content
+  document.getElementById('tab_' + tabId).style.display = 'block';
+  
+  // Remove active class from all tab buttons
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  document.getElementById('btn_' + tabId).classList.add('active');
+}
+</script>
+{% endblock %}

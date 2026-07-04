@@ -14,6 +14,7 @@
   </div>
   <div class="ph-actions">
     <form method="POST" action="/send_shortage_notices" onsubmit="return confirm('Send SMS/Email alerts to {{ defaulters|length }} parents?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="threshold" value="{{ threshold }}">
       <input type="hidden" name="department" value="{{ dept }}">
       <button type="submit" class="btn btn-danger"><i class="fas fa-envelope-open-text"></i> Notify All Parents</button>

@@ -22,6 +22,13 @@ def attendance_role_allowed(session_obj):
     return session_obj.get("role") in {"admin", "faculty"}
 
 
+def _clean(err_msg):
+    if not err_msg:
+        return ""
+    return str(err_msg)[:160].replace('\r', '').replace('\n', ' ')
+
+
+
 from utils.api_utils import json_success
 
 def students_api_response(request_args):
@@ -50,7 +57,7 @@ def handle_single_mark(request_form, session_obj):
         target = "/faculty/attendance_portal?saved=1&tab=view" if role == "faculty" else "/attendance?saved=1"
         return redirect(target)
     target = "/faculty/attendance_portal" if role == "faculty" else "/attendance"
-    return redirect(f"{target}?error={result['error'][:160]}")
+    return redirect(f"{target}?error={_clean(result['error'])}")
 
 
 def handle_bulk_mark(request_form, session_obj):
@@ -61,7 +68,7 @@ def handle_bulk_mark(request_form, session_obj):
         target = "/faculty/attendance_portal?tab=view" if role == "faculty" else "/view_attendance"
         return redirect(f"{target}?saved={result['saved']}&updated={result['updated']}")
     target = "/faculty/attendance_portal" if role == "faculty" else "/attendance"
-    return redirect(f"{target}?error={result['error'][:160]}")
+    return redirect(f"{target}?error={_clean(result['error'])}")
 
 
 def handle_view_records(request_args, session_obj):
@@ -86,7 +93,7 @@ def handle_edit_record(request_form, session_obj):
     target = request_form.get("redirect") or ("/faculty/attendance_portal?tab=view" if role == "faculty" else "/view_attendance")
     if result["ok"]:
         return redirect(target)
-    return redirect(f"{target.split('?')[0]}?error={result['error'][:160]}")
+    return redirect(f"{target.split('?')[0]}?error={_clean(result['error'])}")
 
 
 def handle_delete_record(request_form, session_obj):
@@ -96,7 +103,7 @@ def handle_delete_record(request_form, session_obj):
     target = request_form.get("redirect") or ("/faculty/attendance_portal?tab=view" if role == "faculty" else "/view_attendance")
     if result["ok"]:
         return redirect(target)
-    return redirect(f"{target.split('?')[0]}?error={result['error'][:160]}")
+    return redirect(f"{target.split('?')[0]}?error={_clean(result['error'])}")
 
 
 def handle_import(file_storage, session_obj, subject_override=""):
@@ -106,7 +113,7 @@ def handle_import(file_storage, session_obj, subject_override=""):
         target = "/faculty/attendance_portal?tab=view" if session_obj.get("role") == "faculty" else "/attendance_dashboard"
         return redirect(f"{target}?saved={saved['saved']}&students={saved['students']}&batch_id={saved['batch_id']}")
     target = "/faculty/attendance_portal?tab=import" if session_obj.get("role") == "faculty" else "/attendance"
-    return redirect(f"{target}&error={result['error'][:160]}" if "?" in target else f"{target}?error={result['error'][:160]}")
+    return redirect(f"{target}&error={_clean(result['error'])}" if "?" in target else f"{target}?error={_clean(result['error'])}")
 
 
 def handle_backup(session_obj):
@@ -121,14 +128,14 @@ def handle_restore(session_obj, backup_path=None):
     result = restore_attendance_data(session_obj.get("role", "admin"), session_obj.get("faculty_id") or 1, backup_path)
     if result["ok"]:
         return redirect("/attendance_dashboard?restored=1")
-    return redirect(f"/attendance_dashboard?error={result['error'][:160]}")
+    return redirect(f"/attendance_dashboard?error={_clean(result['error'])}")
 
 
 def handle_reset(session_obj):
     result = reset_attendance_data(session_obj.get("role", "admin"), session_obj.get("faculty_id") or 1)
     if result["ok"]:
         return redirect("/attendance_dashboard?reset=1")
-    return redirect(f"/attendance_dashboard?error={result['error'][:160]}")
+    return redirect(f"/attendance_dashboard?error={_clean(result['error'])}")
 
 
 def handle_student_prediction(session_obj, student_id=None):
@@ -152,4 +159,4 @@ def handle_correction_request(request_form, session_obj):
     result = submit_correction_request(student_id, student_name, record_id, reason)
     if result["ok"]:
         return redirect("/student_attendance?saved=1")
-    return redirect(f"/student_attendance?error={result['error'][:160]}")
+    return redirect(f"/student_attendance?error={_clean(result['error'])}")

@@ -93,11 +93,11 @@ def _class_meta_from_attendance_text(text, filename=""):
 
 def grade(marks, total):
     p = pct(marks, total)
-    if p >= 90: return "A+"
-    if p >= 75: return "A"
-    if p >= 60: return "B+"
-    if p >= 50: return "B"
-    if p >= 40: return "C"
+    if p >= 75: return "O"
+    if p >= 65: return "A"
+    if p >= 55: return "B"
+    if p >= 45: return "C"
+    if p >= 35: return "D"
     return "F"
 
 def normalise_date(raw):
@@ -162,11 +162,11 @@ def today_str():
 @login_required("admin")
 def import_students_excel():
     f = request.files.get("file")
-    if not f: return redirect("/students")
+    if not f: return redirect("/students/")
     wb = load_workbook(f, data_only=True)
     if _is_attendance_student_workbook(wb):
         added, updated, skipped = _import_attendance_workbook_students(wb, f.filename)
-        return redirect(f"/students?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
+        return redirect(f"/students/?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
     ws = wb.active
     added = skipped = 0
     # Find header row
@@ -183,7 +183,7 @@ def import_students_excel():
         return None
     cn = col(["name"]); cr = col(["roll"]); cd = col(["dept","department"])
     cy = col(["year"]); ce = col(["email"]); cc = col(["contact","phone","mobile"])
-    if not cn: return redirect("/students")
+    if not cn: return redirect("/students/")
     for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
         name = str(row[cn-1] or "").strip()
         roll = str(row[cr-1] if cr else "").strip()
@@ -200,7 +200,7 @@ def import_students_excel():
             added += 1
         except psycopg2.IntegrityError:
             skipped += 1
-    return redirect(f"/students?imported={added}&skipped={skipped}")
+    return redirect(f"/students/?imported={added}&skipped={skipped}")
 
 
 
@@ -210,7 +210,7 @@ def import_students_excel():
 @login_required("admin")
 def import_faculty_excel():
     f = request.files.get("file")
-    if not f: return redirect("/faculty")
+    if not f: return redirect("/faculty/")
     wb = load_workbook(f, data_only=True); ws = wb.active
     added = skipped = 0
     hdr_row = 1
@@ -237,7 +237,7 @@ def import_faculty_excel():
             added += 1
         except psycopg2.IntegrityError:
             skipped += 1
-    return redirect(f"/faculty?imported={added}&skipped={skipped}")
+    return redirect(f"/faculty/?imported={added}&skipped={skipped}")
 
 
 # ── SUBJECTS ──────────────────────────────────────────────
@@ -274,7 +274,7 @@ def import_attendance_excel_v2():
         if added:
             return redirect(f"/view_attendance?saved={added}")
 
-    return redirect(f"/attendance?error={message[:160]}")
+    return redirect(f"/attendance?error={str(message)[:160].replace('\r', '').replace('\n', ' ')}")
 
 
 
@@ -290,7 +290,7 @@ def import_final_attendance_report():
             f"/attendance_dashboard?saved={saved['saved']}&skipped={saved['skipped']}"
             f"&students={saved['students']}&format=advanced_upload&batch_id={saved['batch_id']}"
         )
-    return redirect(f"/attendance?error={result['error'][:160]}")
+    return redirect(f"/attendance?error={str(result['error'])[:160].replace('\r', '').replace('\n', ' ')}")
 
 
 
@@ -298,9 +298,9 @@ def import_final_attendance_report():
 @login_required("admin")
 def import_timetable_v2():
     f = request.files.get("file")
-    if not f: return redirect("/timetable?error=nofile")
+    if not f: return redirect("/timetable/?error=nofile")
     added = _parse_timetable_excel(f)
-    return redirect(f"/timetable?imported={added}")
+    return redirect(f"/timetable/?imported={added}")
 
 
 @imports_bp.route("/faculty_import_attendance", methods=["POST"])
@@ -328,9 +328,9 @@ def faculty_import_attendance_v2():
 @login_required("admin")
 def import_faculty_details():
     f = request.files.get("file")
-    if not f: return redirect("/faculty")
+    if not f: return redirect("/faculty/")
     added, skipped = _parse_faculty_excel(f)
-    return redirect(f"/faculty?imported={added}&skipped={skipped}")
+    return redirect(f"/faculty/?imported={added}&skipped={skipped}")
 
 
 # ── FIXED: Timetable import (uses exact DY Patil parser) ───
@@ -339,11 +339,11 @@ def import_faculty_details():
 @login_required("admin")
 def import_students_v2():
     f = request.files.get("file")
-    if not f: return redirect("/students")
+    if not f: return redirect("/students/")
     wb = load_workbook(f, data_only=True)
     if _is_attendance_student_workbook(wb):
         added, updated, skipped = _import_attendance_workbook_students(wb, f.filename)
-        return redirect(f"/students?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
+        return redirect(f"/students/?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
     ws = wb.active
     added = skipped = 0
     hdr_row = 1
@@ -358,7 +358,7 @@ def import_students_v2():
         return None
     cn=gcol(["name"]); cr=gcol(["roll"]); cd=gcol(["dept","department"])
     cy=gcol(["year"]); ce=gcol(["email"])
-    if not cn: return redirect("/students?error=bad_format")
+    if not cn: return redirect("/students/?error=bad_format")
     for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
         name  = str(row[cn-1] or "").strip() if cn <= len(row) else ""
         roll  = str(row[cr-1] or "").strip() if cr and cr <= len(row) else ""
@@ -371,7 +371,7 @@ def import_students_v2():
                 (name, roll, dept, year, email, hash_password(_default_student_password())))
             added += 1
         except Exception: skipped += 1
-    return redirect(f"/students?imported={added}&skipped={skipped}")
+    return redirect(f"/students/?imported={added}&skipped={skipped}")
 
 
 
@@ -381,11 +381,11 @@ def import_students_v2():
 @login_required("admin")
 def import_subjects_v2():
     f = request.files.get("file")
-    if not f: return redirect("/subjects")
+    if not f: return redirect("/admin/subjects")
     wb = load_workbook(f, data_only=True)
     if _is_attendance_student_workbook(wb):
         added, skipped = _import_attendance_workbook_subjects(wb, f.filename)
-        return redirect(f"/subjects?imported={added}&skipped={skipped}&format=attendance_xlsx")
+        return redirect(f"/admin/subjects?imported={added}&skipped={skipped}&format=attendance_xlsx")
     tt_subjects = _read_subjects_from_wb(wb)
     if tt_subjects:
         added = skipped = 0
@@ -402,7 +402,7 @@ def import_subjects_v2():
                 added += 1
             except Exception:
                 skipped += 1
-        return redirect(f"/subjects?imported={added}&skipped={skipped}&format=timetable_xlsx")
+        return redirect(f"/admin/subjects?imported={added}&skipped={skipped}&format=timetable_xlsx")
     ws = wb.active
     added = skipped = 0
     hdr_row = 1
@@ -417,7 +417,7 @@ def import_subjects_v2():
         return None
     cn=gcol(["name","subject"]); cd=gcol(["dept","department"])
     cc=gcol(["code"]); ct=gcol(["teacher"]); cs=gcol(["sem"])
-    if not cn: return redirect("/subjects?error=bad_format")
+    if not cn: return redirect("/admin/subjects?error=bad_format")
     for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
         name = str(row[cn-1] or "").strip() if cn <= len(row) else ""
         if not name: continue
@@ -430,7 +430,7 @@ def import_subjects_v2():
                 (name,dept,code,tchr,sem))
             added += 1
         except Exception: skipped += 1
-    return redirect(f"/subjects?imported={added}&skipped={skipped}")
+    return redirect(f"/admin/subjects?imported={added}&skipped={skipped}")
 
 
 # ── NEW: Import Marks from Excel ───────────────────────────
@@ -449,7 +449,7 @@ def import_students_smart():
     files = [f for f in request.files.getlist("file") if f and f.filename]
     f = files[0] if files else None
     if not f:
-        return redirect("/students?error=no_file")
+        return redirect("/students/?error=no_file")
 
     if any((x.filename or "").lower().endswith(".pdf") for x in files):
         added = skipped = updated = 0
@@ -465,7 +465,7 @@ def import_students_smart():
                     updated += 1
                 else:
                     skipped += 1
-        return redirect(f"/students?imported={added}&updated={updated}&skipped={skipped}&format=pdf")
+        return redirect(f"/students/?imported={added}&updated={updated}&skipped={skipped}&format=pdf")
 
     fname   = f.filename.upper()
     dept    = ""
@@ -485,11 +485,11 @@ def import_students_smart():
     try:
         wb = load_workbook(f, data_only=True)
     except Exception as e:
-        return redirect("/students?error=bad_excel")
+        return redirect("/students/?error=bad_excel")
 
     if _is_attendance_student_workbook(wb):
         added, updated, skipped = _import_attendance_workbook_students(wb, f.filename)
-        return redirect(f"/students?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
+        return redirect(f"/students/?imported={added}&updated={updated}&skipped={skipped}&format=attendance_xlsx")
 
     ws = wb.active
     added = skipped = 0
@@ -519,7 +519,7 @@ def import_students_smart():
     cyear= gcol(["year","class","sem"])
 
     if not cn:
-        return redirect("/students?error=bad_format")
+        return redirect("/students/?error=bad_format")
 
     for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
         if not row: continue
@@ -547,7 +547,7 @@ def import_students_smart():
         except Exception:
             skipped += 1
 
-    return redirect(f"/students?imported={added}&skipped={skipped}")
+    return redirect(f"/students/?imported={added}&skipped={skipped}")
 
 
 
@@ -562,12 +562,12 @@ def import_faculty_smart():
     """
     f = request.files.get("file")
     if not f:
-        return redirect("/faculty?error=no_file")
+        return redirect("/faculty/?error=no_file")
 
     try:
         wb = load_workbook(f, data_only=True)
     except Exception as e:
-        return redirect("/faculty?error=bad_excel")
+        return redirect("/faculty/?error=bad_excel")
     ws = wb.active
     added = skipped = 0
 
@@ -595,7 +595,7 @@ def import_faculty_smart():
     ce  = gcol(["email"])
 
     if not cn:
-        return redirect("/faculty?error=bad_format")
+        return redirect("/faculty/?error=bad_format")
 
     for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
         if not row: continue
@@ -624,7 +624,7 @@ def import_faculty_smart():
         except Exception:
             skipped += 1
 
-    return redirect(f"/faculty?imported={added}&skipped={skipped}")
+    return redirect(f"/faculty/?imported={added}&skipped={skipped}")
 
 
 
@@ -748,7 +748,7 @@ def admin_import_results():
             
             # Evaluate Grade
             g   = grade(final_total_obtained, max_marks)
-            res = "Pass" if pct(final_total_obtained, max_marks) >= 40 else "Fail"
+            res = "Pass" if pct(final_total_obtained, max_marks) >= 35 else "Fail"
             
             try:
                 exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
@@ -847,7 +847,7 @@ def admin_import_sem7():
                     continue
 
                 g   = sem7_grade(marks_val, max_m)
-                res = "Pass" if (marks_val / max_m * 100 >= 40) else "Fail"
+                res = "Pass" if (marks_val / max_m * 100 >= 35) else "Fail"
 
                 existing = qone("SELECT id FROM results WHERE student_name=%s AND subject=%s AND semester=%s", (name, subj_name, "VII"))
                 if existing:
@@ -877,11 +877,11 @@ def admin_import_sem7():
 @login_required("admin")
 def import_subjects_from_tt():
     f = request.files.get("file")
-    if not f: return redirect("/subjects?error=no_file")
+    if not f: return redirect("/admin/subjects?error=no_file")
     wb = load_workbook(f, data_only=True)
     if _is_attendance_student_workbook(wb):
         added, skipped = _import_attendance_workbook_subjects(wb, f.filename)
-        return redirect(f"/subjects?imported={added}&skipped={skipped}&format=attendance_xlsx")
+        return redirect(f"/admin/subjects?imported={added}&skipped={skipped}&format=attendance_xlsx")
     all_subjects = _read_subjects_from_wb(wb)
     added = skipped = 0
     for info in all_subjects.values():
@@ -891,7 +891,7 @@ def import_subjects_from_tt():
         exe("INSERT INTO subjects(name,subject_code,teacher,department,semester) VALUES(%s,%s,%s,%s,%s)",
             (name, info["code"], info["teacher"], info["dept"], info["sem"]))
         added += 1
-    return redirect(f"/subjects?imported={added}&skipped={skipped}")
+    return redirect(f"/admin/subjects?imported={added}&skipped={skipped}")
 
 
 
@@ -1232,7 +1232,7 @@ def _parse_timetable_excel(file_obj, simulate=False):
         # Bulk Insert
         conn = get_db()
         try:
-            cur = conn.cur if hasattr(conn, 'cur') else conn.conn.cursor()
+            cur = conn.cursor()
             psycopg2.extras.execute_values(
                 cur,
                 "INSERT INTO timetable (day,time,start_time,end_time,subject_id,subject,teacher,room,division,semester,slot_type,color,faculty_id,branch,year) VALUES %s",
@@ -2061,4 +2061,293 @@ def _cumulative_result_dict(present, total, source):
         "shortage":   shortage,
         "can_miss":   can_miss,
     }
+
+
+# ── FACULTY TIMETABLE IMPORT ──────────────────────────────────────
+
+def _parse_faculty_timetable_excel(file_obj, faculty_id, faculty_name):
+    _DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+    _SKIP = {"short break","lunch break","lunch","break",
+             "short            break","lunch         break",""}
+
+    def _lookups(ws):
+        sl = {}; fl = {}
+        for ri in range(1, ws.max_row+1):
+            if str(ws.cell(ri,1).value or "").strip().lower() == "sr.no":
+                for ri2 in range(ri+1, ws.max_row+1):
+                    if not ws.cell(ri2,1).value: continue
+                    sc = str(ws.cell(ri2,3).value or "").strip()
+                    fc = str(ws.cell(ri2,5).value or "").strip()
+                    m = re.search(r'\(([A-Za-z0-9 ]+(?:\s+Lab)?)\)\s*$', sc)
+                    if m:
+                        sl[m.group(1).strip()] = sc[:sc.rfind("(")].strip()
+                    for fp in re.split(r'\s*/\s*', fc):
+                        fp = fp.strip()
+                        fm = re.search(r'\(([A-Z]{1,4})\)\s*$', fp)
+                        if fm:
+                            fl[fm.group(1)] = fp[:fp.rfind("(")].strip()
+                break
+        return sl, fl
+
+    def _slot(raw, sl, fl):
+        results = []
+        for entry in _re.split(r',\s*\n\s*', raw.strip()):
+            entry = entry.strip().rstrip(',').strip()
+            if not entry: continue
+            room = ""
+            rm = _re.search(r'-\s*((?:Lab|Room)[-\s]\w+)', entry)
+            if rm: room = rm.group(1).strip()
+            teacher = ""
+            parens  = _re.findall(r'\(([^)]+)\)', entry)
+            for p in reversed(parens):
+                p = p.strip()
+                if p in fl:                                  teacher = fl[p]; break
+                if _re.match(r'^[A-Z]{1,4}$', p):           teacher = p;    break
+                if _re.match(r'^[A-Z][a-z]+$',p) and len(p)>3: teacher = p; break
+            clean = entry
+            clean = _re.sub(r'\([A-Z]\d+\)', '', clean)
+            for p in parens:
+                if _re.match(r'^[A-Z]{1,4}$', p.strip()):
+                    clean = clean.replace(f'({p})','',1)
+            clean = _re.sub(r'-\s*(?:Lab|Room)[-\s\w, ]+', '', clean)
+            clean = _re.sub(r'\s+-\s*$','',clean).strip().rstrip(',').strip()
+            abbrev  = clean.split('(')[0].strip()
+            subject = sl.get(abbrev, abbrev) if abbrev else clean
+            if not subject: continue
+            stype = ("Lab" if "lab" in subject.lower() else
+                     "Elective" if "elective" in subject.lower() else
+                     "Minor" if "minor" in subject.lower() else "Theory")
+            results.append((subject, teacher, room, stype))
+        return results
+
+    wb = load_workbook(file_obj, data_only=True)
+    added = 0
+    inserts = []
+
+    def is_teacher_match(t_name, f_name):
+        if not t_name or not f_name:
+            return False
+        t_clean = t_name.lower().replace("prof.", "").replace("dr.", "").replace("mr.", "").replace("mrs.", "").strip()
+        f_clean = f_name.lower().replace("prof.", "").replace("dr.", "").replace("mr.", "").replace("mrs.", "").strip()
+        if t_clean in f_clean or f_clean in t_clean:
+            return True
+        t_words = [w for w in t_clean.split() if len(w) > 2]
+        f_words = [w for w in f_clean.split() if len(w) > 2]
+        for tw in t_words:
+            if tw in f_words:
+                return True
+        return False
+
+    for ws in wb.worksheets:
+        sl, fl = _lookups(ws)
+        division = ws.title.strip()
+        h6 = str(ws.cell(6,1).value or "").strip()
+        sem  = "VI" if any(x in h6 for x in ["T.E","TE"]) else ""
+
+        time_row = None
+        for ri in range(1, 15):
+            vals = [str(ws.cell(ri,c).value or "").strip() for c in range(1, ws.max_column+1)]
+            if sum(1 for v in vals if _re.match(r'\d+:\d+\s*[-]\s*\d+:\d+', v)) >= 2:
+                time_row = ri; break
+        if not time_row: continue
+
+        time_cols = {}
+        for ci in range(2, ws.max_column+1):
+            v = str(ws.cell(time_row, ci).value or "").strip()
+            if _re.match(r'\d+:\d+\s*[-]\s*\d+:\d+', v):
+                time_cols[ci] = v
+
+        for ri in range(time_row+1, time_row+8):
+            day_v   = str(ws.cell(ri, 2).value or "").strip()
+            matched = next((d for d in _DAYS if d.lower()==day_v.lower()), None)
+            if not matched: continue
+            for ci, ts in time_cols.items():
+                raw  = str(ws.cell(ri, ci).value or "").strip()
+                norm = " ".join(raw.lower().split())
+                if not raw or norm in _SKIP: continue
+                if "break" in norm and len(norm) < 25: continue
+                for subject, teacher, room, slot_type in _slot(raw, sl, fl):
+                    if is_teacher_match(teacher, faculty_name):
+                        time_s = normalize_time(ts)
+                        inserts.append((faculty_id, faculty_name, matched, time_s, subject, division, room, slot_type, sem, ''))
+                        added += 1
+
+    if inserts:
+        conn = get_db()
+        try:
+            cur = conn.cursor()
+            for row in inserts:
+                cur.execute("""
+                    SELECT id FROM faculty_timetable 
+                    WHERE faculty_id = %s AND day = %s AND time_slot = %s AND status != 'rejected'
+                """, (row[0], row[2], row[3]))
+                if cur.fetchone():
+                    continue
+                cur.execute("""
+                    INSERT INTO faculty_timetable (faculty_id, faculty_name, day, time_slot, subject, division, room, slot_type, semester, academic_year, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'draft')
+                """, row)
+            if hasattr(conn, 'conn'): conn.conn.commit()
+            else: conn.commit()
+        except Exception as e:
+            if hasattr(conn, 'conn'): conn.conn.rollback()
+            else: conn.rollback()
+            raise e
+        finally:
+            conn.close()
+            
+    return added
+
+
+@imports_bp.route("/import_faculty_timetable", methods=["POST"])
+@login_required("faculty")
+def import_faculty_timetable():
+    f = request.files.get("file")
+    if not f:
+        flash("No file selected", "error")
+        return redirect("/faculty_timetable")
+    
+    faculty_id = session.get('faculty_id')
+    faculty_name = session.get('name', '')
+    if not faculty_id:
+        flash("Unauthorized", "error")
+        return redirect("/faculty_timetable")
+        
+    try:
+        added = _parse_faculty_timetable_excel(f, faculty_id, faculty_name)
+        if added > 0:
+            flash(f"Successfully imported {added} slots as drafts!", "success")
+        else:
+            flash("No matching timetable slots found for your name in the Excel file.", "warning")
+    except Exception as e:
+        logger.error(f"Error importing faculty timetable: {e}")
+        flash(f"Error importing timetable: {str(e)}", "error")
+        
+    return redirect("/faculty_timetable")
+
+
+@imports_bp.route("/admin/marks/import-excel", methods=["POST"])
+@login_required("admin")
+def admin_import_marks_excel():
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"errors": ["No file uploaded"]}), 400
+        
+    try:
+        wb = load_workbook(io.BytesIO(f.read()), data_only=True)
+        sheet = wb.active
+        rows = list(sheet.iter_rows(values_only=True))
+        
+        if len(rows) < 4:
+            return jsonify({"errors": ["Invalid file structure, too few rows"]}), 400
+            
+        row2 = rows[1] # subject codes
+        row3 = rows[2] # headers
+        
+        subjects = []
+        c = 3 # Col D is 3
+        while c < len(row2):
+            code = row2[c]
+            if code:
+                code_str = str(code).strip()
+                if code_str:
+                    subjects.append({
+                        "code": code_str,
+                        "col_start": c
+                    })
+                    c += 6
+                    continue
+            c += 1
+            
+        if not subjects:
+            return jsonify({"errors": ["No subject codes found in row 2"]}), 400
+            
+        errors = []
+        imported_count = 0
+        
+        for row_idx, row in enumerate(rows[3:], start=4):
+            if not row or len(row) < 3:
+                continue
+            prn = row[2]
+            if prn is None:
+                continue
+            prn_str = str(prn).strip()
+            if not prn_str or prn_str.lower() in ('none', 'null', ''):
+                continue
+                
+            student = qone("SELECT id, name, roll, department, division FROM students WHERE prn = %s", (prn_str,))
+            if not student:
+                errors.append(f"Row {row_idx}: Student with PRN '{prn_str}' not found")
+                continue
+                
+            for subj in subjects:
+                subj_code = subj["code"]
+                start_col = subj["col_start"]
+                
+                if len(row) < start_col + 5:
+                    errors.append(f"Row {row_idx}: Missing columns for subject {subj_code}")
+                    continue
+                    
+                try:
+                    assignment = float(row[start_col + 0] or 0.0)
+                    attendance = float(row[start_col + 1] or 0.0)
+                    teaching   = float(row[start_col + 2] or 0.0)
+                    ut         = float(row[start_col + 3] or 0.0)
+                    mse        = float(row[start_col + 4] or 0.0)
+                except (ValueError, TypeError) as e:
+                    errors.append(f"Row {row_idx}, subject {subj_code}: Invalid numeric marks: {e}")
+                    continue
+                    
+                sub_master = qone("SELECT subject_name, semester FROM subjects_master WHERE subject_code = %s", (subj_code,))
+                if sub_master:
+                    subject_name = sub_master["subject_name"]
+                    semester_val = sub_master["semester"] or "SEM IV"
+                else:
+                    sub_tbl = qone("SELECT name, semester FROM subjects WHERE subject_code = %s", (subj_code,))
+                    subject_name = sub_tbl["name"] if sub_tbl else subj_code
+                    semester_val = sub_tbl["semester"] if (sub_tbl and sub_tbl["semester"]) else "SEM IV"
+                    
+                from services.results_service import calculate_result
+                total_val, grade_val, result_val, passed = calculate_result(assignment, attendance, teaching, ut, mse)
+                
+                existing = qone("SELECT id FROM marks WHERE student_id = %s AND (subject_code = %s OR subject = %s) AND semester = %s",
+                                (student["id"], subj_code, subject_name, semester_val))
+                
+                fid = session.get("faculty_id") or session.get("user_id") or 1
+                
+                if existing:
+                    exe("""
+                        UPDATE marks
+                        SET assignment_marks = %s,
+                            attendance_marks = %s,
+                            teaching_assessment = %s,
+                            ut_marks = %s,
+                            mse_marks = %s,
+                            marks = %s,
+                            total = %s,
+                            grade = %s,
+                            result = %s,
+                            prn_number = %s,
+                            subject_code = %s
+                        WHERE id = %s
+                    """, (assignment, attendance, teaching, ut, mse, total_val, 60.0, grade_val, result_val, prn_str, subj_code, existing["id"]))
+                else:
+                    exe("""
+                        INSERT INTO marks (faculty_id, student_id, student_name, roll, subject, department,
+                                           marks, total, exam_type, date, assignment_marks, attendance_marks,
+                                           teaching_assessment, ut_marks, mse_marks, remarks, prn_number, subject_code, semester)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (fid, student["id"], student["name"], student["roll"], subject_name, student["department"],
+                          total_val, 60.0, 'Semester Exam', datetime.now().strftime('%Y-%m-%d'),
+                          assignment, attendance, teaching, ut, mse, '', prn_str, subj_code, semester_val))
+                          
+            imported_count += 1
+            
+        return jsonify({"imported": imported_count, "errors": errors}), 200
+        
+    except Exception as e:
+        logger.error(f"Error importing marks: {e}", exc_info=True)
+        return jsonify({"errors": [f"File import failed: {str(e)}"]}), 500
+
+
 

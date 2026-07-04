@@ -16,6 +16,29 @@ def profile():
 @students_bp.route("/list")
 @login_required(["admin", "faculty"])
 def list_students():
-    filters = request.args.to_dict()
+    from config import DEPARTMENTS, YEARS, DIVISIONS
+    q = request.args.get("q", "").strip()
+    dept = request.args.get("dept", "").strip()
+    year = request.args.get("year", "").strip()
+    division = request.args.get("division", "").strip()
+    
+    filters = {
+        "q": q,
+        "dept": dept,
+        "year": year,
+        "division": division
+    }
     rows = student_service.get_all_students(filters)
-    return render_template("admin/students.html", students=rows)
+    return render_template(
+        "admin/students.html",
+        students=rows,
+        q=q,
+        dept=dept,
+        year=year,
+        division=division,
+        DEPARTMENTS=DEPARTMENTS,
+        YEARS=YEARS,
+        DIVISIONS=DIVISIONS,
+        total=len(rows)
+    )
+

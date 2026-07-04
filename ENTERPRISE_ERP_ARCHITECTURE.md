@@ -10,8 +10,10 @@ The ERP is transitioning from a monolithic Flask app into a modern, decoupled en
 ## 2. Directory Structure
 ```text
 erp-enterprise/
-├── api/                  # Flask REST APIs
-│   └── v1/               # Versioned endpoints
+├── api/                  # Flask REST APIs (EXPERIMENTAL - Internal-only, prefix: /api/v1_internal)
+│   └── v1/               # Versioned internal endpoints
+├── blueprints/           # Live Web UI Blueprints & Canonical V1 API (e.g., blueprints/timetable.py)
+├── routes/               # Additional Live Blueprints (e.g., routes/timetable_v2.py)
 ├── services/             # Core business logic (Service Layer)
 ├── models/               # SQLAlchemy/Raw SQL database schemas
 ├── tasks/                # Celery background tasks
@@ -21,6 +23,10 @@ erp-enterprise/
 ├── frontend/             # React Source (Integrated via SPA)
 └── app.py                # App Factory & Initialization
 ```
+
+**Timetable Endpoints Canonicity:**
+- **Canonical UI / API**: `/timetable` (defined in `blueprints/timetable.py`) and `/timetable_v2` (defined in `routes/timetable_v2.py`). These support the live web application interface.
+- **Experimental API**: `/api/v1_internal/v1/timetable` (defined in `api/v1/timetable.py`). This is reserved for internal/external automated integrations and is not used by the user-facing frontend.
 
 ## 3. Attendance Workflow Redesign
 **Enterprise Flow:**
@@ -53,11 +59,12 @@ erp-enterprise/
 - [x] **CSRF**: Token validation on all non-GET requests.
 - [x] **Audit Logging**: Mandatory logging for every administrative/faculty action.
 - [x] **Rate Limiting**: Apply via Flask-Limiter for Auth and Sensitive APIs.
-- [x] **Sanitization**: SQL Parameterization (already in use via pg_wrapper).
+- [ ] **Sanitization**: SQL Parameterization (Ongoing - fixing legacy scripts).
 
 ## 8. Implementation Roadmap
 1. **API Migration**: Register V1 Blueprints (Done).
 2. **Service Layer**: Move logic from app.py to files in `services/` (Ongoing).
 3. **DB Hardening**: Execute `scripts/db_hardening.sql`.
-4. **Cellery Setup**: Start Redis and Celery worker.
+4. **Celery Setup**: Start Redis and Celery worker.
 5. **React Porting**: Connect the existing prototype pages to the new APIs.
+

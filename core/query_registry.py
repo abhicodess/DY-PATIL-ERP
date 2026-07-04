@@ -3,14 +3,6 @@ Centralized Query Registry
 Stabilizes SQL joins, aliases, and naming across the ERP.
 """
 
-# FACULTY QUERIES
-FACULTY_LEAVE_REQUESTS = """
-    SELECT l.*, f.name as faculty_name, f.department
-    FROM leave_applications l
-    JOIN faculty f ON l.faculty_id = f.id
-    WHERE l.status = %s
-    ORDER BY l.created_at ASC
-"""
 
 FACULTY_SESSIONS_HISTORY = """
     SELECT 
@@ -59,7 +51,6 @@ def get_query(name, **kwargs):
     Safely retrieves and formats a centralized query.
     """
     queries = {
-        "faculty_leave_requests": FACULTY_LEAVE_REQUESTS,
         "faculty_sessions_history": FACULTY_SESSIONS_HISTORY,
         "attendance_session_detail": ATTENDANCE_SESSION_DETAIL,
         "student_records_by_session": STUDENT_RECORDS_BY_SESSION,

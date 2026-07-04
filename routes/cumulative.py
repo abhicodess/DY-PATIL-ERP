@@ -81,9 +81,24 @@ def cumulative_import():
             continue
         try:
             data = f.read()
+            
+            # Save a debug copy of the uploaded file
+            try:
+                os.makedirs("uploads", exist_ok=True)
+                debug_path = os.path.join("uploads", f"debug_{f.filename}")
+                with open(debug_path, "wb") as dbg_f:
+                    dbg_f.write(data)
+            except Exception:
+                pass
+
             parsed = parse_attendance_file(data, f.filename)
-            parsed["filename"] = f.filename
-            all_parsed.append(parsed)
+            if isinstance(parsed, list):
+                for p in parsed:
+                    p["filename"] = f.filename
+                    all_parsed.append(p)
+            else:
+                parsed["filename"] = f.filename
+                all_parsed.append(parsed)
         except Exception as e:
             errors.append({"file": f.filename, "error": str(e)})
 
@@ -219,7 +234,7 @@ def cumulative_report():
         {filters}
         GROUP BY roll, student_name, department, division
         ORDER BY department, division, roll
-    """, params)
+    """, params)  # nosec B608 - filters is composed of safe hardcoded literals and parameters
 
     # Per-subject breakdown for selected student (exact roll match)
     student_detail = []
@@ -330,14 +345,58 @@ def cumulative_export():
     if sem:  filters += " AND semester=%s";   params.append(sem)
     if year: filters += " AND acad_year=%s";  params.append(year)
 
-    rows = qry(f"""
-        SELECT roll, student_name, department, division, semester, acad_year,
-               SUM(attended) AS tot_att, SUM(conducted) AS tot_con,
-               ROUND(100.0*SUM(attended)/NULLIF(SUM(conducted),0),2) AS pct
+    # 1. Fetch all distinct subjects in the current dataset
+    subjects_in_data = qry(f"""
+        SELECT DISTINCT subject
         FROM cumulative_attendance {filters}
-        GROUP BY roll, student_name, department, division, semester, acad_year
-        ORDER BY department, division, roll
-    """, params)
+        ORDER BY subject
+    """, params)  # nosec B608
+    subjects = [s["subject"] for s in subjects_in_data]
+
+    # 2. Fetch max conducted lectures for each subject
+    subject_conducted = qry(f"""
+        SELECT subject, MAX(conducted) AS max_conducted
+        FROM cumulative_attendance {filters}
+        GROUP BY subject
+        ORDER BY subject
+    """, params)  # nosec B608
+    conducted_map = {s["subject"]: s["max_conducted"] or 0 for s in subject_conducted}
+
+    # 3. Fetch detailed student attendance records
+    records = qry(f"""
+        SELECT roll, student_name, department, division, semester, acad_year,
+               subject, conducted, attended
+        FROM cumulative_attendance {filters}
+        ORDER BY department, division, roll, subject
+    """, params)  # nosec B608
+
+    from collections import defaultdict
+    student_records = defaultdict(lambda: {
+        "roll": "",
+        "name": "",
+        "dept": "",
+        "div": "",
+        "sem": "",
+        "year": "",
+        "attendance": {},
+        "total_conducted": 0,
+        "total_attended": 0
+    })
+
+    for r in records:
+        key = (r["roll"], r["student_name"], r["department"], r["division"], r["semester"], r["acad_year"])
+        s = student_records[key]
+        s["roll"] = r["roll"]
+        s["name"] = r["student_name"]
+        s["dept"] = r["department"]
+        s["div"] = r["division"]
+        s["sem"] = r["semester"]
+        s["year"] = r["acad_year"]
+        
+        subj = r["subject"]
+        s["attendance"][subj] = r["attended"]
+        s["total_conducted"] += r["conducted"] or 0
+        s["total_attended"] += r["attended"] or 0
 
     wb = Workbook()
     ws = wb.active
@@ -345,11 +404,13 @@ def cumulative_export():
 
     hdr_fill = PatternFill("solid", fgColor="1F4E79")
     hdr_font = Font(bold=True, color="FFFFFF", size=11)
+    cond_fill = PatternFill("solid", fgColor="F2F2F2")
+    cond_font = Font(bold=True, italic=True, color="595959", size=10)
     thin = Side(style="thin")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    headers = ["Roll No", "Name", "Dept", "Div", "Semester", "Year",
-               "Total Attended", "Total Conducted", "Cumulative %", "Status"]
+    # Write Headers Row (Row 1)
+    headers = ["Roll No", "Name", "Dept", "Div", "Semester", "Year"] + subjects + ["Total Attended", "Total Conducted", "Cumulative %", "Status"]
     ws.append(headers)
     for cell in ws[1]:
         cell.fill = hdr_fill
@@ -357,26 +418,55 @@ def cumulative_export():
         cell.alignment = Alignment(horizontal="center")
         cell.border = border
 
-    RED  = PatternFill("solid", fgColor="FFCCCC")
-    YEL  = PatternFill("solid", fgColor="FFF2CC")
-    GRN  = PatternFill("solid", fgColor="CCFFCC")
+    # Write Conducted Row (Row 2)
+    conducted_values = ["", "", "", "", "", "LECTURES CONDUCTED"]
+    total_conducted_sum = 0
+    for s_name in subjects:
+        cond = conducted_map.get(s_name, 0)
+        conducted_values.append(cond)
+        total_conducted_sum += cond
+    conducted_values += ["", total_conducted_sum, "", ""]
+    ws.append(conducted_values)
+    for cell in ws[2]:
+        cell.fill = cond_fill
+        cell.font = cond_font
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = border
 
-    for r in rows:
-        pct = r["pct"] or 0
+    RED = PatternFill("solid", fgColor="FFCCCC")
+    YEL = PatternFill("solid", fgColor="FFF2CC")
+    GRN = PatternFill("solid", fgColor="CCFFCC")
+
+    # Write Student Rows
+    pct_col_idx = 6 + len(subjects) + 3  # Cumulative % column index (1-based)
+    
+    # Sort students by department, division, roll
+    sorted_keys = sorted(student_records.keys(), key=lambda k: (k[2], k[3], k[0]))
+    for key in sorted_keys:
+        r = student_records[key]
+        pct = round(100.0 * r["total_attended"] / r["total_conducted"], 2) if r["total_conducted"] else 0.0
         status = "✓ OK" if pct >= 75 else ("⚠ Low" if pct >= 60 else "✗ Shortage")
-        ws.append([r["roll"], r["student_name"], r["department"], r["division"],
-                   r["semester"], r["acad_year"], r["tot_att"], r["tot_con"],
-                   pct, status])
+
+        row_values = [r["roll"], r["name"], r["dept"], r["div"], r["sem"], r["year"]]
+        for s_name in subjects:
+            row_values.append(r["attendance"].get(s_name, "-"))
+        row_values += [r["total_attended"], r["total_conducted"], pct, status]
+
+        ws.append(row_values)
+        
         row_cells = ws[ws.max_row]
         fill = GRN if pct >= 75 else (YEL if pct >= 60 else RED)
         for cell in row_cells:
             cell.border = border
-            if cell.column == 9:  # % column
+            if cell.column == pct_col_idx:
                 cell.fill = fill
 
+    # Auto-adjust column widths
     for col in ws.columns:
-        ws.column_dimensions[col[0].column_letter].width = max(
-            len(str(col[0].value or "")), 12)
+        max_len = 0
+        for cell in col:
+            max_len = max(max_len, len(str(cell.value or "")))
+        ws.column_dimensions[col[0].column_letter].width = max(max_len + 3, 10)
 
     buf = BytesIO()
     wb.save(buf)
@@ -384,3 +474,78 @@ def cumulative_export():
     fname = f"cumulative_{dept or 'all'}_{sem or 'all'}_{year or 'all'}.xlsx"
     return send_file(buf, as_attachment=True, download_name=fname,
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@cumulative_bp.route("/api/cumulative/notify-parents", methods=["POST"])
+def notify_cumulative_parents():
+    from utils.pg_wrapper import qry, qone
+    from services.parent_notification_service import ParentNotificationService
+    
+    if session.get("role") not in ("admin", "faculty"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    payload = request.get_json(force=True) or {}
+    rolls = payload.get("rolls", [])
+    if not isinstance(rolls, list):
+        if rolls:
+            rolls = [rolls]
+        else:
+            rolls = []
+
+    if not rolls:
+        return jsonify({"error": "No student rolls provided"}), 400
+
+    results = []
+    skipped = []
+    
+    for roll in rolls:
+        roll = roll.strip()
+        if not roll:
+            continue
+            
+        # 1. Look up student in students table by roll
+        student = qone("SELECT id, name FROM students WHERE roll=%s", (roll,))
+        if not student:
+            skipped.append({"roll": roll, "reason": "Student not found in main database."})
+            continue
+
+        # 2. Get student overall cumulative percentage
+        cum = qone("""
+            SELECT SUM(attended) AS total_attended, SUM(conducted) AS total_conducted
+            FROM cumulative_attendance
+            WHERE roll=%s
+        """, (roll,))
+        
+        if not cum or not cum["total_conducted"]:
+            skipped.append({"roll": roll, "reason": "No cumulative attendance records found."})
+            continue
+            
+        pct = round(100.0 * cum["total_attended"] / cum["total_conducted"], 2)
+        
+        # 3. Notify student parents
+        try:
+            sms_res = ParentNotificationService.notify_student_parents(
+                student_id=student["id"],
+                category="attendance",
+                template_slug="defaulter_alert",
+                context={"percentage": f"{pct}%"}
+            )
+            if not sms_res:
+                skipped.append({"roll": roll, "name": student["name"], "reason": "No primary parent contact mapped or notification disabled."})
+            else:
+                for r in sms_res:
+                    results.append({
+                        "roll": roll,
+                        "name": student["name"],
+                        "parent": r.get("parent", "Parent"),
+                        "success": r.get("success", True),
+                        "error": r.get("error")
+                    })
+        except Exception as e:
+            skipped.append({"roll": roll, "name": student["name"], "reason": f"Error sending SMS: {str(e)}"})
+
+    return jsonify({
+        "status": "success",
+        "notified": results,
+        "skipped": skipped
+    })

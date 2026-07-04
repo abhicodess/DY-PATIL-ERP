@@ -47,7 +47,14 @@ class ParentNotificationService:
             
             # 5. Queue SMS via the SMSService
             res = SMSService.queue_sms(parent['phone_primary'], template_slug, p_context)
-            results.append({"parent": parent['full_name'], **res})
+            if isinstance(res, dict):
+                results.append({"parent": parent['full_name'], **res})
+            else:
+                results.append({
+                    "parent": parent['full_name'],
+                    "success": True,
+                    "task_id": getattr(res, 'id', str(res))
+                })
             
         return results
 

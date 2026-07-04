@@ -1,0 +1,503 @@
+{% extends "common/base.html" %}
+{% block title %}Timetable Requests — Admin Panel{% block sb_title %}DY Patil ERP{% endblock %}{ block sb_sub %}Admin Panel{% endblock %}{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Timetable Requests{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Timetable Requests{% endblock %}
+
+{% block content %}
+<style>
+  .req-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--sh-sm);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    position: relative;
+  }
+  .req-card.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  .req-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding-right: 28px; /* Leave space for edit button on mobile */
+  }
+  .req-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .req-details {
+    font-size: 13px;
+    color: var(--ink3);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .req-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .reject-box {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+    width: 100%;
+  }
+
+  /* Desktop-mobile display toggles */
+  @media (max-width: 991.98px) {
+    .desktop-only {
+      display: none !important;
+    }
+    .mobile-only {
+      display: block !important;
+    }
+    .req-actions .btn {
+      width: 100% !important; /* Full width buttons on mobile */
+      height: 44px;
+    }
+  }
+  @media (min-width: 992px) {
+    .desktop-only {
+      display: block !important;
+    }
+    .mobile-only {
+      display: none !important;
+    }
+  }
+</style>
+
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Pending Timetable Requests</div>
+    <div class="ph-sub"><span id="requestsCount">0</span> pending requests require approval</div>
+  </div>
+</div>
+
+<div id="erpToast" style="display:none; position:fixed;
+  top:20px; right:20px; padding:12px 20px; border-radius:8px;
+  font-size:14px; font-weight:500; z-index:2000;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  transition:opacity 0.3s ease;"></div>
+
+<div style="margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink3); max-width: 800px; flex-wrap: wrap;">
+  <strong>Export:</strong>
+  <a href="/api/admin/timetable/export/excel?type=master" class="btn btn-sm btn-out" style="padding: 4px 10px; font-size: 12px; text-decoration: none;"><i class="fas fa-file-excel"></i> Master Excel</a>
+  <a href="/api/admin/timetable/export/pdf?type=master" class="btn btn-sm btn-out" style="padding: 4px 10px; font-size: 12px; text-decoration: none;"><i class="fas fa-file-pdf"></i> Master PDF</a>
+  <a href="/api/admin/timetable/export/excel?type=pending" class="btn btn-sm btn-out" style="padding: 4px 10px; font-size: 12px; text-decoration: none;"><i class="fas fa-file-excel"></i> Pending Excel</a>
+  <a href="/api/admin/timetable/export/pdf?type=pending" class="btn btn-sm btn-out" style="padding: 4px 10px; font-size: 12px; text-decoration: none;"><i class="fas fa-file-pdf"></i> Pending PDF</a>
+</div>
+
+<div id="requestsList" style="max-width: 900px; margin-top: 16px;">
+  <!-- Loading state -->
+  <div id="loadingState" class="card" style="padding: 40px; text-align: center;">
+    <p style="color: var(--ink3);"><i class="fas fa-spinner fa-spin"></i> Loading requests...</p>
+  </div>
+</div>
+
+<!-- Slide-up Bottom Sheet for Editing (Mobile only, fallback modal on desktop) -->
+<div class="bottom-sheet" id="editSheet">
+  <div class="bottom-sheet-handle"></div>
+  <div class="bottom-sheet-header">
+    <h4 style="margin:0; font-weight:700;"><i class="fas fa-pen" style="color:var(--blue)"></i> Edit Timetable Request</h4>
+    <button class="btn btn-ghost btn-sm" onclick="BottomSheet.close('editSheet')" style="font-size: 20px; min-height: unset; height: auto;">&times;</button>
+  </div>
+  <div class="bottom-sheet-body">
+    <form id="editSheetForm">
+      <input type="hidden" id="sheet-req-id">
+      
+      <div class="fgrp">
+        <label>Subject *</label>
+        <input type="text" id="sheet-subject" class="form-inp" required>
+      </div>
+      
+      <div class="fg2">
+        <div class="fgrp">
+          <label>Day *</label>
+          <select id="sheet-day" class="form-inp">
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+            <option>Saturday</option>
+          </select>
+        </div>
+        <div class="fgrp">
+          <label>Time Slot *</label>
+          <input type="text" id="sheet-time" class="form-inp" required>
+        </div>
+      </div>
+      
+      <div class="fg2">
+        <div class="fgrp">
+          <label>Division *</label>
+          <input type="text" id="sheet-division" class="form-inp" required>
+        </div>
+        <div class="fgrp">
+          <label>Slot Type *</label>
+          <select id="sheet-type" class="form-inp">
+            <option>Theory</option>
+            <option>Lab</option>
+            <option>Elective</option>
+            <option>Minor</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fg2">
+        <div class="fgrp">
+          <label>Semester</label>
+          <input type="text" id="sheet-semester" class="form-inp">
+        </div>
+        <div class="fgrp">
+          <label>Room</label>
+          <input type="text" id="sheet-room" class="form-inp">
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="bottom-sheet-footer">
+    <button class="btn btn-dark" onclick="saveSheetEdit()"><i class="fas fa-save"></i> Save Changes</button>
+    <button class="btn btn-out" onclick="BottomSheet.close('editSheet')">Cancel</button>
+  </div>
+</div>
+
+<script>
+let allLoadedRequests = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadRequests();
+});
+
+function formatDate(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+async function loadRequests() {
+  const listDiv = document.getElementById('requestsList');
+  const countSpan = document.getElementById('requestsCount');
+  
+  try {
+    const res = await fetch('/api/admin/timetable-requests');
+    if (!res.ok) throw new Error('Failed to fetch requests');
+    
+    const data = await res.json();
+    const requests = data.requests || [];
+    allLoadedRequests = requests;
+    countSpan.textContent = requests.length;
+    
+    listDiv.innerHTML = '';
+    
+    if (requests.length === 0) {
+      listDiv.innerHTML = `
+        <div class="card" style="padding: 60px; text-align: center;">
+          <i class="fas fa-calendar-check" style="font-size: 36px; color: var(--ink4); margin-bottom: 12px;"></i>
+          <p style="font-size: 15px; font-weight: 600; color: var(--ink2);">No pending timetable requests</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Generate Desktop Table Structure
+    let desktopHtml = `
+      <div class="desktop-only card">
+        <div class="cb p0">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Faculty</th>
+                <th>Subject</th>
+                <th>Division</th>
+                <th>Day</th>
+                <th>Time Slot</th>
+                <th>Type</th>
+                <th>Semester</th>
+                <th>Room</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Generate Mobile Cards Structure
+    let mobileHtml = `<div class="mobile-only">`;
+
+    requests.forEach(req => {
+      // Desktop Row
+      desktopHtml += `
+        <tr id="req-row-${req.id}">
+          <td><strong>${req.faculty_display_name || req.faculty_name}</strong></td>
+          <td><span style="font-weight: 600; color: #7C3AED;">${req.subject}</span></td>
+          <td><span class="tag t-bl">${req.division}</span></td>
+          <td>${req.day}</td>
+          <td class="mono" style="font-size:11px;">${req.time_slot}</td>
+          <td><span class="tag t-vi">${req.slot_type}</span></td>
+          <td>Sem ${req.semester || 'N/A'}</td>
+          <td><span class="mono">${req.room || 'N/A'}</span></td>
+          <td>
+            <div class="flex-ac gap6">
+              <button class="btn btn-out btn-sm" onclick="openEditSheet(${req.id})" title="Edit Request"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-sm btn-gr" onclick="approveRequest(${req.id})"><i class="fas fa-check"></i> Approve</button>
+              <button class="btn btn-sm btn-re" onclick="showRejectBox(${req.id})"><i class="fas fa-xmark"></i> Reject</button>
+            </div>
+            <div class="reject-box" id="reject-box-desk-${req.id}" style="margin-top:8px;">
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="note-desk-${req.id}" placeholder="Reason..." style="flex:1; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px;" />
+                <button class="btn btn-sm btn-re" onclick="confirmReject(${req.id}, true)">Confirm</button>
+                <button class="btn btn-sm btn-out" onclick="hideRejectBox(${req.id})">Cancel</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+
+      // Mobile Card
+      mobileHtml += `
+        <div class="req-card" id="req-card-${req.id}">
+          <button class="btn btn-ghost btn-sm edit-pencil-btn" onclick="openEditSheet(${req.id})" style="position:absolute; top:12px; right:12px; min-height:unset; height:auto; color:var(--blue); padding:4px 8px;"><i class="fas fa-pen"></i></button>
+          
+          <div class="req-header">
+            <div>
+              <span class="req-title">${req.faculty_display_name || req.faculty_name}</span>
+              <span style="color: var(--ink4); margin: 0 4px;">·</span>
+              <span style="font-weight: 700; color: #7C3AED;">${req.subject}</span>
+              <span style="color: var(--ink4); margin: 0 4px;">·</span>
+              <span style="font-weight: 600; color: var(--ink2);">${req.division}</span>
+              ${req.resubmission_count > 0 ? `
+                <span style="background:#fef3c7; color:#92400e; font-size:10px; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:6px;">
+                  Re-submission #${req.resubmission_count}
+                </span>
+              ` : ''}
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--ink4); margin-bottom: 12px; margin-top: -8px;">Submitted: ${formatDate(req.created_at)}</div>
+          
+          <div class="req-details">
+            <strong>Day:</strong> ${req.day} &nbsp;·&nbsp;
+            <strong>Time Slot:</strong> ${req.time_slot} &nbsp;·&nbsp;
+            <strong>Type:</strong> ${req.slot_type} &nbsp;·&nbsp;
+            <strong>Semester:</strong> ${req.semester || 'N/A'} &nbsp;·&nbsp;
+            <strong>Room:</strong> ${req.room || 'N/A'}
+            ${req.resubmission_count > 0 ? `
+              <details style="margin-top:6px;">
+                <summary style="font-size:11px; color:#6b7280; cursor:pointer; font-weight:600;">
+                  Previous rejection reason
+                </summary>
+                <p style="font-size:12px; color:#374151; margin:6px 0 0; padding:8px; background:#f9fafb; border-radius:4px;">
+                  "${req.last_rejected_note || ''}"
+                </p>
+              </details>
+            ` : ''}
+          </div>
+          <div class="req-actions" id="actions-${req.id}">
+            <button class="btn btn-sm" style="background:#059669; color:#fff;" onclick="approveRequest(${req.id})">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button class="btn btn-sm" style="background:#dc2626; color:#fff;" onclick="showRejectBox(${req.id})">
+              <i class="fas fa-xmark"></i> Reject
+            </button>
+          </div>
+          <div class="reject-box" id="reject-box-${req.id}">
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:6px;">Rejection Reason *</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="note-${req.id}" placeholder="e.g. Room clash" style="flex:1; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" />
+              <button class="btn btn-sm" style="background:#dc2626; color:#fff;" onclick="confirmReject(${req.id}, false)">Confirm</button>
+              <button class="btn btn-sm btn-out" onclick="hideRejectBox(${req.id})">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    desktopHtml += `</tbody></table></div></div>`;
+    mobileHtml += `</div>`;
+
+    listDiv.innerHTML = desktopHtml + mobileHtml;
+    
+  } catch (err) {
+    listDiv.innerHTML = `
+      <div class="card" style="padding: 40px; text-align: center; border-color: #fca5a5; background: #fef2f2;">
+        <p style="color: #b91c1c;"><i class="fas fa-triangle-exclamation"></i> Error loading requests: ${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+async function approveRequest(id) {
+  try {
+    const res = await fetch(`/api/admin/timetable-requests/${id}/approve`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to approve');
+    
+    showToast('Request approved successfully ✓', 'success');
+    fadeOutCard(id);
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+
+function showRejectBox(id) {
+  const isMobile = window.innerWidth <= 991.98;
+  if (isMobile) {
+    document.getElementById(`reject-box-${id}`).style.display = 'block';
+    document.getElementById(`actions-${id}`).style.display = 'none';
+  } else {
+    document.getElementById(`reject-box-desk-${id}`).style.display = 'block';
+  }
+}
+
+function hideRejectBox(id) {
+  const isMobile = window.innerWidth <= 991.98;
+  if (isMobile) {
+    document.getElementById(`reject-box-${id}`).style.display = 'none';
+    document.getElementById(`actions-${id}`).style.display = 'flex';
+  } else {
+    document.getElementById(`reject-box-desk-${id}`).style.display = 'none';
+  }
+}
+
+async function confirmReject(id, isDesktop = false) {
+  const noteInput = document.getElementById(isDesktop ? `note-desk-${id}` : `note-${id}`);
+  const note = noteInput.value.trim();
+  if (!note) {
+    showToast('Please enter a rejection reason', 'danger');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/admin/timetable-requests/${id}/reject`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({ note })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to reject');
+    
+    showToast('Request rejected successfully ✓', 'success');
+    fadeOutCard(id);
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+
+function fadeOutCard(id) {
+  const card = document.getElementById(`req-card-${id}`);
+  const row = document.getElementById(`req-row-${id}`);
+  
+  if (card) card.classList.add('fade-out');
+  if (row) row.style.opacity = '0';
+  
+  setTimeout(() => {
+    if (card) card.remove();
+    if (row) row.remove();
+    
+    const countSpan = document.getElementById('requestsCount');
+    let count = parseInt(countSpan.textContent) - 1;
+    countSpan.textContent = count >= 0 ? count : 0;
+    
+    if (count === 0) {
+      document.getElementById('requestsList').innerHTML = `
+        <div class="card" style="padding: 60px; text-align: center;">
+          <i class="fas fa-calendar-check" style="font-size: 36px; color: var(--ink4); margin-bottom: 12px;"></i>
+          <p style="font-size: 15px; font-weight: 600; color: var(--ink2);">No pending timetable requests</p>
+        </div>
+      `;
+    }
+  }, 400);
+}
+
+function showToast(message, type) {
+  const toast = document.getElementById('erpToast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+  toast.style.color = '#fff';
+  toast.style.display = 'block';
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 300);
+  }, 3000);
+}
+
+// ── BOTTOM SHEET / MODAL EDIT FUNCTIONS ──────────────────
+function openEditSheet(id) {
+  const req = allLoadedRequests.find(r => r.id === id);
+  if (!req) {
+    showToast('Request data not found', 'danger');
+    return;
+  }
+  
+  document.getElementById('sheet-req-id').value = req.id;
+  document.getElementById('sheet-subject').value = req.subject || '';
+  document.getElementById('sheet-day').value = req.day || 'Monday';
+  document.getElementById('sheet-time').value = req.time_slot || '';
+  document.getElementById('sheet-division').value = req.division || '';
+  document.getElementById('sheet-type').value = req.slot_type || 'Theory';
+  document.getElementById('sheet-semester').value = req.semester || '';
+  document.getElementById('sheet-room').value = req.room || '';
+  
+  BottomSheet.open('editSheet');
+}
+
+async function saveSheetEdit() {
+  const id = document.getElementById('sheet-req-id').value;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  
+  const body = {
+    day: document.getElementById('sheet-day').value,
+    time_slot: document.getElementById('sheet-time').value,
+    subject: document.getElementById('sheet-subject').value,
+    division: document.getElementById('sheet-division').value,
+    slot_type: document.getElementById('sheet-type').value,
+    room: document.getElementById('sheet-room').value,
+    semester: document.getElementById('sheet-semester').value,
+    status: 'pending' // remain in pending status
+  };
+  
+  try {
+    const res = await fetch(`/api/admin/timetable-slots/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrf
+      },
+      body: JSON.stringify(body)
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save edits');
+    
+    showToast('Request edits saved successfully ✓', 'success');
+    BottomSheet.close('editSheet');
+    loadRequests(); // Refresh the list
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+</script>
+{% endblock %}

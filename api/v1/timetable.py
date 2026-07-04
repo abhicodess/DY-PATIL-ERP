@@ -4,7 +4,9 @@ from utils.pg_wrapper import qry, qone, exe
 from utils.api_response import success_response, error_response, paginated_response
 from api.v1.auth import jwt_role_required
 
-timetable_bp = Blueprint('timetable', __name__)
+timetable_bp = Blueprint('timetable_internal', __name__)
+# NOTE: This is an internal-only experimental blueprint. Live UI uses blueprints/timetable.
+
 
 @timetable_bp.route("", methods=["GET"])
 def search_timetable():

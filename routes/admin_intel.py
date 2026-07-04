@@ -107,7 +107,6 @@ def admin_faculty_logs():
         
         params.append(100) # For LIMIT
         
-        # Direct SQL instead of query_registry to avoid import errors
         sql = """
             SELECT 
                 MIN(a.id) as id, 
@@ -132,7 +131,7 @@ def admin_faculty_logs():
             {filters}
             GROUP BY f.id, f.name, f.department, a.subject, a.division, a.date, a.time_slot, a.semester
             ORDER BY a.date DESC LIMIT %s
-        """.format(filters=filter_sql)
+        """.format(filters=filter_sql)  # nosec B608 - filter_sql is built from safe hardcoded literals and parameters
         
         sessions_data = qry(sql, params)
         faculty_list = qry("SELECT id, name FROM faculty ORDER BY name")
@@ -155,23 +154,43 @@ def shortage_report():
     t = threshold_pct / 100.0
     
     sql = f"""
-        WITH stats AS (
+        WITH daily_stats AS (
+            SELECT student_id,
+                   COUNT(id) as d_total,
+                   SUM(CASE WHEN status ILIKE 'Present' THEN 1 ELSE 0 END) as d_attended
+            FROM attendance
+            GROUP BY student_id
+        ),
+        summary_stats AS (
+            SELECT student_id,
+                   SUM(attended) as s_attended,
+                   SUM(total) as s_total
+            FROM attendance_summary
+            GROUP BY student_id
+        ),
+        student_stats AS (
             SELECT s.id, s.name, s.roll, s.department as dept, s.division,
-                   COUNT(a.id) as sessions,
-                   SUM(CASE WHEN a.status ILIKE 'Present' THEN 1 ELSE 0 END) as present
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_attended, 0)
+                       ELSE COALESCE(day_s.d_attended, 0)
+                   END as attended,
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_total, 0)
+                       ELSE COALESCE(day_s.d_total, 0)
+                   END as total
             FROM students s
-            LEFT JOIN attendance a ON s.id = a.student_id
+            LEFT JOIN daily_stats day_s ON s.id = day_s.student_id
+            LEFT JOIN summary_stats sum_s ON s.id = sum_s.student_id
             WHERE (%s='' OR s.department=%s) AND (%s='' OR s.division=%s)
-            GROUP BY s.id, s.name, s.roll, s.department, s.division
         )
         SELECT *,
-               ROUND(CASE WHEN sessions > 0 THEN (present * 100.0 / sessions) ELSE 0 END, 1) as pct,
-               CEIL(GREATEST(0, ({t} * sessions - present) / (1 - {t} + 0.00001))) as shortage,
-               FLOOR(GREATEST(0, (present - {t} * sessions) / ({t} + 0.00001))) as can_miss
-        FROM stats
-        WHERE (CASE WHEN sessions > 0 THEN (present * 100.0 / sessions) ELSE 0 END) < %s
+               ROUND(CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END, 1) as pct,
+               CEIL(GREATEST(0, ({t} * total - attended) / (1 - {t} + 0.00001))) as shortage,
+               FLOOR(GREATEST(0, (attended - {t} * total) / ({t} + 0.00001))) as can_miss
+        FROM student_stats
+        WHERE (CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END) < %s
         ORDER BY pct ASC, roll ASC
-    """
+    """  # nosec B608 - t is a sanitized float constructed from an int cast
     defaulters = qry(sql, (dept, dept, div, div, threshold_pct))
     
     return render_template("attendance/shortage_report.html", 
@@ -180,6 +199,156 @@ def shortage_report():
                            department=dept, 
                            division=div,
                            DEPARTMENTS=DEPARTMENTS, DIVISIONS=DIVISIONS, YEARS=YEARS)
+
+@admin_intel_bp.route("/export_shortage_excel")
+@admin_required
+def export_shortage_excel():
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+    
+    threshold_pct = int(request.args.get("threshold", "75"))
+    dept = request.args.get("department", "").strip()
+    div = request.args.get("division", "").strip()
+    
+    sql = """
+        WITH daily_stats AS (
+            SELECT student_id,
+                   COUNT(id) as d_total,
+                   SUM(CASE WHEN status ILIKE 'Present' THEN 1 ELSE 0 END) as d_attended
+            FROM attendance
+            GROUP BY student_id
+        ),
+        summary_stats AS (
+            SELECT student_id,
+                   SUM(attended) as s_attended,
+                   SUM(total) as s_total
+            FROM attendance_summary
+            GROUP BY student_id
+        ),
+        student_stats AS (
+            SELECT s.id, s.name, s.roll, s.department as dept, s.division, s.year,
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_attended, 0)
+                       ELSE COALESCE(day_s.d_attended, 0)
+                   END as attended,
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_total, 0)
+                       ELSE COALESCE(day_s.d_total, 0)
+                   END as total
+            FROM students s
+            LEFT JOIN daily_stats day_s ON s.id = day_s.student_id
+            LEFT JOIN summary_stats sum_s ON s.id = sum_s.student_id
+            WHERE (%s='' OR s.department=%s) AND (%s='' OR s.division=%s)
+        )
+        SELECT *,
+               ROUND(CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END, 1) as pct
+        FROM student_stats
+        WHERE (CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END) < %s
+        ORDER BY pct ASC, roll ASC
+    """
+    rows = qry(sql, (dept, dept, div, div, threshold_pct))
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Shortage Report"
+    
+    headers = ["Student", "Roll", "Department", "Division", "Year", "Total", "Present", "Absent", "Attendance %", "Threshold"]
+    for c, header in enumerate(headers, 1):
+        cell = ws.cell(1, c, header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1E3A5F")
+        
+    out_row = 2
+    for row in rows:
+        total = int(row["total"] or 0)
+        present = int(row["attended"] or 0)
+        percentage = float(row["pct"] or 0.0)
+        values = [
+            row["name"], row["roll"], row["dept"], row["division"], row["year"],
+            total, present, total - present, f"{percentage}%", f"{threshold_pct}%",
+        ]
+        for c, value in enumerate(values, 1):
+            ws.cell(out_row, c, value)
+        out_row += 1
+        
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or "")) + 4, 14)
+        
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name="shortage_report.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+@admin_intel_bp.route("/trigger_shortage_alert", methods=["POST"])
+@admin_required
+def trigger_shortage_alert():
+    from services.parent_notification_service import ParentNotificationService
+    
+    threshold_pct = int(request.form.get("threshold", "75"))
+    dept = request.form.get("department", "").strip()
+    div = request.form.get("division", "").strip()
+    
+    sql = """
+        WITH daily_stats AS (
+            SELECT student_id,
+                   COUNT(id) as d_total,
+                   SUM(CASE WHEN status ILIKE 'Present' THEN 1 ELSE 0 END) as d_attended
+            FROM attendance
+            GROUP BY student_id
+        ),
+        summary_stats AS (
+            SELECT student_id,
+                   SUM(attended) as s_attended,
+                   SUM(total) as s_total
+            FROM attendance_summary
+            GROUP BY student_id
+        ),
+        student_stats AS (
+            SELECT s.id, s.name, s.department as dept, s.division,
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_attended, 0)
+                       ELSE COALESCE(day_s.d_attended, 0)
+                   END as attended,
+                   CASE 
+                       WHEN COALESCE(sum_s.s_total, 0) > 0 THEN COALESCE(sum_s.s_total, 0)
+                       ELSE COALESCE(day_s.d_total, 0)
+                   END as total
+            FROM students s
+            LEFT JOIN daily_stats day_s ON s.id = day_s.student_id
+            LEFT JOIN summary_stats sum_s ON s.id = sum_s.student_id
+            WHERE (%s='' OR s.department=%s) AND (%s='' OR s.division=%s)
+        )
+        SELECT *,
+               ROUND(CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END, 1) as pct
+        FROM student_stats
+        WHERE (CASE WHEN total > 0 THEN (attended * 100.0 / total) ELSE 0 END) < %s
+    """
+    defaulters = qry(sql, (dept, dept, div, div, threshold_pct))
+    
+    sent_count = 0
+    for s in defaulters:
+        pct_val = float(s["pct"] or 0.0)
+        results = ParentNotificationService.notify_student_parents(
+            student_id=s['id'],
+            category='attendance',
+            template_slug='defaulter_alert',
+            context={'percentage': f"{pct_val}%"}
+        )
+        if any(r.get("success") for r in results):
+            sent_count += 1
+            
+    return redirect(url_for("admin_intel.shortage_report", 
+                             threshold=threshold_pct, 
+                             department=dept, 
+                             division=div, 
+                             alert_triggered=sent_count))
 
 @admin_intel_bp.route("/attendance_roll_call")
 @admin_required

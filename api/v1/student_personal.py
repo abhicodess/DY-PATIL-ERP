@@ -1,12 +1,25 @@
-from flask import Blueprint
+from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from utils.pg_wrapper import qry_read, qone_read
 from utils.api_response import success_response, error_response
 from api.v1.auth import jwt_role_required
 from extensions import limiter
 
-student_personal_bp = Blueprint('student_personal', __name__)
-limiter.limit("100 per minute", key_func=lambda: get_jwt_identity())(student_personal_bp)
+student_personal_bp = Blueprint('student_personal', __name__, url_prefix='/api/v1/student', description="Student personal API")
+
+def get_student_limit_key():
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity is not None:
+            return str(identity)
+    except Exception:
+        pass
+    from flask import request
+    return request.remote_addr
+
+limiter.limit("100 per minute", key_func=get_student_limit_key)(student_personal_bp)
 
 @student_personal_bp.route("/attendance", methods=["GET"])
 @jwt_role_required(["student"])
@@ -71,12 +84,20 @@ def get_logged_in_student_results():
     """
     student_id = int(get_jwt_identity())
     
+    student = qone_read("SELECT name, roll FROM students WHERE id = :id", {"id": student_id})
+    if not student:
+        return success_response([], "Student results retrieved successfully")
+    
     query = """
-        SELECT r.id, r.semester, r.internal_marks, r.external_marks, r.total, r.grade, r.is_published,
-               s.name as subject_name, s.code as subject_code
+        SELECT r.id, r.semester, 
+               (COALESCE(r.ut_marks, 0) + COALESCE(r.mse_marks, 0) + COALESCE(r.assignment_marks, 0) + 
+                COALESCE(r.attendance_marks, 0) + COALESCE(r.teaching_assessment, 0) + COALESCE(r.tw_marks, 0)) as internal_marks,
+               COALESCE(r.pr_or_marks, 0) as external_marks,
+               r.marks as total, r.grade, r.published as is_published,
+               COALESCE(s.name, r.subject) as subject_name, s.subject_code as subject_code
         FROM results r
-        JOIN subjects s ON r.subject_id = s.id
-        WHERE r.student_id = :student_id AND r.is_published = TRUE
+        LEFT JOIN subjects s ON r.subject = s.name
+        WHERE (r.roll = :roll OR r.student_name = :name) AND r.published = 1
     """
-    rows = qry_read(query, {"student_id": student_id})
+    rows = qry_read(query, {"roll": student["roll"], "name": student["name"]})
     return success_response([dict(r) for r in rows], "Student results retrieved successfully")

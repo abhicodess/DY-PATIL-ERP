@@ -98,31 +98,34 @@ def bulk_input_results():
             continue
 
         # Validate student
-        student = qone("SELECT id FROM students WHERE id = :id AND is_active = TRUE", {"id": student_id})
+        student = qone("SELECT name, roll, department, year FROM students WHERE id = :id AND is_active = TRUE", {"id": student_id})
         if not student:
             continue
 
         total = float(internal_marks) + float(external_marks)
-        grade = rec.get("grade") or calculate_grade(total)
+        grade_val = rec.get("grade") or calculate_grade(total)
         is_published = rec.get("is_published", False)
+        pub_status = 1 if is_published else 0
+        res_status = "Pass" if (total / 60.0 * 100) >= 35 else "Fail"
 
         # Check if record exists
         existing = qone("""
             SELECT id FROM results 
-            WHERE student_id = :student_id AND subject_id = :subject_id AND semester = :semester
-        """, {"student_id": student_id, "subject_id": subject_id, "semester": semester})
+            WHERE (roll = :roll OR student_name = :name) AND subject = :subj AND semester = :semester
+        """, {"roll": student["roll"], "name": student["name"], "subj": subj["name"], "semester": semester})
 
         if existing:
             exe("""
                 UPDATE results 
-                SET internal_marks = %s, external_marks = %s, total = %s, grade = %s, is_published = %s
+                SET marks = %s, total = %s, grade = %s, published = %s, result = %s,
+                    ut_marks = %s, pr_or_marks = %s
                 WHERE id = %s
-            """, (internal_marks, external_marks, total, grade, is_published, existing["id"]))
+            """, (total, 60.0, grade_val, pub_status, res_status, internal_marks, external_marks, existing["id"]))
         else:
             exe("""
-                INSERT INTO results (student_id, subject_id, semester, internal_marks, external_marks, total, grade, is_published)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (student_id, subject_id, semester, internal_marks, external_marks, total, grade, is_published))
+                INSERT INTO results (student_name, roll, department, year, semester, subject, marks, total, grade, result, published, ut_marks, pr_or_marks)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (student["name"], student["roll"], student["department"], student["year"], semester, subj["name"], total, 60.0, grade_val, res_status, pub_status, internal_marks, external_marks))
         
         saved_count += 1
 
@@ -168,28 +171,32 @@ def get_marksheet():
     offset = (page - 1) * per_page
 
     query = """
-        SELECT r.id, r.semester, r.internal_marks, r.external_marks, r.total, r.grade, r.is_published,
-               s.name as subject_name, s.code as subject_code,
+        SELECT r.id, r.semester, 
+               (COALESCE(r.ut_marks, 0) + COALESCE(r.mse_marks, 0) + COALESCE(r.assignment_marks, 0) + 
+                COALESCE(r.attendance_marks, 0) + COALESCE(r.teaching_assessment, 0) + COALESCE(r.tw_marks, 0)) as internal_marks,
+               COALESCE(r.pr_or_marks, 0) as external_marks,
+               r.marks as total, r.grade, r.published as is_published,
+               COALESCE(s.name, r.subject) as subject_name, s.subject_code as subject_code,
                st.id as student_id, st.name as student_name, st.roll as roll_no, st.division
         FROM results r
-        JOIN subjects s ON r.subject_id = s.id
-        JOIN students st ON r.student_id = st.id
+        LEFT JOIN subjects s ON r.subject = s.name
+        JOIN students st ON r.roll = st.roll
         WHERE st.is_active = TRUE
     """
     params = {}
 
     # Role enforcement
     if role == 'student':
-        query += " AND r.student_id = :caller_student_id AND r.is_published = TRUE"
+        query += " AND st.id = :caller_student_id AND r.published = 1"
         params['caller_student_id'] = identity_id
     else:
         # Admins or Faculty can filter by student_id
         if request.args.get('student_id'):
-            query += " AND r.student_id = :student_id"
+            query += " AND st.id = :student_id"
             params['student_id'] = int(request.args.get('student_id'))
 
     if request.args.get('subject_id'):
-        query += " AND r.subject_id = :subject_id"
+        query += " AND s.id = :subject_id"
         params['subject_id'] = int(request.args.get('subject_id'))
     if request.args.get('semester'):
         query += " AND r.semester = :semester"
@@ -243,16 +250,23 @@ def publish_results():
     if not subject_id or not semester:
         return error_response("Missing required parameters: subject_id or semester", "VALIDATION_ERROR", 422)
 
+    subj = qone("SELECT name FROM subjects WHERE id = :id", {"id": subject_id})
+    if not subj:
+        return error_response("Subject not found", "NOT_FOUND", 422)
+    subj_name = subj["name"]
+
     query = """
         UPDATE results 
-        SET is_published = TRUE 
-        WHERE subject_id = %s AND semester = %s
+        SET published = 1 
+        WHERE subject = %s AND semester = %s
     """
-    params = [subject_id, semester]
+    params = [subj_name, semester]
 
     if student_id:
-        query += " AND student_id = %s"
-        params.append(student_id)
+        st = qone("SELECT roll FROM students WHERE id = :id", {"id": student_id})
+        if st:
+            query += " AND roll = %s"
+            params.append(st["roll"])
 
     exe(query, tuple(params))
     return success_response(None, "Results published successfully")

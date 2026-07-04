@@ -57,12 +57,20 @@ class TenantMiddleware:
             return self.app(environ, start_response)
 
         # Wrap in Flask application context for safe DB querying
-        if self.flask_app:
-            with self.flask_app.app_context():
+        try:
+            if self.flask_app:
+                with self.flask_app.app_context():
+                    tenant = TenantService.get_by_subdomain(subdomain)
+            else:
                 tenant = TenantService.get_by_subdomain(subdomain)
-        else:
-            tenant = TenantService.get_by_subdomain(subdomain)
-
+        except Exception as e:
+            logger.error(f"Database error in TenantMiddleware: {e}", exc_info=True)
+            start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
+            return [json.dumps({
+                "error": "Internal Database Error. Please try again later.",
+                "code": "DATABASE_ERROR"
+            }).encode('utf-8')]
+ 
         if not tenant:
             start_response('404 Not Found', [('Content-Type', 'application/json')])
             return [json.dumps({

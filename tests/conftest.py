@@ -2,6 +2,11 @@ import os
 os.environ.setdefault('SECRET_KEY', 'placeholder_secret_key_for_testing_purposes_only_32_chars')
 os.environ.setdefault('JWT_SECRET_KEY', 'placeholder_jwt_secret_key_for_testing_purposes_only_32_chars')
 
+import sys
+from unittest.mock import MagicMock
+# Mock weasyprint to prevent OSError on Windows missing GTK/Pango C libraries
+sys.modules['weasyprint'] = MagicMock()
+
 import pytest
 from app import create_app
 from extensions import db as _db

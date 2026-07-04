@@ -9,29 +9,59 @@
 
 <div class="g4060 mb16 fu fu1">
   <div class="card">
-    <div class="ch"><div class="ct">Send Notification</div></div>
-    <form method="POST" action="/admin_notifications"><div class="cb">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <div class="fgrp">
-        <label>Title</label>
-        <input type="text" name="title" required placeholder="Important Update">
+    <div class="ch" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div class="ct" id="card-title">Send Notification</div>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" id="tab-single" class="btn btn-sm btn-dark" style="padding: 4px 10px; font-size: 11px; min-height: unset; height: auto;" onclick="switchTab('single')">Single</button>
+        <button type="button" id="tab-bulk" class="btn btn-sm btn-out" style="padding: 4px 10px; font-size: 11px; min-height: unset; height: auto;" onclick="switchTab('bulk')">Bulk Import</button>
       </div>
-      <div class="fgrp">
-        <label>Target Audience</label>
-        <select name="role_target">
-          <option value="all">Everyone</option>
-          <option value="student">Students Only</option>
-          <option value="faculty">Faculty Only</option>
-          <option value="admin">Admins Only</option>
-        </select>
-      </div>
-      <div class="fgrp">
-        <label>Message</label>
-        <textarea name="message" rows="4" required placeholder="Your message here..."></textarea>
-      </div>
-    </div><div class="cf">
-      <button type="submit" class="btn btn-dark"><i class="fas fa-paper-plane"></i> Send</button>
-    </div></form>
+    </div>
+    
+    <div class="cb">
+      <!-- Single Notification Form -->
+      <form method="POST" action="/admin_notifications" enctype="multipart/form-data" id="form-single">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="fgrp">
+          <label>Title</label>
+          <input type="text" name="title" required placeholder="Important Update">
+        </div>
+        <div class="fgrp">
+          <label>Target Audience</label>
+          <select name="role_target">
+            <option value="all">Everyone</option>
+            <option value="student">Students Only</option>
+            <option value="faculty">Faculty Only</option>
+            <option value="admin">Admins Only</option>
+          </select>
+        </div>
+        <div class="fgrp">
+          <label>Message</label>
+          <textarea name="message" rows="4" required placeholder="Your message here..."></textarea>
+        </div>
+        <div class="fgrp">
+          <label>Attachment (Excel, PDF, JPEG, PNG)</label>
+          <input type="file" name="attachment" accept=".xlsx,.xls,.pdf,.jpg,.jpeg,.png">
+        </div>
+        <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-dark"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+      </form>
+
+      <!-- Bulk Import Form (Hidden by default) -->
+      <form method="POST" action="/admin/import_notifications_excel" enctype="multipart/form-data" id="form-bulk" style="display: none;">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="fgrp">
+          <label>Upload Excel File</label>
+          <input type="file" name="file" accept=".xlsx,.xls" required>
+          <div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.4;">
+            Excel sheet must contain columns like: <strong>Title</strong>, <strong>Message</strong>, and optional <strong>Audience</strong> (values: all, student, faculty, admin).
+          </div>
+        </div>
+        <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-dark"><i class="fas fa-file-import"></i> Import</button>
+        </div>
+      </form>
+    </div>
   </div>
   
   <div class="card">
@@ -47,6 +77,13 @@
             <td>
               <div style="font-weight:700;color:var(--ink);font-size:13px;margin-bottom:2px">{{ n.title }}</div>
               <div style="font-size:12px;color:var(--ink3)">{{ n.message }}</div>
+              {% if n.attachment_path %}
+              <div style="margin-top: 6px;">
+                <a href="{{ n.attachment_path }}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:4px;">
+                  <i class="fas fa-paperclip"></i> {{ n.attachment_name or 'View Attachment' }}
+                </a>
+              </div>
+              {% endif %}
             </td>
             <td><span class="tag t-bl">{{ n.role_target|title }}</span></td>
             <td><span class="tag t-nn">{{ n.created_at[:10] }}</span></td>
@@ -65,4 +102,28 @@
     </div>
   </div>
 </div>
+
+<script>
+function switchTab(tab) {
+  const tabSingle = document.getElementById('tab-single');
+  const tabBulk = document.getElementById('tab-bulk');
+  const formSingle = document.getElementById('form-single');
+  const formBulk = document.getElementById('form-bulk');
+  const cardTitle = document.getElementById('card-title');
+
+  if (tab === 'single') {
+    tabSingle.className = 'btn btn-sm btn-dark';
+    tabBulk.className = 'btn btn-sm btn-out';
+    formSingle.style.display = 'block';
+    formBulk.style.display = 'none';
+    cardTitle.textContent = 'Send Notification';
+  } else {
+    tabSingle.className = 'btn btn-sm btn-out';
+    tabBulk.className = 'btn btn-sm btn-dark';
+    formSingle.style.display = 'none';
+    formBulk.style.display = 'block';
+    cardTitle.textContent = 'Bulk Import Notifications';
+  }
+}
+</script>
 {% endblock %}

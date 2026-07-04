@@ -61,6 +61,9 @@ class StudentService:
         if not student:
             # Fallback to Roll
             student = self.repository.get_by_roll(identifier)
+        if not student:
+            # Fallback to Email
+            student = self.repository.get_by_email(identifier)
         
         if student and check_password_hash(student.password, password):
             return student

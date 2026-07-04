@@ -108,10 +108,66 @@
 .overflow-x { overflow-x: auto; max-width: 100%; }
 .text-center { text-align: center; }
 @media print {
-  .sidebar, .ph-actions, .card:first-of-type { display: none !important; }
-  .content { margin: 0 !important; padding: 0 !important; }
-  .card { border: none !important; box-shadow: none !important; }
-  .tbl th, .tbl td { font-size: 10px !important; padding: 4px !important; }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .sidebar, .topbar, .ph-actions, .card:first-of-type, button, form, nav, .alert-bar, .breadcrumb {
+    display: none !important;
+  }
+  .shell {
+    display: block !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+    background: #fff !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow: visible !important;
+  }
+  .cb, div {
+    overflow: visible !important;
+  }
+  table, .tbl {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    overflow: visible !important;
+  }
+  th, td, .tbl th, .tbl td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
 }
 </style>
 

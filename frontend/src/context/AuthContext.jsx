@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await authService.refreshToken();
         const response = await api.get('/auth/me');
-        setUser(response.data.data);
+        setUser(response.data.data || response.data);
       } catch (error) {
         clearAuth();
       } finally {

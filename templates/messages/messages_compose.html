@@ -15,7 +15,9 @@
 <div class="ph fu"><div class="ph-title">New Message</div><div class="ph-actions"><a href="/messages/search" class="btn btn-out btn-sm"><i class="fas fa-magnifying-glass"></i> Find Person</a></div></div>
 <div class="card fu fu1" style="max-width:620px">
   <div class="ch"><div class="ct">Send a Message</div></div>
-  <form method="POST" action="/messages/compose"><div class="cb">
+  <form method="POST" action="/messages/compose">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="cb">
     <div class="fg2">
       <div class="fgrp"><label>Send To (Role)</label>
         <select name="to_role" id="to-role" onchange="updateRecipients()">

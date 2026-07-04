@@ -43,6 +43,7 @@
           </div>
           {% if session.role=='admin' %}
           <form method="POST" action="/delete_event" onsubmit="return confirm('Delete event?')">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="event_id" value="{{ e.id }}">
             <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
           </form>
@@ -81,7 +82,9 @@
       <div class="ct">Add Event / Holiday</div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('addEventModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
     </div>
-    <form method="POST" action="/save_event"><div class="cb" style="padding-top:0">
+    <form method="POST" action="/save_event">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="cb" style="padding-top:0">
       <div class="fgrp"><label>Title *</label><input type="text" name="title" required placeholder="e.g. Republic Day Holiday"></div>
       <div class="fg2">
         <div class="fgrp"><label>Date *</label><input type="date" name="event_date" required></div>

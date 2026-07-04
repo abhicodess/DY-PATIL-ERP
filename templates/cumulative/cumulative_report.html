@@ -236,9 +236,11 @@
 
   <!-- Shortage Table Card -->
   {% if shortage %}
+  <input type="hidden" id="shortage-rolls-data" value='{{ shortage | map(attribute="roll") | list | tojson }}'>
   <div class="card fu mb20" id="shortage-section" style="border-color: var(--red);">
-    <div class="ch" style="background: var(--red-s); border-bottom: 1.5px solid #fecaca;">
+    <div class="ch" style="background: var(--red-s); border-bottom: 1.5px solid #fecaca; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
       <div class="ct" style="color: var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> Attendance Shortage List (&lt;75%)</div>
+      <button type="button" class="btn btn-re btn-sm" id="btn-notify-all-parents" onclick="sendBulkDefaulterSMS()" style="background: var(--red); color: white; border: none;"><i class="fa-solid fa-paper-plane"></i> Notify All Parents via SMS</button>
     </div>
     <div class="cb p0" style="overflow-x: auto;">
       <table class="tbl">
@@ -253,6 +255,7 @@
             <th style="text-align:center">Conducted</th>
             <th style="text-align:center">Cumulative %</th>
             <th style="text-align:center; color: var(--red)">Lectures Needed for 75%</th>
+            <th style="text-align:center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -270,6 +273,11 @@
             <td class="pct-danger" style="text-align:center">{{ p }}%</td>
             <td style="text-align:center; color:var(--red); font-weight:700; font-family:var(--mono);">
               {% if needed > 0 %}+{{ needed }}{% else %}—{% endif %}
+            </td>
+            <td style="text-align:center">
+              <button type="button" class="btn btn-out btn-sm" onclick="sendSingleDefaulterSMS('{{ s.roll }}', this)" style="padding: 4px 8px; font-size: 11px;">
+                <i class="fa-solid fa-paper-plane"></i> SMS Parent
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -301,4 +309,122 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrfToken = "{{ csrf_token() }}";
+
+async function sendSingleDefaulterSMS(roll, btn) {
+    if (!confirm(`Are you sure you want to send a defaulter SMS to the parents of student with Roll No. ${roll}?`)) {
+        return;
+    }
+    
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+    
+    try {
+        const resp = await fetch('/api/cumulative/notify-parents', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ rolls: [roll] })
+        });
+        
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+            if (data.notified && data.notified.length > 0) {
+                const item = data.notified[0];
+                alert(`✓ Success!\nSMS queued/sent to parent: ${item.parent}`);
+                btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Sent';
+                btn.className = "btn btn-sm btn-out";
+                btn.style.color = "var(--green)";
+            } else if (data.skipped && data.skipped.length > 0) {
+                const item = data.skipped[0];
+                alert(`⚠ Not Sent:\n${item.reason}`);
+                btn.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Skipped';
+                btn.className = "btn btn-sm btn-out";
+                btn.style.color = "var(--amber)";
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Failed to send notification'));
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Network error while sending notification');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+
+async function sendBulkDefaulterSMS() {
+    const rollsEl = document.getElementById('shortage-rolls-data');
+    if (!rollsEl) {
+        alert('No shortage students found.');
+        return;
+    }
+    
+    let rolls = [];
+    try {
+        rolls = JSON.parse(rollsEl.value);
+    } catch (e) {
+        console.error(e);
+    }
+    
+    if (rolls.length === 0) {
+        alert('No shortage students found.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to send defaulter SMS to the parents of all ${rolls.length} shortage student(s)?`)) {
+        return;
+    }
+    
+    const btn = document.getElementById('btn-notify-all-parents');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Notifying...';
+    
+    try {
+        const resp = await fetch('/api/cumulative/notify-parents', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ rolls: rolls })
+        });
+        
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+            const notifiedCount = data.notified ? data.notified.length : 0;
+            const skippedCount = data.skipped ? data.skipped.length : 0;
+            
+            let msg = `Notifications Processed!\n- SMS queued/sent successfully: ${notifiedCount}\n- Skipped/Errors: ${skippedCount}`;
+            if (data.skipped && data.skipped.length > 0) {
+                msg += '\n\nDetails of Skipped/Failed:\n';
+                data.skipped.forEach(s => {
+                    msg += `- Roll ${s.roll}: ${s.reason}\n`;
+                });
+            }
+            alert(msg);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to send bulk notifications'));
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Network error while sending notifications');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+</script>
 {% endblock %}

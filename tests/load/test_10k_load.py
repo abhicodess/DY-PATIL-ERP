@@ -22,7 +22,7 @@ class StudentBehavior(SequentialTaskSet):
         })
         
         if response.status_code == 200:
-            token = response.json().get("data", {}).get("access_token")
+            token = response.json().get("access_token")
             self.client.headers.update({"Authorization": f"Bearer {token}"})
         
     @task
@@ -49,7 +49,7 @@ class FacultyBehavior(SequentialTaskSet):
         })
         
         if response.status_code == 200:
-            token = response.json().get("data", {}).get("access_token")
+            token = response.json().get("access_token")
             self.client.headers.update({"Authorization": f"Bearer {token}"})
 
     @task
@@ -98,7 +98,7 @@ class AdminBehavior(SequentialTaskSet):
         })
         
         if response.status_code == 200:
-            token = response.json().get("data", {}).get("access_token")
+            token = response.json().get("access_token")
             self.client.headers.update({"Authorization": f"Bearer {token}"})
 
     @task

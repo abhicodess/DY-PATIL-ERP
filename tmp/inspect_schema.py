@@ -12,7 +12,7 @@ def inspect_schema():
     schema = {}
     for table in tables:
         name = table['table_name']
-        columns = qry(f"SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '{name}'")
+        columns = qry("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = :table_name", {"table_name": name})
         schema[name] = [dict(c) for c in columns]
     return schema
 

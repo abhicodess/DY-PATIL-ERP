@@ -121,6 +121,90 @@
   </div>
 </div>
 
+<div id="erpToast" style="display:none; position:fixed; top:20px; right:20px; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; z-index:2000; box-shadow:0 4px 12px rgba(0,0,0,0.15); transition:opacity 0.3s ease;"></div>
+
+<!-- QUICK TIMETABLE BUILDER -->
+<div class="card mb20 fu">
+  <div class="ch">
+    <div class="ct"><i class="fas fa-calendar-plus" style="color:var(--purple)"></i> Quick Timetable Builder</div>
+    <div class="cs">Create draft slots and submit them for admin approval directly from your dashboard.</div>
+  </div>
+  <div class="cb" style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Form Side -->
+    <div>
+      <h4 style="margin-top:0; margin-bottom:12px; font-size:13px; font-weight:600; color:var(--ink2);">Add a New Lecture Slot</h4>
+      <form id="quickSlotForm">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Day *</label>
+            <select id="qDay" class="ff" style="width:100%" required>
+              <option value="">Select day</option>
+              <option>Monday</option><option>Tuesday</option>
+              <option>Wednesday</option><option>Thursday</option>
+              <option>Friday</option><option>Saturday</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Time Slot *</label>
+            <select id="qTime" class="ff" style="width:100%" required>
+              <option value="">Select time</option>
+              <option>8:30-9:30</option><option>9:30-10:30</option>
+              <option>10:30-11:30</option><option>11:30-12:30</option>
+              <option>1:30-2:30</option><option>2:30-3:30</option>
+              <option>3:30-4:30</option><option>4:30-5:30</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Subject *</label>
+          <input id="qSubject" type="text" class="ff" placeholder="e.g. Machine Learning" style="width:100%; box-sizing:border-box;" required />
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Division *</label>
+            <select id="qDivision" class="ff" style="width:100%" required>
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Room / Lab</label>
+            <input id="qRoom" type="text" class="ff" placeholder="e.g. Lab 4" style="width:100%; box-sizing:border-box;" />
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Type *</label>
+            <select id="qType" class="ff" style="width:100%" required>
+              <option value="Theory">Theory</option>
+              <option value="Lab">Lab</option>
+              <option value="Elective">Elective</option>
+              <option value="Minor">Minor</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--ink3);">Semester</label>
+            <input id="qSemester" type="text" class="ff" placeholder="e.g. Sem 6" style="width:100%; box-sizing:border-box;" />
+          </div>
+        </div>
+        <button type="submit" id="qSubmitBtn" class="btn btn-vi" style="width:100%; justify-content:center;"><i class="fas fa-plus"></i> Add Draft Slot</button>
+      </form>
+    </div>
+    
+    <!-- Drafts List Side -->
+    <div style="border-left: 1px solid var(--border); padding-left: 24px; display:flex; flex-direction:column;">
+      <div class="flex-sb" style="margin-bottom:12px; align-items:center;">
+        <h4 style="margin:0; font-size:13px; font-weight:600; color:var(--ink2);">My Timetable Drafts (<span id="draftCount">0</span>)</h4>
+        <button id="qSubmitApprovalBtn" class="btn btn-sm" style="background:#D97706; color:#fff; border:none; font-size:11px; display:none;" onclick="submitQuickTimetable()"><i class="fas fa-check-double"></i> Submit Approval</button>
+      </div>
+      <div id="quickDraftsList" style="flex:1; overflow-y:auto; max-height:220px;">
+        <div style="text-align:center; padding:30px; color:var(--ink4);">
+          <i class="fas fa-spinner fa-spin"></i> Loading drafts...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="g2 fu fu3">
   <div class="card">
     <div class="ch flex-sb pb0">
@@ -164,5 +248,196 @@ if(ctx) {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
+
+// Quick Timetable Builder Logic
+fetch('/api/faculty/divisions')
+  .then(r => r.json())
+  .then(data => {
+    const sel = document.getElementById('qDivision');
+    if (sel) {
+      sel.innerHTML = '<option value="">Select division</option>';
+      (data.divisions || []).forEach(d => {
+        sel.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+      if (!data.divisions || !data.divisions.length) {
+        ['SE CSE-A','SE CSE-B','SE AIDS','SE IT'].forEach(d => {
+          sel.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      }
+    }
+  })
+  .catch(() => {
+    const sel = document.getElementById('qDivision');
+    if (sel) {
+      sel.innerHTML = '<option value="">Select division</option>';
+      ['SE CSE-A','SE CSE-B','SE AIDS','SE IT'].forEach(d => {
+        sel.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+    }
+  });
+
+function loadQuickDrafts() {
+  const listDiv = document.getElementById('quickDraftsList');
+  const countSpan = document.getElementById('draftCount');
+  const submitBtn = document.getElementById('qSubmitApprovalBtn');
+  if (!listDiv) return;
+  
+  fetch('/api/faculty/my-timetable')
+    .then(r => r.json())
+    .then(data => {
+      const slots_by_day = data.slots_by_day || {};
+      const drafts = [];
+      Object.values(slots_by_day).forEach(daySlots => {
+        daySlots.forEach(s => {
+          if (s.status === 'draft' || s.status === 'rejected') {
+            drafts.push(s);
+          }
+        });
+      });
+      
+      countSpan.textContent = drafts.length;
+      listDiv.innerHTML = '';
+      
+      if (drafts.length === 0) {
+        submitBtn.style.display = 'none';
+        listDiv.innerHTML = `
+          <div style="text-align:center; padding:30px; color:var(--ink4);">
+            <i class="fas fa-circle-check" style="color:var(--green); font-size:24px; margin-bottom:8px;"></i>
+            <p style="margin:0; font-size:12px;">No pending drafts.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      submitBtn.style.display = 'flex';
+      drafts.forEach(s => {
+        const item = document.createElement('div');
+        item.style.padding = '10px';
+        item.style.borderBottom = '1px solid var(--border)';
+        item.style.fontSize = '12px';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        
+        const badge = s.status === 'rejected' ? `<span style="background:#fee2e2; color:#dc2626; font-size:9px; padding:1px 4px; border-radius:3px; font-weight:700;">REJECTED</span>` : `<span style="background:#f3f4f6; color:#4b5563; font-size:9px; padding:1px 4px; border-radius:3px;">DRAFT</span>`;
+        
+        item.innerHTML = `
+          <div>
+            <div style="font-weight:700; color:var(--ink);">${s.subject} ${badge}</div>
+            <div style="font-size:10px; color:var(--ink3);">${s.day} · ${s.time_slot} · ${s.division}</div>
+            ${s.admin_note ? `<div style="font-size:10px; color:#dc2626; margin-top:2px;">Reason: ${s.admin_note}</div>` : ''}
+          </div>
+          <div>
+            <button onclick="deleteQuickSlot(${s.id})" class="btn btn-ghost btn-sm" style="color:var(--red); padding:4px 8px;"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        listDiv.appendChild(item);
+      });
+    });
+}
+
+const qForm = document.getElementById('quickSlotForm');
+if (qForm) {
+  qForm.onsubmit = function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('qSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+    
+    const payload = {
+      day: document.getElementById('qDay').value,
+      time_slot: document.getElementById('qTime').value,
+      subject: document.getElementById('qSubject').value.trim(),
+      division: document.getElementById('qDivision').value,
+      room: document.getElementById('qRoom').value.trim(),
+      slot_type: document.getElementById('qType').value,
+      semester: document.getElementById('qSemester').value.trim()
+    };
+    
+    fetch('/api/faculty/my-timetable', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (res.status === 201) {
+        showQuickToast('Slot added as draft!', 'success');
+        document.getElementById('qSubject').value = '';
+        document.getElementById('qRoom').value = '';
+        document.getElementById('qSemester').value = '';
+        loadQuickDrafts();
+      } else {
+        res.json().then(data => {
+          showQuickToast(data.error || 'Failed to add slot', 'danger');
+        });
+      }
+    })
+    .catch(() => showQuickToast('Network error', 'danger'))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-plus"></i> Add Draft Slot';
+    });
+  };
+}
+
+function deleteQuickSlot(id) {
+  if (!confirm('Are you sure you want to delete this draft slot?')) return;
+  fetch('/api/faculty/my-timetable/' + id, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+  })
+  .then(res => {
+    if (res.status === 204) {
+      showQuickToast('Draft slot deleted.', 'success');
+      loadQuickDrafts();
+    } else {
+      showQuickToast('Failed to delete slot.', 'danger');
+    }
+  });
+}
+
+function submitQuickTimetable() {
+  if (!confirm('Submit all drafts and rejected slots for admin approval?')) return;
+  const btn = document.getElementById('qSubmitApprovalBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  
+  fetch('/api/faculty/my-timetable/submit', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+  })
+  .then(res => {
+    if (res.ok) {
+      showQuickToast('Timetable submitted for approval!', 'success');
+      loadQuickDrafts();
+    } else {
+      showQuickToast('Failed to submit timetable.', 'danger');
+    }
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.textContent = 'Submit Approval';
+  });
+}
+
+function showQuickToast(message, type) {
+  const toast = document.getElementById('erpToast');
+  if (toast) {
+    toast.textContent = message;
+    toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+    toast.style.color = '#fff';
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3000);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadQuickDrafts);
 </script>
 {% endblock %}

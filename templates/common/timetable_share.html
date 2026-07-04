@@ -109,6 +109,7 @@
     </div>
     <div class="btn-grp">
       <form method="POST" action="/timetable_send_all" onsubmit="return confirm('Attention: This will send individual messages to ALL currently selected users. Proceed?')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <input type="hidden" name="target_role" value="{{ role_sel }}">
         <button type="submit" class="btn btn-outline" style="color: var(--indigo-600); border-color: var(--indigo-600);">
           <i class="fas fa-paper-plane"></i> Send to All {{ role_sel|title }}s
@@ -183,6 +184,7 @@
             <a href="/timetable_share?role={{ role_sel }}&id={{ matched_entity.id }}" class="btn btn-outline"><i class="fas fa-sync-alt"></i> Refresh</a>
             {% if selected_slots %}
               <form method="POST" action="/timetable_share" style="margin:0">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <input type="hidden" name="target_role" value="{{ role_sel }}">
                 <input type="hidden" name="target_id" value="{{ matched_entity.id }}">
                 <button type="submit" class="btn btn-success">

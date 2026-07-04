@@ -94,6 +94,9 @@ def _prepare_query_and_params(sql: str, params: Any, is_postgres: bool):
     # FIX: Translate Postgres-specific syntax to SQLite compatible syntax during testing
     if not is_postgres:
         sql = sql.replace('\\:\\:', '::')
+        sql = sql.replace(' ILIKE ', ' LIKE ').replace(' ilike ', ' like ')
+        sql = re.sub(r"\bGREATEST\b", "MAX", sql, flags=re.IGNORECASE)
+        sql = re.sub(r"\bLEAST\b", "MIN", sql, flags=re.IGNORECASE)
         
         # Replace TO_CHAR(..., 'Mon YYYY') -> strftime('%m-%Y', ...)
         sql = re.sub(r"TO_CHAR\((.*?),\s*['\"]Mon YYYY['\"]\)", r"strftime('%m-%Y', \1)", sql, flags=re.IGNORECASE)
@@ -150,7 +153,11 @@ def get_public_db():
     if is_testing:
         conn = db.session.connection().connection
         _configure_connection_row_factory(conn)
-        cur = conn.cursor()
+        is_postgres = db.engine.dialect.name == 'postgresql'
+        if is_postgres:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        else:
+            cur = conn.cursor()
         try:
             yield cur
         finally:
@@ -193,7 +200,11 @@ def get_tenant_db():
     if is_testing:
         conn = db.session.connection().connection
         _configure_connection_row_factory(conn)
-        cur = conn.cursor()
+        is_postgres = db.engine.dialect.name == 'postgresql'
+        if is_postgres:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        else:
+            cur = conn.cursor()
         try:
             yield cur
         finally:
@@ -381,22 +392,55 @@ def get_tenant_read_db():
     except Exception:
         schema = 'public'
         
-    engine = get_replica_engine()
-    conn = engine.raw_connection()
-    _configure_connection_row_factory(conn)
+    from flask import current_app
+    is_testing = False
     try:
-        is_postgres = engine.dialect.name == 'postgresql'
+        if current_app and current_app.config.get("TESTING"):
+            is_testing = True
+    except RuntimeError:
+        pass
+
+    if is_testing:
+        conn = db.session.connection().connection
+        _configure_connection_row_factory(conn)
+        is_postgres = db.engine.dialect.name == 'postgresql'
         if is_postgres:
             cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cur.execute(f"SET search_path TO {schema}, public")
         else:
             cur = conn.cursor()
-        yield cur
-    finally:
-        conn.close()
+        try:
+            yield cur
+        finally:
+            cur.close()
+    else:
+        engine = get_replica_engine()
+        conn = engine.raw_connection()
+        _configure_connection_row_factory(conn)
+        try:
+            is_postgres = engine.dialect.name == 'postgresql'
+            if is_postgres:
+                cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                cur.execute(f"SET search_path TO {schema}, public")
+            else:
+                cur = conn.cursor()
+            yield cur
+        finally:
+            conn.close()
 
 def qry_read(sql, params=None, timeout=30):
-    is_postgres = get_replica_engine().dialect.name == 'postgresql'
+    is_testing = False
+    try:
+        from flask import current_app
+        if current_app and current_app.config.get("TESTING"):
+            is_testing = True
+    except RuntimeError:
+        pass
+
+    if is_testing:
+        is_postgres = db.engine.dialect.name == 'postgresql'
+    else:
+        is_postgres = get_replica_engine().dialect.name == 'postgresql'
+
     sql, params = _prepare_query_and_params(sql, params, is_postgres)
     
     start_time = time.time()
@@ -415,7 +459,19 @@ def qry_read(sql, params=None, timeout=30):
         return [RowWrapper(r) for r in res]
 
 def qone_read(sql, params=None, timeout=30):
-    is_postgres = get_replica_engine().dialect.name == 'postgresql'
+    is_testing = False
+    try:
+        from flask import current_app
+        if current_app and current_app.config.get("TESTING"):
+            is_testing = True
+    except RuntimeError:
+        pass
+
+    if is_testing:
+        is_postgres = db.engine.dialect.name == 'postgresql'
+    else:
+        is_postgres = get_replica_engine().dialect.name == 'postgresql'
+
     sql, params = _prepare_query_and_params(sql, params, is_postgres)
     
     start_time = time.time()

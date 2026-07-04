@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, session, render_template, send_file, jsonify
+from flask import Blueprint, request, redirect, session, render_template, send_file, jsonify, url_for
 from datetime import datetime, date
 import re
 import io
@@ -50,11 +50,11 @@ def normalize_time(t):
 
 def grade(marks, total):
     p = pct(marks, total)
-    if p >= 90: return "A+"
-    if p >= 75: return "A"
-    if p >= 60: return "B+"
-    if p >= 50: return "B"
-    if p >= 40: return "C"
+    if p >= 75: return "O"
+    if p >= 65: return "A"
+    if p >= 55: return "B"
+    if p >= 45: return "C"
+    if p >= 35: return "D"
     return "F"
 
 def resolve_student_id(name, roll=None):
@@ -130,7 +130,7 @@ def _cumulative_marks_data_aggregated(dept="", student_filter="", faculty_id=Non
         MAX(m.department) AS department, SUM(m.marks) AS obtained,
         SUM(m.total) AS total_m, COUNT(*) AS exams
         FROM marks m WHERE {ws} GROUP BY m.student_id HAVING SUM(m.total) > 0
-    """, params)
+    """, params)  # nosec B608 - ws is composed of safe hardcoded literals and parameters
     for r in rows_std:
         _add(r["student_name"], r["roll"], r["department"], r["obtained"], r["total_m"], r["exams"])
 
@@ -153,7 +153,7 @@ def _cumulative_marks_data_aggregated(dept="", student_filter="", faculty_id=Non
         SUM(m.total) AS total_m, COUNT(*) AS exams
         FROM marks m WHERE {ws2}
         GROUP BY m.student_name, m.roll, m.department HAVING SUM(m.total) > 0
-    """, params2)
+    """, params2)  # nosec B608 - ws2 is composed of safe hardcoded literals and parameters
     for r in rows_legacy:
         _add(r["student_name"], r["roll"], r["department"], r["obtained"], r["total_m"], r["exams"])
 
@@ -177,44 +177,109 @@ def faculty_marks():
 @login_required("faculty")
 def faculty_save_marks():
     fid = session["faculty_id"]
-    student_name = request.form.get("student_name","").strip()
-    roll_row = qone("SELECT id,roll,department FROM students WHERE name=%s", (student_name,))
-    stu_id = roll_row["id"]         if roll_row else None
-    roll   = roll_row["roll"]       if roll_row else request.form.get("roll","")
-    dept   = roll_row["department"] if roll_row else request.form.get("department","")
-
-    exam_type = request.form.get("exam_type", "Semester Exam")
-
-    if exam_type == "Semester Exam":
-        assignment_m = min(float(request.form.get("assignment_marks",   0) or 0), 5.0)
-        attendance_m = min(float(request.form.get("attendance_marks",   0) or 0), 5.0)
-        teaching_m   = min(float(request.form.get("teaching_assessment",0) or 0), 10.0)
-        ut_m         = min(float(request.form.get("ut_marks",           0) or 0), 20.0)
-        mse_m        = min(float(request.form.get("mse_marks",          0) or 0), 20.0)
-        marks_val    = assignment_m + attendance_m + teaching_m + ut_m + mse_m
-        if marks_val == 0:
-            marks_val = min(float(request.form.get("marks", 0) or 0), 60.0)
-        marks_val = min(marks_val, 60.0)
-        total_val = 60.0
+    if request.is_json:
+        data = request.json
     else:
-        assignment_m = attendance_m = teaching_m = ut_m = mse_m = 0.0
-        marks_val = float(request.form.get("marks", 0) or 0)
-        total_val = float(request.form.get("total", 60) or 60)
-        total_val = min(total_val, 60.0)
-        marks_val = min(marks_val, total_val)
+        data = request.form
 
-    exe("""INSERT INTO marks(faculty_id,student_id,student_name,roll,subject,department,
-                             marks,total,exam_type,date,
-                             assignment_marks,attendance_marks,teaching_assessment,
-                             ut_marks,mse_marks)
-           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+    # COMPONENT 3: Validation — max marks per component
+    COMPONENT_MAXES = {
+        'assignment_marks': 5,
+        'attendance_marks': 5,
+        'teaching_assessment': 10,
+        'ut_marks': 20,
+        'mse_marks': 20,
+    }
+    errors = {}
+    for field, max_val in COMPONENT_MAXES.items():
+        val = float(data.get(field, 0) or 0)
+        if val < 0:
+            errors[field] = "Cannot be negative"
+        if val > max_val:
+            errors[field] = f"Max is {max_val}, got {val}"
+    if errors:
+        return jsonify({"errors": errors}), 400
+
+    student_name = data.get("student_name", "").strip()
+    roll_row = qone("SELECT id, roll, department, division, prn FROM students WHERE name=%s OR roll=%s", (student_name, student_name))
+    if not roll_row:
+        # fallback lookup by student_id or roll
+        student_id = data.get("student_id")
+        if student_id:
+            roll_row = qone("SELECT id, roll, department, division, prn FROM students WHERE id=%s", (student_id,))
+
+    stu_id = roll_row["id"] if roll_row else None
+    roll   = roll_row["roll"] if roll_row else data.get("roll", "")
+    dept   = roll_row["department"] if roll_row else data.get("department", "")
+    prn_number = roll_row["prn"] if roll_row else data.get("prn_number", "")
+    if not prn_number:
+        prn_number = ""
+
+    subject_name = data.get("subject", "").strip()
+    sub_row = qone("SELECT subject_code FROM subjects_master WHERE subject_name=%s OR subject_code=%s", (subject_name, subject_name))
+    subject_code = sub_row["subject_code"] if sub_row else ""
+
+    exam_type = data.get("exam_type", "Semester Exam")
+    assignment_m = float(data.get("assignment_marks", 0) or 0)
+    attendance_m = float(data.get("attendance_marks", 0) or 0)
+    teaching_m   = float(data.get("teaching_assessment", 0) or 0)
+    ut_m         = float(data.get("ut_marks", 0) or 0)
+    mse_m        = float(data.get("mse_marks", 0) or 0)
+    remarks      = data.get("remarks", "").strip()
+    date_val     = data.get("date", today_str())
+    semester_val = data.get("semester", "SEM IV")
+
+    # Insert marks row
+    exe("""INSERT INTO marks(faculty_id, student_id, student_name, roll, subject, department,
+                             marks, total, exam_type, date,
+                             assignment_marks, attendance_marks, teaching_assessment,
+                             ut_marks, mse_marks, remarks, prn_number, subject_code, semester)
+           VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (fid, stu_id, student_name, roll,
-         request.form.get("subject",""),
-         dept,
-         marks_val, total_val,
-         exam_type,
-         request.form.get("date", today_str()),
-         assignment_m, attendance_m, teaching_m, ut_m, mse_m))
+         subject_name, dept,
+         0.0, 60.0, # Will be updated below
+         exam_type, date_val,
+         assignment_m, attendance_m, teaching_m, ut_m, mse_m,
+         remarks, prn_number, subject_code, semester_val))
+
+    # COMPONENT 2: Auto-calculate total in marks save
+    total = (
+        float(assignment_m or 0) +
+        float(attendance_m or 0) +
+        float(teaching_m or 0) +
+        float(ut_m or 0) +
+        float(mse_m or 0)
+    )
+    exe("""UPDATE marks SET marks=%s, total=%s
+           WHERE student_id=%s AND subject=%s AND semester=%s""",
+        (total, 60.0, stu_id, subject_name, semester_val))
+
+    # COMPONENT 4: Pass/Fail + Grade auto-calculation
+    from services.results_service import calculate_result
+    total_val, grade_val, result_val, passed = calculate_result(
+        assignment_m, attendance_m, teaching_m, ut_m, mse_m
+    )
+    exe("""UPDATE marks SET grade=%s, result=%s
+           WHERE student_id=%s AND subject=%s AND semester=%s""",
+        (grade_val, result_val, stu_id, subject_name, semester_val))
+
+    try:
+        from services.admin_notification_service import admin_notifier
+        admin_notifier.notify_admin(
+            event_type    = 'marks_submitted',
+            faculty_id    = fid,
+            faculty_name  = session.get('name', 'Unknown'),
+            subject       = subject_name,
+            division      = roll_row["division"] if (roll_row and roll_row["division"]) else "Unknown",
+            exam_type     = exam_type,
+            student_count = 1,
+        )
+    except Exception:
+        pass
+
+    if request.is_json:
+        return jsonify({"success": True, "total": total_val, "grade": grade_val, "result": result_val}), 200
+
     return redirect("/faculty_marks?success=1")
 
 @faculty_extra_bp.route("/faculty_delete_marks", methods=["POST"])
@@ -240,25 +305,6 @@ def api_students_by_subject():
                       ORDER BY name""", (div, div, dept, dept))
     return jsonify([dict(s) for s in students])
 
-@faculty_extra_bp.route("/faculty_leaves")
-@login_required("faculty")
-def faculty_leaves():
-    fid = session["faculty_id"]
-    my_leaves = qry("SELECT * FROM leave_applications WHERE faculty_id=%s ORDER BY created_at DESC", (fid,))
-    return render_template("faculty/faculty_leaves.html", leaves=my_leaves)
-
-@faculty_extra_bp.route("/faculty_apply_leave", methods=["POST"])
-@login_required("faculty")
-def faculty_apply_leave():
-    fid = session["faculty_id"]
-    lt  = request.form.get("leave_type")
-    f_d = request.form.get("from_date")
-    t_d = request.form.get("to_date")
-    res = request.form.get("reason")
-    
-    exe("""INSERT INTO leave_applications (faculty_id, leave_type, from_date, to_date, reason)
-           VALUES (%s, %s, %s, %s, %s)""", (fid, lt, f_d, t_d, res))
-    return redirect("/faculty_leaves?applied=1")
 
 @faculty_extra_bp.route("/faculty_notices")
 @login_required("faculty")
@@ -294,14 +340,38 @@ def faculty_notes():
         params.append(f_subject)
     sql += " ORDER BY fn.id DESC"
     notes = qry(sql, params)
-    return render_template("faculty/faculty_notes.html", notes=notes, my_subjects=my_subjects, f_subject=f_subject)
+    notes_list = []
+    for n in notes:
+        d = dict(n)
+        if isinstance(d.get("created_at"), (datetime, date)):
+            d["created_at"] = d["created_at"].strftime("%Y-%m-%d")
+        elif d.get("created_at"):
+            d["created_at"] = str(d["created_at"])[:10]
+        notes_list.append(d)
+    return render_template("faculty/faculty_notes.html", notes=notes_list, my_subjects=my_subjects, f_subject=f_subject)
 
 @faculty_extra_bp.route("/faculty_save_note", methods=["POST"])
 @login_required("faculty")
 def faculty_save_note():
-    exe("INSERT INTO faculty_notes(faculty_id,subject,title,content,note_type) VALUES(%s,%s,%s,%s,%s)",
+    import os
+    import uuid
+    from flask import current_app
+    
+    attachment = request.files.get("attachment")
+    attachment_path = None
+    if attachment and attachment.filename:
+        filename = attachment.filename
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext in ["xlsx", "xls", "pdf", "jpg", "jpeg", "png"]:
+            new_filename = f"{uuid.uuid4().hex}.{ext}"
+            upload_dir = os.path.join(current_app.root_path, "static", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            attachment.save(os.path.join(upload_dir, new_filename))
+            attachment_path = f"/static/uploads/{new_filename}"
+            
+    exe("INSERT INTO faculty_notes(faculty_id,subject,title,content,note_type,attachment_path) VALUES(%s,%s,%s,%s,%s,%s)",
         (session["faculty_id"], request.form.get("subject",""), request.form.get("title",""),
-         request.form.get("content",""), request.form.get("note_type","Lecture Note")))
+         request.form.get("content",""), request.form.get("note_type","Lecture Note"), attachment_path))
     return redirect("/faculty_notes?success=1")
 
 @faculty_extra_bp.route("/faculty_edit_note", methods=["POST"])
@@ -332,7 +402,25 @@ def faculty_timetable():
 
     fac_id  = session.get("faculty_id")
 
-    all_entries = [dict(e) for e in qry(f"SELECT t.*, f.name as teacher FROM timetable t JOIN faculty f ON t.faculty_id = f.id WHERE t.faculty_id=%s ORDER BY {DAY_ORD}, t.start_time", (fac_id,))]
+    faculty_name = session.get("name", "")
+    master_rows = [dict(e) for e in qry(f"""
+        SELECT * FROM timetable 
+        WHERE faculty_id = %s 
+        OR (teacher IS NOT NULL AND TRIM(REPLACE(teacher, ' ', '')) ILIKE TRIM(REPLACE(%s, ' ', '')))
+        ORDER BY {DAY_ORD}, start_time
+    """, (fac_id, faculty_name))]
+    for m in master_rows:
+        m['status'] = 'approved'
+        m['teacher'] = faculty_name or m.get('teacher') or 'You'
+        m['time_slot'] = m.get('time') or ''
+        m['time'] = m.get('time') or ''
+
+    self_rows = [dict(e) for e in qry("SELECT * FROM faculty_timetable WHERE faculty_id = %s AND status != 'approved'", (fac_id,))]
+    for s in self_rows:
+        s['time'] = s.get('time_slot') or ''
+        s['teacher'] = session.get('name', 'You')
+
+    all_entries = master_rows + self_rows
     for e in all_entries: 
         e["time"] = normalize_time(e.get("time",""))
 
@@ -369,13 +457,40 @@ def faculty_timetable():
     lab     = sum(1 for e in all_entries if e.get("slot_type")=="Lab")
     days_active = len(set(e["day"] for e in all_entries))
 
+    # Self-service stats queries
+    total_slots_row = qone("SELECT COUNT(*) FROM faculty_timetable WHERE faculty_id=%s AND status='approved'", (fac_id,))
+    total_slots = total_slots_row[0] if total_slots_row else 0
+
+    theory_count_row = qone("SELECT COUNT(*) FROM faculty_timetable WHERE faculty_id=%s AND status='approved' AND slot_type='Theory'", (fac_id,))
+    theory_count = theory_count_row[0] if theory_count_row else 0
+
+    lab_count_row = qone("SELECT COUNT(*) FROM faculty_timetable WHERE faculty_id=%s AND status='approved' AND slot_type='Lab'", (fac_id,))
+    lab_count = lab_count_row[0] if lab_count_row else 0
+
+    active_days_row = qone("SELECT COUNT(DISTINCT day) FROM faculty_timetable WHERE faculty_id=%s AND status='approved'", (fac_id,))
+    active_days_val = active_days_row[0] if active_days_row else 0
+
+    time_slots_count_row = qone("SELECT COUNT(DISTINCT time_slot) FROM faculty_timetable WHERE faculty_id=%s AND status='approved'", (fac_id,))
+    time_slots_count = time_slots_count_row[0] if time_slots_count_row else 0
+
+    pending_count_row = qone("SELECT COUNT(*) FROM faculty_timetable WHERE faculty_id=%s AND status='pending'", (fac_id,))
+    pending_count = pending_count_row[0] if pending_count_row else 0
+
+    draft_count_row = qone("SELECT COUNT(*) FROM faculty_timetable WHERE faculty_id=%s AND status IN ('draft', 'rejected')", (fac_id,))
+    draft_count = draft_count_row[0] if draft_count_row else 0
+
     return render_template("faculty/faculty_timetable.html",
         entries=entries, all_entries=all_entries,
         grid=grid, time_slots=time_slots,
         DAYS=DAYS, view=view, f_day=f_day, f_type=f_type,
         total=total, theory=theory, lab=lab,
         days_active=days_active,
-        today_name=date.today().strftime("%A")
+        today_name=date.today().strftime("%A"),
+        total_slots=total_slots, theory_count=theory_count,
+        lab_count=lab_count, active_days=active_days_val,
+        time_slots_count=time_slots_count, pending_count=pending_count,
+        draft_count=draft_count,
+        DEPARTMENTS=DEPARTMENTS
     )
 
 @faculty_extra_bp.route("/faculty_profile")
@@ -467,8 +582,8 @@ def import_marks_v2():
             dept = ""
 
         exe(
-            "INSERT INTO marks(faculty_id,student_id,student_name,roll,subject,department,marks,total,exam_type,date) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (fid, stu_id, name, roll, subj, dept, marks_f, total_f, exam_t, att_date),
+            "INSERT INTO marks(faculty_id,student_id,student_name,roll,subject,department,marks,total,exam_type,date,remarks) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (fid, stu_id, name, roll, subj, dept, marks_f, total_f, exam_t, att_date, ""),
         )
         added += 1
     return redirect(f"/faculty_marks?imported={added}")
@@ -551,8 +666,8 @@ def faculty_save_result():
 
     marks_val = min(marks_val, 60.0)
     total_val = 60.0
-    g   = grade(marks_val, total_val)
-    res = "Pass" if pct(marks_val, total_val) >= 40 else "Fail"
+    g = request.form.get("grade", "").strip() or grade(marks_val, total_val)
+    res = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
 
     exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
                                marks,total,exam_type,grade,result,faculty_id,published,
@@ -587,8 +702,8 @@ def faculty_edit_result():
 
     marks_val = min(marks_val, 60.0)
     total_val = 60.0
-    g = grade(marks_val, total_val)
-    res = "Pass" if pct(marks_val, total_val) >= 40 else "Fail"
+    g = request.form.get("grade", "").strip() or grade(marks_val, total_val)
+    res = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
     exe("""UPDATE results SET semester=%s,subject=%s,marks=%s,total=%s,
            exam_type=%s,grade=%s,result=%s, assignment_marks=%s, attendance_marks=%s,
            teaching_assessment=%s, ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s
@@ -652,3 +767,216 @@ def export_cumulative_excel():
     buf.seek(0)
     return send_file(buf, as_attachment=True, download_name="cumulative_marks.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# ── Assessment Module Routes ───────────────────────────────────
+
+@faculty_extra_bp.route("/faculty/assessments")
+@login_required("faculty")
+def faculty_assessments():
+    fid = session.get("faculty_id")
+    # Fetch assigned subjects/divisions/departments
+    my_assignments = qry("SELECT DISTINCT subject_name, division, department FROM faculty_subject_assignments WHERE faculty_id = %s", (fid,))
+    if not my_assignments:
+        my_assignments = qry("SELECT DISTINCT name as subject_name, division, department FROM subjects WHERE teacher LIKE %s", (f"%{session['name']}%",))
+
+    subjects_list = sorted(list(set(a["subject_name"] for a in my_assignments if a["subject_name"])))
+    divisions_list = sorted(list(set(a["division"] for a in my_assignments if a["division"])))
+    departments_list = sorted(list(set(a["department"] for a in my_assignments if a["department"])))
+
+    selected_subject = request.args.get("subject", "").strip()
+    selected_div = request.args.get("division", "").strip()
+    selected_dept = request.args.get("department", "").strip()
+
+    students = []
+    assessments_map = {}
+    if selected_subject:
+        sql = "SELECT * FROM students WHERE 1=1"
+        params = []
+        if selected_div:
+            sql += " AND division = %s"
+            params.append(selected_div)
+        if selected_dept:
+            sql += " AND department = %s"
+            params.append(selected_dept)
+        sql += " ORDER BY name"
+        students = qry(sql, params)
+
+        raw_assessments = qry("SELECT * FROM assessments WHERE subject = %s", (selected_subject,))
+        assessments_map = {r["student_id"]: dict(r) for r in raw_assessments}
+
+    return render_template(
+        "faculty/faculty_assessments.html",
+        my_assignments=my_assignments,
+        subjects_list=subjects_list,
+        divisions_list=divisions_list,
+        departments_list=departments_list,
+        students=students,
+        assessments_map=assessments_map,
+        selected_subject=selected_subject,
+        selected_div=selected_div,
+        selected_dept=selected_dept
+    )
+
+@faculty_extra_bp.route("/faculty/assessments/edit/<int:student_id>/<path:subject>")
+@login_required("faculty")
+def edit_assessment(student_id, subject):
+    student = qone("SELECT * FROM students WHERE id = %s", (student_id,))
+    if not student:
+        return redirect("/faculty/assessments")
+
+    assessment = qone("SELECT * FROM assessments WHERE student_id = %s AND subject = %s", (student_id, subject))
+    if assessment:
+        assessment = dict(assessment)
+    else:
+        assessment = {}
+
+    return render_template(
+        "faculty/edit_assessment.html",
+        student=dict(student),
+        subject=subject,
+        assessment=assessment
+    )
+
+@faculty_extra_bp.route("/faculty/assessments/save", methods=["POST"])
+@login_required("faculty")
+def save_assessment():
+    student_id = int(request.form.get("student_id"))
+    subject = request.form.get("subject", "").strip()
+    selected_div = request.form.get("selected_div", "").strip()
+    selected_dept = request.form.get("selected_dept", "").strip()
+
+    assignment_1 = request.form.get("assignment_1", "").strip()
+    assignment_2 = request.form.get("assignment_2", "").strip()
+    assignment_3 = request.form.get("assignment_3", "").strip()
+    assignment_4 = request.form.get("assignment_4", "").strip()
+    assignment_5 = request.form.get("assignment_5", "").strip()
+
+    paper_q1 = request.form.get("paper_q1", "").strip()
+    paper_q2 = request.form.get("paper_q2", "").strip()
+    paper_q3 = request.form.get("paper_q3", "").strip()
+    paper_q4 = request.form.get("paper_q4", "").strip()
+    patent_publication = request.form.get("patent_publication", "").strip()
+    copyright = request.form.get("copyright", "").strip()
+
+    project_review_1 = request.form.get("project_review_1", "").strip()
+    project_review_2 = request.form.get("project_review_2", "").strip()
+    implementation_documentation = request.form.get("implementation_documentation", "").strip()
+    remark = request.form.get("remark", "").strip()
+
+    existing = qone("SELECT id FROM assessments WHERE student_id = %s AND subject = %s", (student_id, subject))
+    if existing:
+        exe("""
+            UPDATE assessments SET 
+                assignment_1 = %s, assignment_2 = %s, assignment_3 = %s, assignment_4 = %s, assignment_5 = %s,
+                paper_q1 = %s, paper_q2 = %s, paper_q3 = %s, paper_q4 = %s,
+                patent_publication = %s, copyright = %s,
+                project_review_1 = %s, project_review_2 = %s,
+                implementation_documentation = %s, remark = %s,
+                faculty_id = %s, updated_at = %s
+            WHERE id = %s
+        """, (
+            assignment_1, assignment_2, assignment_3, assignment_4, assignment_5,
+            paper_q1, paper_q2, paper_q3, paper_q4,
+            patent_publication, copyright,
+            project_review_1, project_review_2,
+            implementation_documentation, remark,
+            session["faculty_id"], datetime.utcnow(), existing["id"]
+        ))
+    else:
+        exe("""
+            INSERT INTO assessments (
+                student_id, subject, faculty_id,
+                assignment_1, assignment_2, assignment_3, assignment_4, assignment_5,
+                paper_q1, paper_q2, paper_q3, paper_q4,
+                patent_publication, copyright,
+                project_review_1, project_review_2,
+                implementation_documentation, remark
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            student_id, subject, session["faculty_id"],
+            assignment_1, assignment_2, assignment_3, assignment_4, assignment_5,
+            paper_q1, paper_q2, paper_q3, paper_q4,
+            patent_publication, copyright,
+            project_review_1, project_review_2,
+            implementation_documentation, remark
+        ))
+
+    from flask import flash
+    flash("Assessment details updated successfully.", "success")
+    return redirect(url_for("faculty_extra.faculty_assessments", subject=subject, division=selected_div, department=selected_dept))
+
+
+@faculty_extra_bp.route("/faculty/marks/publish-ut", methods=["POST"])
+@login_required("faculty")
+def publish_ut():
+    data = request.json if request.is_json else request.form
+    subject_code = data.get("subject_code")
+    division = data.get("division")
+    semester = data.get("semester")
+    
+    if not (subject_code and division and semester):
+        return jsonify({"errors": "Missing required fields"}), 400
+        
+    cur = exe("""
+        UPDATE marks
+        SET ut_published = TRUE
+        WHERE ut_marks IS NOT NULL
+          AND (subject_code = %s OR subject = %s)
+          AND semester = %s
+          AND student_id IN (
+              SELECT id FROM students WHERE division = %s
+          )
+    """, (subject_code, subject_code, semester, division))
+    
+    return jsonify({"updated": cur.rowcount}), 200
+
+
+@faculty_extra_bp.route("/faculty/marks/publish-mse", methods=["POST"])
+@login_required("faculty")
+def publish_mse():
+    data = request.json if request.is_json else request.form
+    subject_code = data.get("subject_code")
+    division = data.get("division")
+    semester = data.get("semester")
+    
+    if not (subject_code and division and semester):
+        return jsonify({"errors": "Missing required fields"}), 400
+        
+    cur = exe("""
+        UPDATE marks
+        SET mse_published = TRUE
+        WHERE mse_marks IS NOT NULL
+          AND (subject_code = %s OR subject = %s)
+          AND semester = %s
+          AND student_id IN (
+              SELECT id FROM students WHERE division = %s
+          )
+    """, (subject_code, subject_code, semester, division))
+    
+    return jsonify({"updated": cur.rowcount}), 200
+
+
+@faculty_extra_bp.route("/admin/marks/publish-result", methods=["POST"])
+@login_required("admin")
+def publish_result():
+    data = request.json if request.is_json else request.form
+    subject_code = data.get("subject_code")
+    division = data.get("division")
+    semester = data.get("semester")
+    
+    if not (subject_code and division and semester):
+        return jsonify({"errors": "Missing required fields"}), 400
+        
+    cur = exe("""
+        UPDATE marks
+        SET result_published = TRUE
+        WHERE (subject_code = %s OR subject = %s)
+          AND semester = %s
+          AND student_id IN (
+              SELECT id FROM students WHERE division = %s
+          )
+    """, (subject_code, subject_code, semester, division))
+    
+    return jsonify({"updated": cur.rowcount}), 200
+
+

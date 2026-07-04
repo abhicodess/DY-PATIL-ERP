@@ -9,4 +9,4 @@ scrape_configs:
   - job_name: 'flask_apps'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['app1:8000', 'app2:8000', 'app3:8000']
+      - targets: ['app1:8000']

@@ -9,8 +9,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
   {% block head %}{% endblock %}
   <style>
     :root {
@@ -396,7 +397,9 @@
 
     .main {
       margin-left: var(--sb-w);
-      padding: calc(var(--tb-h) + 28px) 28px 32px
+      padding: calc(var(--tb-h) + 28px) 28px 32px;
+      max-width: calc(100vw - var(--sb-w));
+      overflow-x: hidden;
     }
 
     .ph {
@@ -768,6 +771,17 @@
 
     .btn-danger:hover {
       background: var(--red);
+      color: #fff
+    }
+
+    .btn-am {
+      background: var(--amber-s);
+      color: var(--amber);
+      border: 1.5px solid #fde68a
+    }
+
+    .btn-am:hover {
+      background: var(--amber);
       color: #fff
     }
 
@@ -1632,15 +1646,128 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* Global Print styles to fix PDF layouts across all modules */
+    @media print {
+      html, body {
+        background: #fff !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .sidebar,
+      .sidebar-close-btn,
+      .sb-overlay,
+      .mob-header,
+      .mob-bottom-nav,
+      .topbar,
+      .ph-actions,
+      .breadcrumb,
+      .alert-bar,
+      .no-print,
+      .btn,
+      button,
+      form,
+      nav {
+        display: none !important;
+      }
+      .shell {
+        display: block !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      .main {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        overflow: visible !important;
+      }
+      .card,
+      .card-view-grid,
+      #printable-timetable {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        margin-bottom: 20px !important;
+        page-break-inside: avoid !important;
+        background: #fff !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        overflow: visible !important;
+      }
+      .cb, div {
+        overflow: visible !important;
+      }
+      table, .tbl {
+        width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        overflow: visible !important;
+      }
+      th, td, .tbl th, .tbl td {
+        border: 1px solid #cbd5e1 !important;
+        padding: 8px !important;
+        font-size: 11px !important;
+        color: #000 !important;
+        background: #fff !important;
+      }
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 
 <body class="{% if session.get('dark_mode') %}dark-theme{% endif %}">
-  <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+  <!-- Mobile Header Bar -->
+  <header class="mob-header">
+    <button id="sbToggle" class="mob-header-btn" onclick="openDrawer()"><i class="fa-solid fa-bars"></i></button>
+    <img src="{{ url_for('static', filename='images/dypatil_logo.png') }}" class="mob-header-logo" alt="DY Patil Logo">
+    <a href="{% if session.role == 'admin' %}{{ url_for('features.admin_notifications') }}{% elif session.role == 'faculty' %}/faculty_notices{% else %}/student_notices{% endif %}" class="mob-header-btn">
+      <i class="fa-solid fa-bell"></i>
+      <span class="badge-dot"></span>
+    </a>
+  </header>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mob-bottom-nav">
+    <a href="{% if session.role == 'admin' %}/admin{% elif session.role == 'faculty' %}/faculty_dashboard{% else %}/student_dashboard{% endif %}" class="mob-nav-item">
+      <i class="fa-solid fa-house"></i>
+      <span>Home</span>
+    </a>
+    <a href="{% if session.role == 'admin' %}/timetable/{% elif session.role == 'faculty' %}/faculty_timetable{% else %}/student_timetable{% endif %}" class="mob-nav-item">
+      <i class="fa-solid fa-calendar-days"></i>
+      <span>Timetable</span>
+    </a>
+    <a href="{% if session.role == 'admin' %}/attendance_dashboard{% elif session.role == 'faculty' %}/faculty/attendance_portal{% else %}/student_attendance_dashboard{% endif %}" class="mob-nav-item">
+      <i class="fa-solid fa-clipboard-user"></i>
+      <span>Attendance</span>
+    </a>
+    <a href="{% if session.role == 'admin' %}{{ url_for('results.index') }}{% elif session.role == 'faculty' %}/faculty_results{% else %}/student_marks{% endif %}" class="mob-nav-item">
+      <i class="fa-solid fa-square-poll-vertical"></i>
+      <span>Results</span>
+    </a>
+    <a href="{% if session.role == 'admin' %}/admin_profile{% elif session.role == 'faculty' %}/faculty_profile{% else %}/student_profile{% endif %}" class="mob-nav-item">
+      <i class="fa-solid fa-user"></i>
+      <span>Profile</span>
+    </a>
+  </nav>
+
   <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
   <div class="shell">
     <div class="sidebar">
+      <button class="sidebar-close-btn" id="sidebarClose" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
       <div class="sb-brand">
         <img src="{{ url_for('static', filename='images/dypatil_logo.png') }}" class="sb-logo-img" alt="DY Patil">
         <div>
@@ -1654,28 +1781,33 @@
             <div class="sb-sec">Overview</div>
             <a href="/admin" class="sb-link {{ 'active' if request.path == '/admin' }}"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
             <a href="/analytics" class="sb-link {{ 'active' if request.path == '/analytics' }}"><i class="fa-solid fa-chart-line"></i> Analytics</a>
-            
-            <div class="sb-sec">Management</div>
-            <a href="/students" class="sb-link {{ 'active' if request.path == '/students' }}"><i class="fa-solid fa-users"></i> Students</a>
-            <a href="/faculty" class="sb-link {{ 'active' if request.path == '/faculty' }}"><i class="fa-solid fa-chalkboard-user"></i> Faculty</a>
-            <a href="/admin/faculty_assignments" class="sb-link {{ 'active' if 'faculty_assignments' in request.path }}"><i class="fa-solid fa-link"></i> Faculty Assignments</a>
+                        <div class="sb-sec">Management</div>
+            <a href="/students/" class="sb-link {{ 'active' if request.path == '/students/' }}"><i class="fa-solid fa-users"></i> Students</a>
+            <a href="/faculty/" class="sb-link {{ 'active' if request.path == '/faculty/' }}"><i class="fa-solid fa-chalkboard-user"></i> Faculty</a>
+            <a href="/admin/faculty_assignments" class="sb-link {{ 'active' if 'faculty_assignments' in request.path }}"><i class="fa-solid fa-link"></i> Faculty Sub Alot</a>
             <a href="{{ url_for('admin.subjects') }}" class="sb-link {{ 'active' if 'subjects' in request.path }}"><i class="fa-solid fa-book"></i> Subjects</a>
-            <a href="{{ url_for('hr.faculty_list') }}" class="sb-link {{ 'active' if 'hr' in request.path }}"><i class="fa-solid fa-user-tie"></i> HR / Payroll</a>
-            <a href="/admin/faculty_leave_requests" class="sb-link {{ 'active' if 'faculty_leave_requests' in request.path }}"><i class="fa-solid fa-calendar-minus"></i> Faculty Leaves</a>
-            <a href="{{ url_for('admissions.dashboard') }}" class="sb-link {{ 'active' if 'admissions' in request.path }}"><i class="fa-solid fa-id-badge"></i> Admissions</a>
+
 
             <div class="sb-sec">Academic</div>
             <a href="/attendance" class="sb-link {{ 'active' if request.path == '/attendance' }}"><i class="fa-solid fa-calendar-check"></i> Attendance Portal</a>
-            <a href="/view_attendance" class="sb-link {{ 'active' if request.path == '/view_attendance' }}"><i class="fa-solid fa-eye"></i> View Attendance</a>
             <a href="/attendance_dashboard" class="sb-link {{ 'active' if request.path == '/attendance_dashboard' }}"><i class="fa-solid fa-table-columns"></i> Attendance Summary</a>
-            <a href="/attendance_roll_call" class="sb-link {{ 'active' if request.path == '/attendance_roll_call' }}"><i class="fa-solid fa-list-ol"></i> Master Roll Call</a>
-            <a href="/timetable" class="sb-link {{ 'active' if request.path == '/timetable' }}"><i class="fa-solid fa-table-cells"></i> Timetable Manager</a>
-            <a href="/calendar" class="sb-link {{ 'active' if request.path == '/calendar' }}"><i class="fa-solid fa-calendar-days"></i> Academic Calendar</a>
+            <a href="/timetable/" class="sb-link {{ 'active' if request.path == '/timetable/' }}"><i class="fa-solid fa-table-cells"></i> Timetable Manager</a>
+            <a href="/admin/timetable-dashboard" class="sb-link {{ 'active' if request.path == '/admin/timetable-dashboard' }}"><i class="fa-solid fa-chart-line"></i> Faculty Timetable
+              {% set f_count = pending_faculty_timetable_count() %}
+              {% if f_count > 0 %}
+                <span class="badge font-mono" style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #fff; background-color: #ef4444; border-radius: 10px; margin-left: 6px; line-height: 1;">{{ f_count }}</span>
+              {% endif %}
+            </a>
+            <a href="/admin/student-timetable-requests" class="sb-link {{ 'active' if request.path == '/admin/student-timetable-requests' }}"><i class="fa-solid fa-clipboard-check"></i> Student Timetable Requests
+              {% set s_count = pending_student_timetable_count() %}
+              {% if s_count > 0 %}
+                <span class="badge font-mono" style="display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #fff; background-color: #ef4444; border-radius: 10px; margin-left: 6px; line-height: 1;">{{ s_count }}</span>
+              {% endif %}
+            </a>
             
             <div class="sb-sec">Examinations & Marks</div>
-            <a href="{{ url_for('exams.schedule') }}" class="sb-link {{ 'active' if 'exams' in request.path }}"><i class="fa-solid fa-file-signature"></i> Exams</a>
             <a href="{{ url_for('results.index') }}" class="sb-link {{ 'active' if 'results' in request.path }}"><i class="fa-solid fa-square-poll-vertical"></i> Results / Marks</a>
-            <a href="{{ url_for('cumulative.cumulative_report') }}" class="sb-link {{ 'active' if 'cumulative' in request.path }}"><i class="fa-solid fa-chart-pie"></i> Cumulative Marks</a>
+            <a href="{{ url_for('cumulative.cumulative_report') }}" class="sb-link {{ 'active' if 'cumulative' in request.path }}"><i class="fa-solid fa-chart-pie"></i> Cumulative Attendance Report</a>
 
             <div class="sb-sec">Communication</div>
             <a href="{{ url_for('features.admin_notifications') }}" class="sb-link {{ 'active' if 'notifications' in request.path }}"><i class="fa-solid fa-bell"></i> Notifications</a>
@@ -1684,8 +1816,6 @@
 
             <div class="sb-sec">Reports & Insights</div>
             <a href="/shortage_report" class="sb-link {{ 'active' if request.path == '/shortage_report' }}"><i class="fa-solid fa-triangle-exclamation"></i> Defaulter Analysis</a>
-            <a href="{{ url_for('admin_intel.admin_attendance_intelligence') }}" class="sb-link {{ 'active' if 'intelligence' in request.path }}"><i class="fa-solid fa-brain"></i> Attendance Intelligence</a>
-            <a href="{{ url_for('admin_intel.admin_faculty_logs') }}" class="sb-link {{ 'active' if 'faculty_sessions' in request.path }}"><i class="fa-solid fa-list-check"></i> Session Audit</a>
             
             <div class="sb-sec">Account</div>
             <a href="/admin_profile" class="sb-link {{ 'active' if request.path == '/admin_profile' }}"><i class="fa-solid fa-user-gear"></i> My Profile</a>
@@ -1696,13 +1826,10 @@
             <a href="/faculty/attendance_portal" class="sb-link {{ 'active' if 'attendance_portal' in request.path }}"><i class="fa-solid fa-calendar-check"></i> Attendance Portal</a>
             <a href="/faculty/session_history" class="sb-link {{ 'active' if 'session_history' in request.path }}"><i class="fa-solid fa-list-check"></i> Session History</a>
             <a href="/faculty/my_students" class="sb-link {{ 'active' if 'my_students' in request.path }}"><i class="fa-solid fa-users"></i> My Students</a>
+            <a href="/faculty/assessments" class="sb-link {{ 'active' if 'assessments' in request.path }}"><i class="fa-solid fa-clipboard-list"></i> Assessments</a>
             <a href="/faculty_timetable" class="sb-link {{ 'active' if request.path == '/faculty_timetable' }}"><i class="fa-solid fa-table-cells"></i> Timetable</a>
-            <a href="/calendar" class="sb-link {{ 'active' if request.path == '/calendar' }}"><i class="fa-solid fa-calendar-days"></i> Academic Calendar</a>
+            <a href="/faculty/assign-student-timetable" class="sb-link {{ 'active' if request.path == '/faculty/assign-student-timetable' }}"><i class="fa-solid fa-calendar-plus"></i> Assign Student Timetable</a>
 
-            <div class="sb-sec">Examinations</div>
-            <a href="/faculty_marks" class="sb-link {{ 'active' if request.path == '/faculty_marks' }}"><i class="fa-solid fa-square-poll-vertical"></i> Marks Entry</a>
-            <a href="/faculty_cumulative" class="sb-link {{ 'active' if request.path == '/faculty_cumulative' }}"><i class="fa-solid fa-chart-pie"></i> Cumulative Marks</a>
-            <a href="/faculty_results" class="sb-link {{ 'active' if request.path == '/faculty_results' }}"><i class="fa-solid fa-square-poll-horizontal"></i> Results</a>
 
             <div class="sb-sec">Communication</div>
             <a href="/messages" class="sb-link {{ 'active' if 'messages' in request.path }}"><i class="fa-solid fa-envelope"></i> Messages</a>
@@ -1710,7 +1837,6 @@
             <a href="/faculty_notes" class="sb-link {{ 'active' if request.path == '/faculty_notes' }}"><i class="fa-solid fa-file-lines"></i> Study Material</a>
 
             <div class="sb-sec">Account</div>
-            <a href="/faculty_leaves" class="sb-link {{ 'active' if request.path == '/faculty_leaves' }}"><i class="fa-solid fa-calendar-minus"></i> Leave Application</a>
             <a href="/faculty_profile" class="sb-link {{ 'active' if request.path == '/faculty_profile' }}"><i class="fa-solid fa-user-gear"></i> My Profile</a>
             <a href="/logout" class="sb-link"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
           {% elif session.role == 'student' %}
@@ -1719,6 +1845,7 @@
             <a href="/student_attendance" class="sb-link {{ 'active' if request.path == '/student_attendance' }}"><i class="fa-solid fa-calendar-check"></i> Attendance</a>
             <a href="/student_timetable" class="sb-link {{ 'active' if request.path == '/student_timetable' }}"><i class="fa-solid fa-table-cells"></i> Timetable</a>
             <a href="/student_marks" class="sb-link {{ 'active' if request.path == '/student_marks' }}"><i class="fa-solid fa-graduation-cap"></i> My Marks</a>
+            <a href="/student/assessments" class="sb-link {{ 'active' if 'assessments' in request.path }}"><i class="fa-solid fa-clipboard-list"></i> My Assessments</a>
             
             <div class="sb-sec">Academic</div>
             <a href="/student_notices" class="sb-link {{ 'active' if request.path == '/student_notices' }}"><i class="fa-solid fa-bullhorn"></i> Notices</a>
@@ -1849,5 +1976,6 @@
     document.getElementById('sbOverlay').addEventListener('click', closeSidebar);
     window.addEventListener('resize', function() { if (window.innerWidth > 768) closeSidebar(); });
   </script>
+  <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
 </body>
 </html>

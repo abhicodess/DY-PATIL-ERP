@@ -10,6 +10,13 @@ ATT_BACKUP_DIR = os.path.join("backups", "attendance_engine")
 
 def ensure_attendance_engine_schema():
     conn = get_db()
+    is_sqlite = False
+    try:
+        from extensions import db
+        if db.engine.dialect.name != 'postgresql':
+            is_sqlite = True
+    except Exception:
+        pass
     try:
         for sql in (
             """
@@ -33,12 +40,27 @@ def ensure_attendance_engine_schema():
                 locked_at TIMESTAMP NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                lecture_type TEXT DEFAULT 'Lecture',
+                academic_year TEXT DEFAULT '',
+                semester TEXT DEFAULT '',
                 UNIQUE(subject, division, branch, lecture_date, time_slot, faculty_id)
             )
             """,
             """
             ALTER TABLE attendance_sessions
             ADD COLUMN IF NOT EXISTS locked_at TIMESTAMP NULL
+            """,
+            """
+            ALTER TABLE attendance_sessions
+            ADD COLUMN IF NOT EXISTS lecture_type TEXT DEFAULT 'Lecture'
+            """,
+            """
+            ALTER TABLE attendance_sessions
+            ADD COLUMN IF NOT EXISTS academic_year TEXT DEFAULT ''
+            """,
+            """
+            ALTER TABLE attendance_sessions
+            ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT ''
             """,
             """
             ALTER TABLE attendance
@@ -205,6 +227,8 @@ def ensure_attendance_engine_schema():
             """
         ):
             try:
+                if is_sqlite:
+                    sql = sql.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
                 conn.execute(sql)
             except Exception as exc:
                 message = str(exc).lower()

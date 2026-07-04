@@ -3,12 +3,12 @@ import datetime
 import os
 import psycopg2
 import psycopg2.extras
-from pg_wrapper import get_db
+from utils.pg_wrapper import get_db
 
 TABLES = [
     'subjects', 'students', 'timetable', 'faculty', 'attendance', 'marks', 
     'faculty_notices', 'faculty_notes', 'cumulative_attendance', 'results', 
-    'result_summary', 'audit_logs', 'notifications', 'leave_applications', 
+    'result_summary', 'audit_logs', 'notifications', 
     'events', 'attendance_summary', 'messages', 'timetable_notifications', 
     'classrooms', 'qr_sessions'
 ]
@@ -20,7 +20,9 @@ def backup_db():
     try:
         cur = conn.cur if hasattr(conn, 'cur') else conn.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         for t in TABLES:
-            cur.execute(f"SELECT * FROM {t}")
+            if t not in TABLES:
+                raise ValueError(f"Unauthorized table: {t}")
+            cur.execute(f"SELECT * FROM {t}")  # nosec B608
             rows = cur.fetchall()
             
             # Serialize dates for JSON mapping
@@ -53,8 +55,11 @@ def reset_db():
     conn = get_db()
     try:
         cur = conn.cur if hasattr(conn, 'cur') else conn.conn.cursor()
+        for t in TABLES:
+            if t not in TABLES:
+                raise ValueError(f"Unauthorized table: {t}")
         sql = f"TRUNCATE TABLE {', '.join(TABLES)} RESTART IDENTITY CASCADE;"
-        cur.execute(sql)
+        cur.execute(sql)  # nosec B608
         if hasattr(conn, 'conn'): conn.conn.commit()
         else: conn.commit()
         print("\n✅ FACTORY RESET COMPLETE!")

@@ -1,6 +1,5 @@
 {% extends "attendance/attendance_base.html" %}
 
-
 {% block title %}{{ student.name }} — Attendance{% endblock %}
 {% block page_title %}Student Attendance{% endblock %}
 {% block breadcrumb %}
@@ -33,12 +32,85 @@
   }
 
   /* Professional PDF Report Styling */
-  #officialReport { display: none; background: #fff; color: #000; font-family: 'Times New Roman', serif; }
-  .pdf-shell { padding: 40px; border: 1px solid #eee; }
-  .pdf-brand { border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-  .pdf-brand img { height: 80px; }
-  .pdf-brand h1 { font-size: 24px; margin: 0; color: #1e293b; text-align: right; }
-  .pdf-brand p { font-size: 14px; margin: 5px 0 0; color: #64748b; text-align: right; }
+  #officialReport { display: none; background: #fff; color: #000; font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+  .pdf-shell { padding: 30px; border: 1px solid #e2e8f0; }
+  
+  .pdf-brand {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%);
+    padding: 24px 30px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+  }
+  .pdf-brand::before {
+    content: '';
+    position: absolute;
+    right: -40px; top: -40px;
+    width: 150px; height: 150px;
+    background: rgba(255,255,255,.04);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .pdf-brand::after {
+    content: '';
+    position: absolute;
+    right: 30px; bottom: -30px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,.03);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .pdf-brand img {
+    height: 60px;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 5px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .pdf-brand-text {
+    text-align: right;
+    z-index: 2;
+  }
+  .pdf-brand h1 {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+  .pdf-brand p {
+    font-size: 11px;
+    margin: 0 0 4px;
+    color: #93c5fd;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .pdf-brand .pdf-brand-sub {
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .pdf-watermark {
+    position: absolute;
+    left: 45%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 72px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.05);
+    letter-spacing: -3px;
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+  }
   
   .pdf-meta-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
   .pdf-meta-table td { padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 14px; }
@@ -62,7 +134,7 @@
     </div>
     <div class="report-title">
         <h1>ATTENDANCE ANALYTICS REPORT</h1>
-        <p>Academic Year 2025-26 • DY Patil University Ambi, Pune</p>
+        <p>DY Patil University, Pune • School of Engineering & Technology</p>
     </div>
 </div>
 
@@ -111,6 +183,14 @@
     </form>
     {% endif %}
     {% endif %}
+  </div>
+</div>
+
+<!-- Color-Coded Circular Summary at Top -->
+<div class="flex-ac justify-center mb20 fu" style="justify-content: center; width: 100%;">
+  <div class="att-summary-circle {% if cum.percentage>=75 %}safe{% elif cum.percentage>=65 %}warning{% else %}danger{% endif %}">
+    <div class="att-summary-val">{{ cum.percentage }}%</div>
+    <div class="att-summary-lbl">{% if cum.percentage>=75 %}Safe{% elif cum.percentage>=65 %}Warning{% else %}Low{% endif %}</div>
   </div>
 </div>
 
@@ -332,7 +412,9 @@
     </div>
   </div>
   <div class="cb p0">
-    <table class="tbl">
+    
+    <!-- DESKTOP TABLE VIEW -->
+    <table class="tbl desktop-only">
       <thead>
         <tr>
           <th>#</th>
@@ -353,17 +435,17 @@
             <td style="font-weight:600;font-size:13px">{{ s.subject }}</td>
             <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
             <td>
-              <span class="tag {% if s.percentage>85 %}t-gr{% elif s.percentage>=75 %}t-am{% else %}t-re{% endif %}">
+              <span class="tag {% if s.percentage>=75 %}t-gr{% elif s.percentage>=65 %}t-am{% else %}t-re{% endif %}">
                 {{ s.percentage }}%
               </span>
             </td>
             <td style="min-width:120px">
               <div style="background:#F3F4F6;border-radius:99px;height:8px;overflow:hidden">
-                <div style="height:100%;border-radius:99px;background:{% if s.percentage>85 %}#059669{% elif s.percentage>=75 %}#D97706{% else %}#DC2626{% endif %};width:{{ [s.percentage,100]|min }}%"></div>
+                <div style="height:100%;border-radius:99px;background:{% if s.percentage>=75 %}#059669{% elif s.percentage>=65 %}#D97706{% else %}#DC2626{% endif %};width:{{ [s.percentage,100]|min }}%"></div>
               </div>
             </td>
             <td>
-              <span style="font-size:12px;font-weight:600;color:{% if s.status=='Good' %}#059669{% elif s.status=='Average' %}#D97706{% else %}#DC2626{% endif %}">
+              <span style="font-size:12px;font-weight:600;color:{% if s.percentage>=75 %}#059669{% elif s.percentage>=65 %}#D97706{% else %}#DC2626{% endif %}">
                 {{ s.status }}
               </span>
             </td>
@@ -401,6 +483,39 @@
         {% endif %}
       </tbody>
     </table>
+
+    <!-- MOBILE CARD VIEW -->
+    <div class="mobile-only" style="padding: 10px 16px;">
+      {% if subjects %}
+        {% for s in subjects %}
+        <div class="att-subj-card">
+          <div class="att-subj-left">
+            <div class="att-subj-title">{{ s.subject }}</div>
+            <div class="att-subj-stats">{{ s.attended }} / {{ s.total }} lectures</div>
+            <div class="prog-track">
+              <div class="prog-bar {% if s.percentage>=75 %}pb-gr{% elif s.percentage>=65 %}pb-am{% else %}pb-re{% endif %}" style="width: {{ s.percentage }}%"></div>
+            </div>
+            <div style="font-size: 11px; margin-top: 6px;">
+              {% if s.shortage > 0 %}
+                <span style="color:var(--red)"><i class="fas fa-arrow-up"></i> Need {{ s.shortage }} more</span>
+              {% elif s.can_miss > 0 %}
+                <span style="color:var(--green)"><i class="fas fa-arrow-down"></i> Can miss {{ s.can_miss }}</span>
+              {% else %}
+                <span style="color:var(--ink4)">Stable</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="att-subj-right">
+            <div class="att-subj-pct" style="color:{% if s.percentage>=75 %}var(--green){% elif s.percentage>=65 %}var(--amber){% else %}var(--red){% endif %};">{{ s.percentage }}%</div>
+            <div style="font-size: 10px; font-weight: 600; color: var(--ink4); margin-top: 2px;">{{ s.status }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state"><i class="fas fa-book"></i><p>No subject data.</p></div>
+      {% endif %}
+    </div>
+
   </div>
 </div>
 
@@ -416,10 +531,12 @@
 <div id="officialReport">
   <div class="pdf-shell">
     <div class="pdf-brand">
+      <div class="pdf-watermark">SOET</div>
       <img src="/static/images/dypatil_logo.png" alt="University Logo">
-      <div>
+      <div class="pdf-brand-text">
+        <p>DY Patil University, Pune • School of Engineering & Technology</p>
         <h1>OFFICIAL ATTENDANCE RECORD</h1>
-        <p>DY Patil University Ambi, Pune • Academic Year 2025-26</p>
+        <div class="pdf-brand-sub">Academic Year 2025-26</div>
       </div>
     </div>
     
@@ -519,29 +636,24 @@ function downloadPDFReport() {
 }
 
 // ─── Prediction Chart ───────────────────────────────────────────────────────
-// All data comes from Jinja2 template variables — safe JSON serialization
 var currentPct  = {{ cum.percentage | float }};
 var attended    = {{ cum.attended   | int }};
 var totalLec    = {{ cum.total      | int }};
-var bestCurve   = {{ prediction_curve | tojson }};  // list of 20 floats from backend
+var bestCurve   = {{ prediction_curve | tojson }};
 
-// Compute worst case (attend ZERO future lectures)
 var worstCurve = [];
 for (var i = 1; i <= 20; i++) {
   var t = totalLec + i;
   worstCurve.push(t > 0 ? parseFloat((attended / t * 100).toFixed(1)) : 0);
 }
 
-// Labels: "Now", "+1" … "+20"
 var predLabels = ['Now'];
 for (var j = 1; j <= 20; j++) { predLabels.push('+' + j); }
 
-// Prepend current to both curves
 var bestData  = [currentPct].concat(bestCurve);
 var worstData = [currentPct].concat(worstCurve);
 var line75    = Array(21).fill(75);
 
-// Y-axis range — show meaningful area
 var yMin = Math.max(0,  Math.min(worstData[worstData.length-1], currentPct) - 5);
 var yMax = Math.min(100, Math.max(bestData[bestData.length-1], 80) + 3);
 

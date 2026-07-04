@@ -58,7 +58,6 @@
         </div>
         <div class="fg2">
           <div class="fgrp"><label>Marks Obtained *</label><input type="number" name="marks" step="0.5" min="0" required></div>
-          <div class="fgrp"><label>Total Marks</label><input type="number" name="total" value="100" min="1" required></div>
         </div>
         <div class="fg2">
           <div class="fgrp"><label>Exam Type</label>
@@ -68,6 +67,10 @@
             </select>
           </div>
           <div class="fgrp"><label>Date</label><input type="date" name="date" value="{{ today }}"></div>
+        </div>
+        <div class="fgrp">
+          <label>Remarks</label>
+          <input type="text" name="remarks" placeholder="Enter remarks (e.g. Good performance, Needs improvement)...">
         </div>
       </div>
       <div class="cf">

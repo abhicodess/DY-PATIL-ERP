@@ -239,7 +239,7 @@
         <span style="font-size:11px;color:#94a3b8">students scoring &lt; 40%</span>
       </div>
       <div class="dash-card-body">
-        {% set fail_max = [failed_per_subj.values()|list|max, 1]|max %}
+        {% set fail_max = [failed_per_subj.values()|list|max if failed_per_subj else 0, 1]|max %}
         {% for subj, cnt in failed_per_subj.items()|sort(attribute='1', reverse=True) %}
         {% set fail_pct = (cnt / total_students * 100)|round(1) if total_students else 0 %}
         <div class="fail-item" style="background:{{ '#fef2f2' if cnt>0 else '#f8fafc' }}">

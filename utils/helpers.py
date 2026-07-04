@@ -159,9 +159,9 @@ def normalize_division(div_str):
 
 def grade(marks, total):
     p = pct(marks, total)
-    if p >= 90: return "A+"
-    if p >= 75: return "A"
-    if p >= 60: return "B+"
-    if p >= 50: return "B"
-    if p >= 40: return "C"
+    if p >= 75: return "O"
+    if p >= 65: return "A"
+    if p >= 55: return "B"
+    if p >= 45: return "C"
+    if p >= 35: return "D"
     return "F"

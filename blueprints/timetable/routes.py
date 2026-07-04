@@ -9,10 +9,12 @@ timetable_service = TimetableService()
 @login_required
 def index():
     role = session.get("role")
+    qs = request.query_string.decode('utf-8')
+    suffix = f"?{qs}" if qs else ""
     if role == "admin":
-        return redirect("/timetable_v2")
+        return redirect(f"/timetable_v2{suffix}")
     elif role == "faculty":
-        return redirect("/faculty_timetable")
+        return redirect(f"/faculty_timetable{suffix}")
     elif role == "student":
         from utils.pg_wrapper import qry, qone
         from config import DAYS, DAY_ORD

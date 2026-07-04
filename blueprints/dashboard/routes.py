@@ -28,7 +28,7 @@ def student():
         present = sum(r["attended"] for r in rows)
         total = sum(r["total"] for r in rows)
     else:
-        rows = qry("SELECT status FROM attendance WHERE student_id=%s OR roll=%s", (student_id, student["roll"]))
+        rows = qry("SELECT status FROM attendance WHERE student_id=%s", (student_id,))
         total = len(rows)
         present = sum(1 for r in rows if r["status"] == "Present")
         
@@ -55,11 +55,30 @@ def student():
     """, (student["division"], student["department"], student["year"]))
     
     # Notices
-    notices = qry("""
-        SELECT fn.title, fn.message, fn.created_at, f.name as faculty_name
+    admin_notifs = qry("""
+        SELECT title, message, created_at, 'Admin' as faculty_name, attachment_path, attachment_name
+        FROM notifications 
+        WHERE role_target='student' or role_target='all' 
+        ORDER BY id DESC LIMIT 5
+    """)
+    faculty_notifs = qry("""
+        SELECT fn.title, fn.message, fn.created_at, f.name as faculty_name, NULL as attachment_path, NULL as attachment_name
         FROM faculty_notices fn JOIN faculty f ON fn.faculty_id=f.id
         ORDER BY fn.id DESC LIMIT 5
     """)
+    
+    combined_notices = []
+    for r in admin_notifs:
+        d = dict(r)
+        if d.get("created_at"): d["created_at"] = str(d["created_at"])
+        combined_notices.append(d)
+    for r in faculty_notifs:
+        d = dict(r)
+        if d.get("created_at"): d["created_at"] = str(d["created_at"])
+        combined_notices.append(d)
+        
+    combined_notices.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    notices = combined_notices[:5]
     
     today_name = datetime.now().strftime("%A")
     

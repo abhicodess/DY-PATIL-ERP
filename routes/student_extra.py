@@ -62,7 +62,7 @@ def student_marks():
 @student_extra_bp.route("/student_timetable")
 @student_required
 def student_timetable():
-    return redirect(url_for('timetable.index'))
+    return redirect(url_for('student_timetable.view_student_timetable'))
 
 @student_extra_bp.route("/student_profile")
 @student_required
@@ -72,7 +72,34 @@ def student_profile():
 @student_extra_bp.route("/student_notices")
 @student_required
 def student_notices():
-    return render_template("student/student_notices.html", notices=[])
+    admin_rows = qry("""
+        SELECT title, message, created_at, 'Admin' as faculty_name, attachment_path, attachment_name 
+        FROM notifications 
+        WHERE role_target='student' OR role_target='all' 
+        ORDER BY id DESC
+    """)
+    faculty_rows = qry("""
+        SELECT fn.title, fn.message, fn.created_at, f.name as faculty_name, NULL as attachment_path, NULL as attachment_name
+        FROM faculty_notices fn 
+        JOIN faculty f ON fn.faculty_id=f.id
+        ORDER BY fn.id DESC
+    """)
+    
+    notices_list = []
+    for r in admin_rows:
+        d = dict(r)
+        if d.get("created_at"):
+            d["created_at"] = str(d["created_at"])
+        notices_list.append(d)
+        
+    for r in faculty_rows:
+        d = dict(r)
+        if d.get("created_at"):
+            d["created_at"] = str(d["created_at"])
+        notices_list.append(d)
+        
+    notices_list.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    return render_template("student/student_notices.html", notices=notices_list)
 
 @student_extra_bp.route("/student_notes")
 @student_required
@@ -82,7 +109,26 @@ def student_notes():
 @student_extra_bp.route("/student_analysis")
 @student_required
 def student_analysis():
-    return render_template("student/analysis.html")
+    sid = session.get("student_id")
+    student_row = qone("SELECT * FROM students WHERE id=%s", (sid,))
+    if not student_row:
+        return redirect("/auth/logout")
+    
+    student = dict(student_row)
+    name = student["name"]
+    
+    cum = get_cumulative(sid, name)
+    subjects_list = get_subjects(sid, name)
+    
+    subjects_dict = {}
+    for s in subjects_list:
+        subjects_dict[s["subject"]] = {
+            "present": s["attended"],
+            "total": s["total"],
+            "percentage": s["percentage"]
+        }
+        
+    return render_template("student/analysis.html", summary=cum, subjects=subjects_dict)
 
 @student_extra_bp.route("/student_settings", methods=["GET", "POST"])
 @student_required
@@ -128,14 +174,14 @@ def report_card(student_id):
     
     s = qone("SELECT * FROM students WHERE id=%s", (student_id,))
     if not s: 
-        return redirect("/students")
+      return redirect("/students/")
     s = dict(s)
     name = s["name"]
 
     from utils.helpers import pct, grade, get_today_str
 
     att_rows = qry(
-        f"SELECT subject,status FROM attendance WHERE {att_match_student_sql()}",
+        f"SELECT subject,status FROM attendance WHERE {att_match_student_sql()}",  # nosec B608 - safe match SQL
         att_match_student_params(s["id"], name),
     )
     total_att = len(att_rows)
@@ -152,7 +198,7 @@ def report_card(student_id):
                     "pct": pct(v["p"], v["t"])} for k, v in subj_map.items()]
 
     marks_rows = qry(
-        f"SELECT * FROM marks WHERE {marks_match_student_sql()} ORDER BY subject,exam_type",
+        f"SELECT * FROM marks WHERE {marks_match_student_sql()} ORDER BY subject,exam_type",  # nosec B608 - safe match SQL
         marks_match_student_params(s["id"], name),
     )
     marks_with_grade = []
@@ -225,7 +271,7 @@ def get_cumulative(student_id, student_name):
         source = "summary"
     else:
         rows_raw = qry(
-            f"SELECT status FROM attendance WHERE {att_match_student_sql()}",
+            f"SELECT status FROM attendance WHERE {att_match_student_sql()}",  # nosec B608 - safe match SQL
             att_match_student_params(student_id, student_name)
         )
         total   = len(rows_raw)
@@ -265,7 +311,7 @@ def get_subjects(student_id, student_name):
             })
     else:
         rows = qry(
-            f"SELECT subject, status FROM attendance WHERE {att_match_student_sql()} ORDER BY subject",
+            f"SELECT subject, status FROM attendance WHERE {att_match_student_sql()} ORDER BY subject",  # nosec B608 - safe match SQL
             att_match_student_params(student_id, student_name)
         )
         data = {}
@@ -352,11 +398,12 @@ def student_attendance_dashboard():
 
     # --- Heatmap Calculations (Last 30 Days) ---
     from datetime import date as dt_date, timedelta
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).date().strftime("%Y-%m-%d")
     records_30 = qry("""
         SELECT date, status FROM attendance 
         WHERE student_id = %s 
-        AND date >= CURRENT_DATE - INTERVAL '30 days'
-    """, (sid,))
+        AND date >= %s
+    """, (sid, thirty_days_ago))
     
     date_status_map = {}
     for r in records_30:
@@ -416,3 +463,139 @@ def student_attendance_dashboard():
         heatmap_data=heatmap_data,
         history_records=history_records
     )
+
+@student_extra_bp.route("/student/assessments")
+@student_required
+def student_assessments():
+    sid = session.get("student_id")
+    student = qone("SELECT * FROM students WHERE id = %s", (sid,))
+    if not student:
+        return redirect("/auth/logout")
+
+    # Fetch all entered assessments for this student
+    raw_assessments = qry("""
+        SELECT a.*, f.name as faculty_name 
+        FROM assessments a 
+        LEFT JOIN faculty f ON a.faculty_id = f.id 
+        WHERE a.student_id = %s
+    """, (sid,))
+    
+    assessments_map = {r["subject"]: dict(r) for r in raw_assessments}
+
+    # Fetch student's subjects to show missing ones as well
+    student_subjects = qry("""
+        SELECT DISTINCT name 
+        FROM subjects 
+        WHERE department = %s 
+        AND (division = %s OR division = '' OR division IS NULL)
+    """, (student["department"], student["division"]))
+
+    # Build list of subjects and merge assessment data
+    final_assessments = []
+    seen_subjects = set()
+    
+    # 1. Add subjects that have assessments
+    for subject_name, assess in assessments_map.items():
+        final_assessments.append({
+            "subject": subject_name,
+            "has_data": True,
+            "data": assess
+        })
+        seen_subjects.add(subject_name)
+
+    # 2. Add subjects that don't have assessments yet
+    for s in student_subjects:
+        subj_name = s["name"]
+        if subj_name not in seen_subjects:
+            final_assessments.append({
+                "subject": subj_name,
+                "has_data": False,
+                "data": None
+            })
+            seen_subjects.add(subj_name)
+
+    return render_template(
+        "student/student_assessments.html",
+        student=dict(student),
+        assessments=final_assessments
+    )
+
+
+@student_extra_bp.route("/student/marks/ut", methods=["GET"])
+@login_required("student")
+def get_student_ut_marks():
+    sid = session.get("student_id")
+    rows = qry("""
+        SELECT m.subject_code, m.subject, MAX(m.ut_marks) as ut_marks
+        FROM marks m
+        WHERE m.student_id = %s AND m.ut_published = TRUE AND m.ut_marks IS NOT NULL
+        GROUP BY m.subject_code, m.subject
+    """, (sid,))
+    
+    grouped = {}
+    for r in rows:
+        name = r["subject"]
+        code = r["subject_code"]
+        if not code:
+            sub_master = qone("SELECT subject_code FROM subjects_master WHERE subject_name=%s", (name,))
+            code = sub_master["subject_code"] if sub_master else name
+        if not name:
+            sub_master = qone("SELECT subject_name FROM subjects_master WHERE subject_code=%s", (code,))
+            name = sub_master["subject_name"] if sub_master else code
+            
+        ut_marks = r["ut_marks"]
+        val = float(ut_marks) if ut_marks is not None else 0.0
+        
+        if code not in grouped:
+            grouped[code] = {
+                "subject_code": code,
+                "subject_name": name,
+                "ut_marks": val,
+                "max_ut": 20,
+                "passed_ut": val >= 8
+            }
+        else:
+            if val > grouped[code]["ut_marks"]:
+                grouped[code]["ut_marks"] = val
+                grouped[code]["passed_ut"] = val >= 8
+                
+    return jsonify(list(grouped.values())), 200
+
+
+@student_extra_bp.route("/student/marks/full", methods=["GET"])
+@login_required("student")
+def get_student_full_marks():
+    sid = session.get("student_id")
+    rows = qry("""
+        SELECT m.subject_code, m.subject, m.assignment_marks, m.attendance_marks,
+               m.teaching_assessment, m.ut_marks, m.mse_marks, m.marks, m.grade, m.result
+        FROM marks m
+        WHERE m.student_id = %s AND m.result_published = TRUE
+    """, (sid,))
+    
+    res = []
+    for r in rows:
+        name = r.get("subject")
+        code = r.get("subject_code")
+        if not code:
+            sub_master = qone("SELECT subject_code FROM subjects_master WHERE subject_name=%s", (name,))
+            code = sub_master["subject_code"] if sub_master else name
+        if not name:
+            sub_master = qone("SELECT subject_name FROM subjects_master WHERE subject_code=%s", (code,))
+            name = sub_master["subject_name"] if sub_master else code
+            
+        res.append({
+            "subject_code": code,
+            "subject_name": name,
+            "assignment": float(r.get("assignment_marks") or 0.0),
+            "attendance": float(r.get("attendance_marks") or 0.0),
+            "teaching": float(r.get("teaching_assessment") or 0.0),
+            "ut": float(r.get("ut_marks") or 0.0),
+            "mse": float(r.get("mse_marks") or 0.0),
+            "total": float(r.get("marks") or 0.0),
+            "grade": r.get("grade") or "",
+            "result": r.get("result") or ""
+        })
+    return jsonify(res), 200
+
+

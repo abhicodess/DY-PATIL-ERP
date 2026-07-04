@@ -206,10 +206,21 @@
     margin-top: 2px
   }
 
+  /* Quick action buttons layout */
   .att-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px
+    gap: 10px;
+  }
+  
+  @media (min-width: 768px) {
+    .att-actions {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @media (max-width: 767.98px) {
+    .att-actions {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   .att-action {
@@ -328,8 +339,28 @@
     color: #1d4ed8
   }
 
-  @media (max-width:1180px) {
+  /* Horizontally Scrollable charts container on mobile */
+  .mob-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 991.98px) {
+    .mob-charts-row {
+      display: flex !important;
+      overflow-x: auto !important;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      gap: 16px;
+    }
+    .mob-charts-row > .card {
+      flex: 0 0 320px !important;
+      min-width: 320px !important;
+    }
+  }
 
+  @media (max-width:1180px) {
     .att-hero,
     .att-layout,
     .att-grid-2 {
@@ -338,20 +369,58 @@
   }
 
   @media (max-width:760px) {
-
-    .att-mini-grid,
-    .att-actions {
+    .att-mini-grid {
       grid-template-columns: 1fr
     }
 
     .att-toolbar {
-      align-items: stretch
+      align-items: stretch;
+      width: 100%;
     }
 
     .att-filter-input,
     .att-filter-select {
-      width: 100%
+      width: 100%;
+      flex: 1;
     }
+  }
+
+  /* Segmented button group style */
+  .btn-grp {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  .btn-grp button {
+    border: none !important;
+    background: transparent !important;
+    color: #475569 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-grp button.btn-dark {
+    background: var(--white) !important;
+    color: var(--ink) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+  }
+  .btn-grp button:hover:not(.btn-dark) {
+    background: rgba(0,0,0,0.03) !important;
+  }
+
+  .p6 {
+    padding: 6px 10px !important;
+    border-radius: 8px !important;
+  }
+  
+  #calendarGrid div:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   }
 </style>
 
@@ -463,8 +532,8 @@
   </div>
 </div>
 
-{# ── ROW 1: 3-column — Top Performers | Attendance Health | Action Center ── #}
-<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px" class="fu fu2">
+{# ── ROW 1: Horizontally Scrollable Chart Sections ── #}
+<div class="mob-charts-row fu fu2">
 
   {# Top Performers #}
   <div class="card">
@@ -511,46 +580,112 @@
     </div>
   </div>
 
-  {# Action Center #}
+</div>
+
+{# ── ROW 1.5: Trends & Calendar Card Row ── #}
+<div class="mob-charts-row fu fu2 mb16">
+  {# Attendance Trends #}
   <div class="card">
-    <div class="ch">
-      <div class="ct">Action Center</div>
-      <div class="cs">Jump to the most common attendance workflows</div>
+    <div class="ch flex-sb" style="align-items: center;">
+      <div>
+        <div class="ct">Attendance Trends</div>
+        <div class="cs">Student attendance percentage over time</div>
+      </div>
+      <div class="btn-grp">
+        <button class="trend-toggle btn btn-sm btn-dark" data-view="daily">Daily</button>
+        <button class="trend-toggle btn btn-sm btn-out" data-view="weekly">Weekly</button>
+        <button class="trend-toggle btn btn-sm btn-out" data-view="monthly">Monthly</button>
+      </div>
     </div>
     <div class="cb">
-      <div class="att-actions">
-        <a href="/attendance" class="att-action">
-          <div class="att-action-ico ic-bl"><i class="fas fa-calendar-check"></i></div>
-          <div class="att-action-copy"><strong>Mark Attendance</strong><span>Create single, bulk, or Excel entries</span></div>
-        </a>
-        <a href="/view_attendance" class="att-action">
-          <div class="att-action-ico ic-vi"><i class="fas fa-eye"></i></div>
-          <div class="att-action-copy"><strong>View Records</strong><span>Search, edit, and export class records</span></div>
-        </a>
-        <a href="/shortage_report" class="att-action">
-          <div class="att-action-ico ic-re"><i class="fas fa-triangle-exclamation"></i></div>
-          <div class="att-action-copy"><strong>Shortage Alert</strong><span>Open the student-level risk list</span></div>
-        </a>
-        <a href="/admin/reports/defaulters" class="att-action">
-          <div class="att-action-ico ic-am"><i class="fas fa-user-xmark"></i></div>
-          <div class="att-action-copy"><strong>Subject Defaulters</strong><span>View subject-wise attendance deficit</span></div>
-        </a>
-        <a href="/admin/reports/division_attendance" class="att-action">
-          <div class="att-action-ico ic-gr"><i class="fas fa-chart-simple"></i></div>
-          <div class="att-action-copy"><strong>Division Stats</strong><span>Compare class averages over dates</span></div>
-        </a>
-        <a href="/attendance_analytics" class="att-action">
-          <div class="att-action-ico ic-te"><i class="fas fa-chart-bar"></i></div>
-          <div class="att-action-copy"><strong>Analytics</strong><span>Review trends, branches, and subjects</span></div>
-        </a>
-      </div>
+      <div style="height:250px"><canvas id="chartTrend"></canvas></div>
     </div>
   </div>
 
+  {# Attendance Calendar #}
+  <div class="card">
+    <div class="ch flex-sb" style="align-items: center;">
+      <div>
+        <div class="ct">Attendance Calendar</div>
+        <div class="cs">Interactive daily attendance map</div>
+      </div>
+      <div class="cal-nav" style="display:flex; gap:6px; align-items:center;">
+        <button class="btn btn-sm btn-out p6" id="calPrev"><i class="fas fa-chevron-left"></i></button>
+        <span id="calMonthLabel" style="font-size:13px; font-weight:700; min-width:85px; text-align:center;">June 2026</span>
+        <button class="btn btn-sm btn-out p6" id="calNext"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="cb" style="padding-top:10px;">
+      <div class="calendar-grid-header" style="display:grid; grid-template-columns:repeat(7, 1fr); text-align:center; font-size:11px; font-weight:700; color:var(--ink4); margin-bottom:8px;">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+      <div id="calendarGrid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; text-align:center;">
+        {# Days will be rendered by JS #}
+      </div>
+      <div class="calendar-legend" style="display:flex; justify-content:center; gap:12px; margin-top:14px; font-size:11px; color:var(--ink3);">
+        <span class="flex-ac gap4"><span style="width:10px; height:10px; border-radius:50%; background:#059669; display:inline-block;"></span> &ge;75%</span>
+        <span class="flex-ac gap4"><span style="width:10px; height:10px; border-radius:50%; background:#D97706; display:inline-block;"></span> 50-74%</span>
+        <span class="flex-ac gap4"><span style="width:10px; height:10px; border-radius:50%; background:#DC2626; display:inline-block;"></span> &lt;50%</span>
+        <span class="flex-ac gap4"><span style="width:10px; height:10px; border-radius:50%; background:#f1f5f9; border:1px solid #e2e8f0; display:inline-block;"></span> None</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Calendar Detail Panel (shown when a day is clicked) #}
+<div class="card fu fu2 mb16" id="calendarDetailCard" style="display:none;">
+  <div class="ch flex-sb" style="align-items: center; border-bottom: 1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+    <div>
+      <div class="ct" id="calDetailDate">Attendance Details for 2026-06-25</div>
+      <div class="cs" id="calDetailSummary">Total Students: 508 | Present: 419 | Absent: 89 (82.5% Attendance)</div>
+    </div>
+    <button class="btn btn-sm btn-out" onclick="document.getElementById('calendarDetailCard').style.display='none'"><i class="fas fa-xmark"></i> Close</button>
+  </div>
+  <div class="cb">
+    <div id="calDetailSessions" style="display:grid; gap:10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+      {# Sessions list #}
+    </div>
+  </div>
+</div>
+
+{# Action Center #}
+<div class="card fu fu2 mb16">
+  <div class="ch">
+    <div class="ct">Action Center</div>
+    <div class="cs">Jump to the most common attendance workflows</div>
+  </div>
+  <div class="cb">
+    <div class="att-actions">
+      <a href="/attendance" class="att-action">
+        <div class="att-action-ico ic-bl"><i class="fas fa-calendar-check"></i></div>
+        <div class="att-action-copy"><strong>Mark Attendance</strong><span>Create single, bulk, or Excel entries</span></div>
+      </a>
+      <a href="/view_attendance" class="att-action">
+        <div class="att-action-ico ic-vi"><i class="fas fa-eye"></i></div>
+        <div class="att-action-copy"><strong>View Records</strong><span>Search, edit, and export class records</span></div>
+      </a>
+      <a href="/shortage_report" class="att-action">
+        <div class="att-action-ico ic-re"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="att-action-copy"><strong>Shortage Alert</strong><span>Open the student-level risk list</span></div>
+      </a>
+      <a href="/admin/reports/defaulters" class="att-action">
+        <div class="att-action-ico ic-am"><i class="fas fa-user-xmark"></i></div>
+        <div class="att-action-copy"><strong>Subject Defaulters</strong><span>View subject-wise attendance deficit</span></div>
+      </a>
+      <a href="/admin/reports/division_attendance" class="att-action">
+        <div class="att-action-ico ic-gr"><i class="fas fa-chart-simple"></i></div>
+        <div class="att-action-copy"><strong>Division Stats</strong><span>Compare class averages over dates</span></div>
+      </a>
+      <a href="/attendance_analytics" class="att-action">
+        <div class="att-action-ico ic-te"><i class="fas fa-chart-bar"></i></div>
+        <div class="att-action-copy"><strong>Analytics</strong><span>Review trends, branches, and subjects</span></div>
+      </a>
+    </div>
+  </div>
 </div>
 
 {# ── ROW 2: 2-column — Critical Watchlist | Import Attendance ── #}
-<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px" class="fu fu2">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px" class="fu fu2 g2">
 
   <div class="card">
     <div class="ch">
@@ -559,9 +694,9 @@
     </div>
     <div class="cb">
       {% if critical %}
-      <div class="att-list">
-        {% for s in critical[:6] %}
-        <div class="att-list-item">
+      <div class="att-list recent-activity-list">
+        {% for s in critical %}
+        <div class="att-list-item activity-item">
           <div>
             <div class="att-list-label">{{ s.name }}</div>
             <div class="att-list-sub">{{ s.dept }}{% if s.division %} - Division {{ s.division }}{% endif %}</div>
@@ -575,6 +710,7 @@
         </div>
         {% endfor %}
       </div>
+      <button id="recentActivityToggleBtn" class="btn btn-out btn-sm" style="width:100%; margin-top:12px;" onclick="toggleRecentActivity()">See all</button>
       {% else %}
       <div class="empty-state"><i class="fas fa-shield-heart"></i>
         <p>No critical students right now.</p>
@@ -618,9 +754,9 @@
 
 </div>
 
-{# ── ROW 3: Full-width — All Students Table ── #}
+{# ── ROW 3: Full-width — All Students Table converted to Card List View on Mobile ── #}
 <div class="card fu fu2">
-  <div class="ch flex-sb pb0">
+  <div class="ch flex-sb pb0" style="flex-wrap:wrap; gap:12px;">
     <div>
       <div class="ct">All Students</div>
       <div class="cs">{{ total_students }} students with cumulative attendance data</div>
@@ -637,10 +773,16 @@
         <option value="">All Divisions</option>
         {% for d in divisions %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
       </select>
+      <select id="timeframeFilter" class="att-filter-select" onchange="window.location.href='/attendance_dashboard?timeframe=' + this.value;">
+        <option value="cumulative" {% if timeframe == "cumulative" %}selected{% endif %}>Cumulative</option>
+        <option value="daily" {% if timeframe == "daily" %}selected{% endif %}>Daily (Today)</option>
+        <option value="weekly" {% if timeframe == "weekly" %}selected{% endif %}>Weekly (Last 7 Days)</option>
+        <option value="monthly" {% if timeframe == "monthly" %}selected{% endif %}>Monthly (Last 30 Days)</option>
+      </select>
     </div>
   </div>
   <div class="cb p0">
-    <table class="tbl" id="studentsTable">
+    <table class="tbl tbl-to-card" id="studentsTable">
       <thead>
         <tr>
           <th>Rank</th>
@@ -657,9 +799,9 @@
       </thead>
       <tbody id="studentsBody">
         {% for s in all_students %}
-        <tr data-name="{{ s.name|lower }}" data-roll="{{ s.roll|lower }}" data-status="{{ s.status }}" data-div="{{ s.division }}">
-          <td style="font-weight:700;color:var(--ink3)">{{ s.rank }}</td>
-          <td>
+        <tr class="filterable-card" data-name="{{ s.name|lower }}" data-roll="{{ s.roll|lower }}" data-status="{{ s.status }}" data-div="{{ s.division }}">
+          <td data-label="Rank" style="font-weight:700;color:var(--ink3)">{{ s.rank }}</td>
+          <td data-label="Student">
             <div class="flex-ac gap8">
               <div class="av av-sm" style="background:{% if s.pct>=75 %}#059669{% elif s.pct>=50 %}#D97706{% else %}#DC2626{% endif %}">{{ s.name[0]|upper }}</div>
               <div>
@@ -668,15 +810,23 @@
               </div>
             </div>
           </td>
-          <td style="font-size:12px;color:var(--ink3)">{{ s.roll }}</td>
-          <td><span class="tag t-bl">{{ s.division or '-' }}</span></td>
-          <td><span class="tag t-vi">{{ s.dept }}</span></td>
-          <td style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
-          <td><span class="tag {% if s.pct>=75 %}t-gr{% elif s.pct>=50 %}t-am{% else %}t-re{% endif %}">{{ s.pct }}%</span></td>
-          <td>
+          <td data-label="Roll" style="font-size:12px;color:var(--ink3)">{{ s.roll }}</td>
+          <td data-label="Division"><span class="tag t-bl">{{ s.division or '-' }}</span></td>
+          <td data-label="Department"><span class="tag t-vi">{{ s.dept }}</span></td>
+          <td data-label="Attendance" style="font-size:12px">{{ s.attended }} / {{ s.total }}</td>
+          <td data-label="Percentage">
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
+              <span class="tag {% if s.pct>=75 %}t-gr{% elif s.pct>=50 %}t-am{% else %}t-re{% endif %}">{{ s.pct }}%</span>
+              <!-- Visual Progress Bar per student -->
+              <div class="prog-track" style="height:4px; margin-top:2px;">
+                <div class="prog-bar {% if s.pct>=75 %}pb-gr{% elif s.pct>=50 %}pb-am{% else %}pb-re{% endif %}" style="width: {{ s.pct }}%"></div>
+              </div>
+            </div>
+          </td>
+          <td data-label="Status">
             <span style="font-size:12px;font-weight:600;color:{% if s.status=='Good' %}#059669{% elif s.status=='Average' %}#D97706{% else %}#DC2626{% endif %}">{{ s.status }}</span>
           </td>
-          <td style="font-size:12px">
+          <td data-label="Required Action" style="font-size:12px">
             {% if s.shortage > 0 %}
             <span style="color:#DC2626"><i class="fas fa-arrow-up" style="font-size:10px"></i> Need {{ s.shortage }} classes</span>
             {% elif s.can_miss > 0 %}
@@ -685,7 +835,7 @@
             <span style="color:var(--ink4)">Stable</span>
             {% endif %}
           </td>
-          <td><a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+          <td class="action-td"><a href="/student_attendance_dashboard?student_id={{ s.id }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
         </tr>
         {% else %}
         <tr>
@@ -706,6 +856,231 @@
 <script>
   var tick = { color: '#9CA3AF', font: { family: "'Plus Jakarta Sans',sans-serif", size: 11 } };
   var grid = { color: '#F3F4F6' };
+
+  var trendChart = null;
+
+  function loadTrendData(view) {
+    // Show active state in toggle buttons
+    document.querySelectorAll('.trend-toggle').forEach(btn => {
+      if (btn.dataset.view === view) {
+        btn.className = 'trend-toggle btn btn-sm btn-dark';
+      } else {
+        btn.className = 'trend-toggle btn btn-sm btn-out';
+      }
+    });
+
+    fetch(`/api/admin/attendance_trend?view=${view}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.status === 'success') {
+          renderTrendChart(res.labels, res.data);
+        }
+      });
+  }
+
+  function renderTrendChart(labels, data) {
+    var ctx = document.getElementById('chartTrend');
+    if (!ctx) return;
+    
+    if (trendChart) {
+      trendChart.destroy();
+    }
+    
+    if (typeof Chart !== 'undefined') {
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Attendance Rate (%)',
+            data: data,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.05)',
+            borderWidth: 2,
+            tension: 0.25,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#2563eb'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) { return context.parsed.y + '%'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: tick,
+              grid: { display: false }
+            },
+            y: {
+              ticks: {
+                ...tick,
+                callback: function(v) { return v + '%'; }
+              },
+              grid: grid,
+              beginAtZero: true,
+              max: 100
+            }
+          }
+        }
+      });
+    }
+  }
+
+  var currentCalDate = new Date();
+
+  function renderCalendar() {
+    var year = currentCalDate.getFullYear();
+    var month = currentCalDate.getMonth() + 1;
+    
+    var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    document.getElementById('calMonthLabel').innerText = monthNames[currentCalDate.getMonth()] + " " + year;
+    
+    fetch(`/api/admin/attendance_calendar?year=${year}&month=${month}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.status === 'success') {
+          buildCalendarGrid(year, month - 1, res.data);
+        }
+      });
+  }
+
+  function buildCalendarGrid(year, monthIdx, attendanceData) {
+    var gridEl = document.getElementById('calendarGrid');
+    if (!gridEl) return;
+    gridEl.innerHTML = '';
+    
+    var firstDay = new Date(year, monthIdx, 1);
+    var startDayOfWeek = firstDay.getDay();
+    startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+    
+    var lastDay = new Date(year, monthIdx + 1, 0);
+    var totalDays = lastDay.getDate();
+    
+    for (var i = 0; i < startDayOfWeek; i++) {
+      var emptyCell = document.createElement('div');
+      emptyCell.style.padding = '8px';
+      gridEl.appendChild(emptyCell);
+    }
+    
+    for (var day = 1; day <= totalDays; day++) {
+      var dateKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      var dayCell = document.createElement('div');
+      dayCell.style.padding = '8px 4px';
+      dayCell.style.borderRadius = '8px';
+      dayCell.style.fontSize = '12px';
+      dayCell.style.fontWeight = '600';
+      dayCell.style.cursor = 'pointer';
+      dayCell.style.transition = 'all 0.15s ease';
+      
+      dayCell.innerText = day;
+      dayCell.style.background = '#f8fafc';
+      dayCell.style.color = 'var(--ink)';
+      dayCell.style.border = '1px solid #f1f5f9';
+      
+      if (attendanceData && attendanceData[dateKey]) {
+        var dayInfo = attendanceData[dateKey];
+        var pctVal = dayInfo.pct;
+        dayCell.title = `${pctVal}% Attendance (${dayInfo.present} present, ${dayInfo.absent} absent)`;
+        
+        if (pctVal >= 75) {
+          dayCell.style.background = '#e6f4ea';
+          dayCell.style.color = '#137333';
+          dayCell.style.border = '1px solid #c2e7c9';
+        } else if (pctVal >= 50) {
+          dayCell.style.background = '#fef7e0';
+          dayCell.style.color = '#b06000';
+          dayCell.style.border = '1px solid #fbe7b2';
+        } else {
+          dayCell.style.background = '#fce8e6';
+          dayCell.style.color = '#c5221f';
+          dayCell.style.border = '1px solid #fad2cf';
+        }
+        
+        (function(dKey) {
+          dayCell.addEventListener('click', function() {
+            showDateDetails(dKey);
+          });
+        })(dateKey);
+      } else {
+        dayCell.style.color = '#94a3b8';
+        dayCell.style.background = '#f8fafc';
+        dayCell.title = "No attendance recorded";
+        
+        (function(dKey) {
+          dayCell.addEventListener('click', function() {
+            showEmptyDateDetails(dKey);
+          });
+        })(dateKey);
+      }
+      
+      gridEl.appendChild(dayCell);
+    }
+  }
+
+  function showDateDetails(dateStr) {
+    fetch(`/api/admin/attendance_date_details?date=${dateStr}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.status === 'success' && res.stats) {
+          var s = res.stats;
+          document.getElementById('calDetailDate').innerText = `Attendance Details for ${dateStr}`;
+          document.getElementById('calDetailSummary').innerText = `Total Students: ${s.total} | Present: ${s.present} | Absent: ${s.absent} (${s.pct}% Attendance)`;
+          
+          var container = document.getElementById('calDetailSessions');
+          container.innerHTML = '';
+          
+          if (res.sessions && res.sessions.length > 0) {
+            res.sessions.forEach(sess => {
+              var div = document.createElement('div');
+              div.className = 'att-stream-row';
+              div.style.background = '#fff';
+              div.style.border = '1px solid var(--border)';
+              div.style.padding = '12px';
+              div.style.borderRadius = '10px';
+              
+              var pctTagColor = sess.pct >= 75 ? 't-gr' : (sess.pct >= 50 ? 't-am' : 't-re');
+              
+              div.innerHTML = `
+                <div class="flex-sb flex-ac" style="margin-bottom:6px;">
+                  <strong style="font-size:13px; color:var(--ink);">${sess.subject}</strong>
+                  <span class="tag ${pctTagColor}">${sess.pct}%</span>
+                </div>
+                <div style="font-size:11px; color:var(--ink3);">
+                  <span>Division: <strong>${sess.division}</strong></span> | 
+                  <span>Faculty: <strong>${sess.faculty}</strong></span>
+                </div>
+                <div style="font-size:11px; color:var(--ink4); margin-top:6px;">
+                  <span>Present: <strong>${sess.present}</strong></span> | 
+                  <span>Absent: <strong>${sess.absent}</strong></span>
+                </div>
+              `;
+              container.appendChild(div);
+            });
+          } else {
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:var(--ink4); padding:10px;">No session details found.</div>';
+          }
+          
+          document.getElementById('calendarDetailCard').style.display = 'block';
+          document.getElementById('calendarDetailCard').scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+  }
+
+  function showEmptyDateDetails(dateStr) {
+    document.getElementById('calDetailDate').innerText = `Attendance Details for ${dateStr}`;
+    document.getElementById('calDetailSummary').innerText = `No attendance recorded for this date.`;
+    document.getElementById('calDetailSessions').innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:var(--ink4); padding:20px 10px; font-size:13px;"><i class="fas fa-calendar-times" style="font-size:24px; margin-bottom:8px; display:block; color:#94a3b8;"></i> No lectures or attendance entries were found in the system for this date.</div>';
+    document.getElementById('calendarDetailCard').style.display = 'block';
+    document.getElementById('calendarDetailCard').scrollIntoView({ behavior: 'smooth' });
+  }
 
   function initAttendanceCharts() {
     var t5El = document.getElementById('chartTop5');
@@ -777,5 +1152,57 @@
   if (sf) sf.addEventListener('change', applyFilters);
   var df = document.getElementById('divFilter');
   if (df) df.addEventListener('change', applyFilters);
+
+  function toggleRecentActivity() {
+    const list = document.querySelector('.recent-activity-list');
+    const btn = document.getElementById('recentActivityToggleBtn');
+    if (list && btn) {
+      const isExpanded = list.classList.toggle('show-all');
+      btn.textContent = isExpanded ? 'Show less' : 'See all';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Hide excess watchlist items initially on mobile
+    if (window.innerWidth <= 767.98) {
+      const list = document.querySelector('.recent-activity-list');
+      if (list) {
+        const items = list.querySelectorAll('.activity-item');
+        if (items.length <= 3) {
+          document.getElementById('recentActivityToggleBtn').style.display = 'none';
+        }
+      }
+    } else {
+      const btn = document.getElementById('recentActivityToggleBtn');
+      if (btn) btn.style.display = 'none';
+    }
+
+    // Initialize Calendar Navigation Listeners
+    var prevBtn = document.getElementById('calPrev');
+    var nextBtn = document.getElementById('calNext');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function() {
+        currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+        renderCalendar();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function() {
+        currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+        renderCalendar();
+      });
+    }
+    
+    // Register trend toggles
+    document.querySelectorAll('.trend-toggle').forEach(btn => {
+      btn.addEventListener('click', function() {
+        loadTrendData(this.dataset.view);
+      });
+    });
+    
+    // Load initial views
+    loadTrendData('daily');
+    renderCalendar();
+  });
 </script>
 {% endblock %}

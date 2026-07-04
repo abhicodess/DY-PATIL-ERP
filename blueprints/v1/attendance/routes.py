@@ -187,13 +187,14 @@ def submit_attendance():
     except Exception as e:
         current_app.logger.error(f"Socket emit failed during submit: {e}")
 
-    return {
+    from utils.api_response import success_response
+    return success_response({
         "session_id": session_id,
         "present_count": present_count,
         "absent_count": absent_count,
         "total": total,
         "is_final": is_final
-    }
+    }, "Attendance logged successfully")
 
 @attendance_bp.route('/session/initialize', methods=['POST'])
 @attendance_bp.response(200)
@@ -216,18 +217,19 @@ def initialize_session():
         return {"error": result.get("error"), "code": "INITIALIZATION_FAILED"}, 400
 
     details = dict(result["details"])
-    if details.get("start_time"):
+    if details.get("start_time") and hasattr(details["start_time"], "strftime"):
         details["start_time"] = details["start_time"].strftime("%H:%M:%S")
-    if details.get("end_time"):
+    if details.get("end_time") and hasattr(details["end_time"], "strftime"):
         details["end_time"] = details["end_time"].strftime("%H:%M:%S")
-    if details.get("created_at"):
+    if details.get("created_at") and hasattr(details["created_at"], "isoformat"):
         details["created_at"] = details["created_at"].isoformat()
 
-    return {
+    from utils.api_response import success_response
+    return success_response({
         "session_id": result["session_id"],
         "students": [dict(s) for s in result["students"]],
         "details": details
-    }
+    }, "Session initialized successfully")
 
 @attendance_bp.route('/session/<int:session_id>', methods=['GET'])
 @attendance_bp.response(200)

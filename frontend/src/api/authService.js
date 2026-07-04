@@ -13,7 +13,7 @@ export const api = axios.create({
 const fetchCsrfToken = async () => {
   try {
     const response = await axios.get('/api/v1/auth/csrf', { withCredentials: true });
-    const token = response.data.data.csrf_token;
+    const token = response.data.csrf_token || (response.data.data && response.data.data.csrf_token);
     useAuthStore.getState().setCsrfToken(token);
     return token;
   } catch (error) {
@@ -68,8 +68,8 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't retry refresh requests
-      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login') {
+      // Don't retry refresh, login, or logout requests
+      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login' || originalRequest.url === '/auth/logout') {
         useAuthStore.getState().clearAuth();
         return Promise.reject(error);
       }
@@ -90,7 +90,7 @@ api.interceptors.response.use(
 
       try {
         const refreshResponse = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
-        const newAccessToken = refreshResponse.data.data.access_token;
+        const newAccessToken = refreshResponse.data.access_token || (refreshResponse.data.data && refreshResponse.data.data.access_token);
         
         useAuthStore.getState().setAccessToken(newAccessToken);
         api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
@@ -133,7 +133,7 @@ export const authService = {
 
   refreshToken: async () => {
     const response = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
-    const { access_token } = response.data.data;
+    const access_token = response.data.access_token || (response.data.data && response.data.data.access_token);
     useAuthStore.getState().setAccessToken(access_token);
     return access_token;
   },

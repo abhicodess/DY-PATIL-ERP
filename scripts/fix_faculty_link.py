@@ -3,6 +3,9 @@ import sys
 import argparse
 import psycopg2
 from psycopg2.extras import DictCursor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def main():
     parser = argparse.ArgumentParser(description="Professional Faculty-Timetable Auto-Linker & Assignment Generator")

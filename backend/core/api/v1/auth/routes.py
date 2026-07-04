@@ -4,6 +4,8 @@ from werkzeug.security import check_password_hash
 from backend.core.repositories.auth_repository import AuthRepository
 from backend.core.auth.token_service import TokenService
 
+from extensions import redis_client
+
 auth_api = Blueprint('auth_api', __name__)
 
 @auth_api.route('/login', methods=['POST'])
@@ -19,10 +21,44 @@ def login():
     if not email or not password:
         return jsonify({"message": "Email and password are required"}), 400
 
+    lockout_key = f"lockout:{email}"
+    attempts_key = f"attempts:{email}"
+
+    # Check lockout status
+    is_locked = False
+    try:
+        if redis_client.get(lockout_key):
+            is_locked = True
+    except Exception as e:
+        import logging
+        logging.warning(f"Redis error during lockout check: {e}")
+
+    if is_locked:
+        return jsonify({"error": "Account locked. Try again in 10 minutes."}), 423
+
     user = AuthRepository.get_user_by_email(email)
     
     if not user or not check_password_hash(user['password_hash'], password):
+        # Record failed attempt
+        try:
+            attempts = redis_client.incr(attempts_key)
+            if attempts == 1:
+                redis_client.expire(attempts_key, 600)
+            if attempts >= 5:
+                redis_client.set(lockout_key, 1, ex=600)
+                redis_client.delete(attempts_key)
+        except Exception as e:
+            import logging
+            logging.warning(f"Redis error during login failure handling: {e}")
+            
         return jsonify({"message": "Invalid credentials"}), 401
+
+    # Reset attempts on success
+    try:
+        redis_client.delete(attempts_key)
+    except Exception as e:
+        import logging
+        logging.warning(f"Redis error during login success handling: {e}")
 
     access_token, refresh_token = TokenService.generate_tokens(user['id'], user['role'])
     

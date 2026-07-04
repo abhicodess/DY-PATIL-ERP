@@ -62,11 +62,148 @@ def add_student():
         return redirect(url_for('admin.students'))
     return render_template("admin/add_student.html")
 
+import os
+import shutil
+import json
+from datetime import datetime, date
+import logging
+from flask import session
+from utils.pg_wrapper import get_db
+
+logger = logging.getLogger("admin_routes")
+
+BACKUP_DIR = "backups"
+RESET_TABLES = [
+    "messages",
+    "timetable_notifications",
+    "attendance_summary",
+    "qr_sessions",
+    "attendance",
+    "results",
+    "marks",
+    "result_summary",
+    "cumulative_attendance",
+    "faculty_notes",
+    "faculty_notices",
+    "notifications",
+    "events",
+    "timetable",
+    "subjects",
+    "students",
+    "faculty",
+]
+
+def _quote_ident(name):
+    return '"' + str(name).replace('"', '""') + '"'
+
+def _json_safe(value):
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, bytes):
+        return value.hex()
+    return value
+
+def _prune_old_backups(keep=10):
+    if not os.path.isdir(BACKUP_DIR):
+        return
+    backups = []
+    for f in os.listdir(BACKUP_DIR):
+        if f.startswith("backup_") and (f.endswith(".json") or f.endswith(".db")):
+            backups.append(os.path.join(BACKUP_DIR, f))
+    backups.sort(key=os.path.getmtime)
+    while len(backups) > keep:
+        try:
+            os.remove(backups.pop(0))
+        except Exception as e:
+            logger.warning(f"Failed to delete old backup: {e}")
+
+def _create_backup_file():
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    conn = get_db()
+    backup_path = os.path.join(BACKUP_DIR, f"backup_{stamp}.json")
+    
+    try:
+        from utils.tenant_context import get_tenant_schema
+        schema = get_tenant_schema()
+    except Exception:
+        schema = 'public'
+
+    data = {"created_at": datetime.now().isoformat(timespec="seconds"), "schema": schema, "tables": {}}
+    try:
+        tables = conn.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema=%s AND table_type='BASE TABLE' ORDER BY table_name",
+            (schema,)
+        ).fetchall()
+        for row in tables:
+            table_name = row["table_name"]
+            rows = conn.execute(f"SELECT * FROM {_quote_ident(table_name)}").fetchall()
+            data["tables"][table_name] = [
+                {key: _json_safe(value) for key, value in dict(record).items()}
+                for record in rows
+            ]
+    finally:
+        conn.close()
+
+    with open(backup_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, default=str)
+    _prune_old_backups()
+    return backup_path
+
 @admin_bp.route("/backup")
 @admin_required
 def backup():
-    # Implementation...
-    flash("Backup created successfully", "success")
+    try:
+        backup_path = _create_backup_file()
+        flash(f"Backup created successfully: {os.path.basename(backup_path)}", "success")
+    except Exception as e:
+        logger.exception("Backup creation failed")
+        flash(f"Backup failed: {str(e)}", "danger")
+    return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route("/reset", methods=["POST"])
+@admin_required
+def reset_system():
+    try:
+        backup_path = _create_backup_file()
+        logger.warning(
+            "Admin %s started full ERP data reset after backup %s",
+            session.get("name", "Admin"),
+            backup_path,
+        )
+
+        try:
+            from utils.tenant_context import get_tenant_schema
+            schema = get_tenant_schema()
+        except Exception:
+            schema = 'public'
+
+        conn = get_db()
+        try:
+            existing = conn.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema=%s AND table_type='BASE TABLE'",
+                (schema,)
+            ).fetchall()
+            existing_names = {row["table_name"] for row in existing}
+            tables = [table for table in RESET_TABLES if table in existing_names]
+            if tables:
+                joined = ", ".join(_quote_ident(table) for table in tables)
+                conn.execute(f"TRUNCATE TABLE {joined} RESTART IDENTITY CASCADE")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        flash("All data reset successfully (testing mode)", "warning")
+    except Exception as e:
+        logger.exception("Full data reset failed")
+        flash(f"Reset failed: {str(e)}", "danger")
+        return str(e), 500
+
     return redirect(url_for('admin.dashboard'))
 
 # ── SUBJECTS ──────────────────────────────────────────────

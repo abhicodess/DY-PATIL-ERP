@@ -396,7 +396,6 @@
   }
 
   @media (max-width:1180px) {
-
     .att-banner,
     .att-command,
     .att-upload-grid,
@@ -406,7 +405,6 @@
   }
 
   @media (max-width:760px) {
-
     .att-chip-grid,
     .att-grid.cols-2,
     .att-grid.cols-3 {
@@ -415,6 +413,28 @@
 
     .att-tabbar {
       flex-wrap: wrap
+    }
+  }
+
+  /* Mobile Sticky Save Wrapper */
+  @media (max-width: 767.98px) {
+    .mobile-sticky-wrapper {
+      position: fixed !important;
+      bottom: var(--mobile-nav-height) !important;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      z-index: 1040;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    }
+    .mobile-sticky-wrapper button {
+      width: 100% !important;
+      height: 48px !important;
+    }
+    .att-workspace {
+      padding-bottom: 74px; /* Ensure content is not cut off by sticky button */
     }
   }
 </style>
@@ -473,11 +493,11 @@
   <section class="att-command fu fu1">
     <div class="att-workspace">
       <div class="att-tabbar">
-        <button class="att-tab active" data-tab="single" onclick="switchTab(this,'single')"><i class="fas fa-user"></i>
+        <button class="att-tab active" id="tabBtnSingle" data-tab="single" onclick="switchTab(this,'single')"><i class="fas fa-user"></i>
           Single Entry</button>
-        <button class="att-tab" data-tab="bulk" onclick="switchTab(this,'bulk')"><i class="fas fa-users"></i> Bulk
+        <button class="att-tab" id="tabBtnBulk" data-tab="bulk" onclick="switchTab(this,'bulk')"><i class="fas fa-users"></i> Bulk
           Class</button>
-        <button class="att-tab" data-tab="excel" onclick="switchTab(this,'excel')"><i class="fas fa-file-excel"></i>
+        <button class="att-tab" id="tabBtnExcel" data-tab="excel" onclick="switchTab(this,'excel')"><i class="fas fa-file-excel"></i>
           Excel Import</button>
       </div>
 
@@ -488,45 +508,44 @@
           <form method="POST" action="/attendance">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <div class="att-grid cols-3">
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Student Name <span style="color:#DC2626">*</span></label>
                 <input type="text" name="student_name" class="form-inp" placeholder="Full name" required>
               </div>
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Subject <span style="color:#DC2626">*</span></label>
                 <input type="text" name="subject" class="form-inp" placeholder="Subject name" required>
               </div>
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Date <span style="color:#DC2626">*</span></label>
                 <input type="date" name="date" class="form-inp" value="{{ today }}" required>
               </div>
             </div>
             <div class="att-grid cols-3">
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Department</label>
                 <select name="department" class="form-inp">
                   <option value="">- Select -</option>
                   {% for d in ['AIML','AIDS','CS','IT'] %}<option>{{ d }}</option>{% endfor %}
                 </select>
               </div>
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Division</label>
                 <select name="division" class="form-inp">
                   <option value="">- Any -</option>
                   {% for d in ['A','B','C','D'] %}<option>{{ d }}</option>{% endfor %}
                 </select>
               </div>
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Time Slot</label>
                 <input type="text" name="time_slot" class="form-inp" placeholder="e.g. 10:30-11:30">
               </div>
             </div>
             <div class="att-grid">
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Status <span style="color:#DC2626">*</span></label>
                 <div class="status-group" id="statusRadios">
-                  {% for st, icon, cls in [('Present','fas fa-check','P'),('Absent','fas fa-times','A'),('Leave','fas
-                  fa-file-circle-minus','L'),('Late','fas fa-clock','LA'),('Medical','fas fa-hospital','M')] %}
+                  {% for st, icon, cls in [('Present','fas fa-check','P'),('Absent','fas fa-times','A'),('Leave','fas fa-file-circle-minus','L'),('Late','fas fa-clock','LA'),('Medical','fas fa-hospital','M')] %}
                   <label class="status-radio" id="lbl-{{ cls }}" onclick="pickStatus(this,'{{ cls }}')">
                     <input type="radio" name="status" value="{{ st }}" {% if st=='Present' %}checked{% endif %}>
                     <i class="{{ icon }}"></i> {{ st }}
@@ -534,7 +553,7 @@
                   {% endfor %}
                 </div>
               </div>
-              <div>
+              <div class="fgrp">
                 <label class="form-lbl">Remark</label>
                 <input type="text" name="remark" class="form-inp" placeholder="Optional note">
               </div>
@@ -553,25 +572,25 @@
           <div class="att-section-title">Bulk Class Attendance</div>
           <div class="att-section-sub">Load one class, mark defaults fast, then adjust exceptions before saving.</div>
           <div class="att-grid cols-4">
-            <div>
+            <div class="fgrp">
               <label class="form-lbl">Department <span style="color:#DC2626">*</span></label>
               <select id="bulkDept" class="form-inp" onchange="loadBulk()">
                 <option value="">- Select -</option>
                 {% for d in ['AIML','AIDS','CS','IT'] %}<option>{{ d }}</option>{% endfor %}
               </select>
             </div>
-            <div>
+            <div class="fgrp">
               <label class="form-lbl">Division</label>
               <select id="bulkDiv" class="form-inp" onchange="loadBulk()">
                 <option value="">- Any -</option>
                 {% for d in ['A','B','C','D'] %}<option>{{ d }}</option>{% endfor %}
               </select>
             </div>
-            <div>
+            <div class="fgrp">
               <label class="form-lbl">Subject <span style="color:#DC2626">*</span></label>
               <input type="text" id="bulkSubject" class="form-inp" placeholder="Subject name">
             </div>
-            <div>
+            <div class="fgrp">
               <label class="form-lbl">Date</label>
               <input type="date" id="bulkDate" class="form-inp" value="{{ today }}">
             </div>
@@ -590,7 +609,7 @@
           <form method="POST" action="/attendance_bulk" id="bulkForm">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <div id="bulkHidden"></div>
-            <div class="att-inline-actions">
+            <div class="att-inline-actions" id="bulkSubmitWrapper">
               <button type="button" class="btn btn-dark btn-sm" onclick="submitBulk()"><i class="fas fa-save"></i> Save
                 Bulk Attendance</button>
             </div>
@@ -698,6 +717,16 @@
     document.querySelectorAll('.att-pane').forEach(function (p) { p.classList.remove('active'); });
     el.classList.add('active');
     document.getElementById('pane-' + name).classList.add('active');
+    
+    // Toggle sticky class for submit button on mobile
+    const submitWrapper = document.getElementById('bulkSubmitWrapper');
+    if (submitWrapper) {
+      if (name === 'bulk') {
+        submitWrapper.classList.add('mobile-sticky-wrapper');
+      } else {
+        submitWrapper.classList.remove('mobile-sticky-wrapper');
+      }
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function () { pickStatus(document.getElementById('lbl-P'), 'P'); });
@@ -728,7 +757,9 @@
       document.getElementById('bulkArea').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No students found</p></div>';
       return;
     }
-    var html = '<table class="tbl"><thead><tr><th>#</th><th>Student</th><th>PRN Number</th><th>Division</th>';
+    
+    // DESKTOP TABLE VIEW
+    var html = '<div class="desktop-only"><table class="tbl"><thead><tr><th>#</th><th>Student</th><th>PRN Number</th><th>Division</th>';
     ['Present', 'Absent', 'Leave', 'Late', 'Medical'].forEach(function (st) {
       html += '<th style="text-align:center;color:' + statusColors[st] + '">' + st + '</th>';
     });
@@ -740,19 +771,70 @@
       html += '<td style="font-size:11px;font-weight:700;color:var(--green)">' + (s.prn || s.roll || 'N/A') + '</td>';
       html += '<td><span class="tag t-bl">' + (s.division || '-') + '</span></td>';
       ['Present', 'Absent', 'Leave', 'Late', 'Medical'].forEach(function (st) {
-        html += '<td style="text-align:center"><input type="radio" name="' + n + '" value="' + st + '"' + (st === 'Present' ? ' checked' : '') + '></td>';
+        html += '<td style="text-align:center"><input type="radio" id="radio_' + s.id + '_' + st + '" name="' + n + '" value="' + st + '"' + (st === 'Present' ? ' checked' : '') + '></td>';
       });
       html += '</tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
+    
+    // MOBILE SWIPE-FRIENDLY CARD LIST
+    html += '<div class="mobile-only" style="padding-top: 10px;">';
+    students.forEach(function (s) {
+      var n = 'bst_' + s.id;
+      html += '<div class="swipe-card-container">';
+      // Swipe Action Background
+      html += '  <div class="swipe-action-bg">';
+      html += '    <div class="swipe-action-present"><i class="fas fa-check"></i> Present</div>';
+      html += '    <div class="swipe-action-absent">Absent <i class="fas fa-times"></i></div>';
+      html += '  </div>';
+      // Swipe Card Content
+      html += '  <div class="swipe-card marked-present" data-student-id="' + s.id + '" data-student-name="' + s.name.replace(/"/g, '&quot;') + '" id="swipe_card_' + s.id + '">';
+      html += '    <div>';
+      html += '      <div style="font-weight:700; font-size:14px; color:var(--ink);">' + s.name + '</div>';
+      html += '      <div style="font-size:11px; color:var(--ink4); margin-top:2px;">PRN: ' + (s.prn || s.roll || 'N/A') + ' &bull; Div: ' + (s.division || '-') + '</div>';
+      html += '    </div>';
+      html += '    <div style="display:flex; gap:6px;">';
+      html += '      <button type="button" class="btn btn-sm btn-gr" style="min-height:36px; padding:4px 8px;" onclick="quickMarkSwipe(' + s.id + ', \'Present\')">P</button>';
+      html += '      <button type="button" class="btn btn-sm btn-re" style="min-height:36px; padding:4px 8px;" onclick="quickMarkSwipe(' + s.id + ', \'Absent\')">A</button>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    
     document.getElementById('bulkArea').innerHTML = html;
+    
+    // Initialize swipe marking touch handlers
+    if (typeof initSwipeMarking === 'function') {
+      initSwipeMarking();
+    }
   }
+
+  window.quickMarkSwipe = function(studentId, status) {
+    const card = document.getElementById('swipe_card_' + studentId);
+    if (card) {
+      markStudent(studentId, status, card);
+    }
+  };
 
   function markAll(status) {
     allStudents.forEach(function (s) {
+      // Desktop
       var r = document.querySelector('input[name="bst_' + s.id + '"][value="' + status + '"]');
       if (r) r.checked = true;
+      // Mobile Card
+      var card = document.getElementById('swipe_card_' + s.id);
+      if (card) {
+        if (status === 'Present') {
+          card.classList.add('marked-present');
+          card.classList.remove('marked-absent');
+        } else {
+          card.classList.add('marked-absent');
+          card.classList.remove('marked-present');
+        }
+      }
     });
+    toast('Marked all as ' + status, 'ok');
   }
 
   function submitBulk() {

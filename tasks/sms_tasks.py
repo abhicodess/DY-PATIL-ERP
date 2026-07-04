@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger("sms_tasks")
 
 @celery.task(bind=True, max_retries=3, default_retry_delay=10)
-def send_async_sms(self, recipient: str, template_slug: str, context: dict):
+def send_async_sms(self, recipient: str, template_slug: str, context: dict, **kwargs):
     """
     Asynchronously send SMS using Celery with exponential retry and logging.
     """

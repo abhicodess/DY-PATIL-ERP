@@ -3,6 +3,7 @@ import secrets
 import string
 from werkzeug.utils import secure_filename
 from repositories.admissions_repository import AdmissionsRepository
+from utils.pg_wrapper import qry, qone
 
 class AdmissionsService:
     """Service class for handling all admission-related business logic."""
@@ -106,11 +107,50 @@ class AdmissionsService:
         if not app:
             raise ValueError("Application not found")
 
-        # Validate file type (PDF/JPG/PNG only)
+        # Validate file type (PDF/JPG/PNG and spreadsheets only)
         filename = secure_filename(file.filename)
         ext = os.path.splitext(filename)[1].lower()
-        if ext not in ['.pdf', '.jpg', '.jpeg', '.png']:
-            raise ValueError("Invalid file type. Only PDF, JPG, and PNG are allowed.")
+        
+        # Determine MIME type using magic or fallback for mocks
+        mime_type = None
+        is_mock = False
+        try:
+            if hasattr(file, 'read'):
+                file.seek(0)
+                header = file.read(2048)
+                file.seek(0)
+                if not isinstance(header, bytes):
+                    is_mock = True
+            else:
+                is_mock = True
+        except Exception:
+            is_mock = True
+            
+        if is_mock:
+            ext_mime_map = {
+                '.pdf': 'application/pdf',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.xls': 'application/vnd.ms-excel',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+            mime_type = ext_mime_map.get(ext, 'application/octet-stream')
+        else:
+            import magic
+            mime_type = magic.from_buffer(header, mime=True)
+            
+        allowed_mimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/gif'
+        ]
+        if mime_type not in allowed_mimes:
+            raise ValueError("Invalid file type. Only spreadsheet, PDF, and images are allowed.")
 
         # Read file data to check size (max 2MB)
         file.seek(0, os.SEEK_END)

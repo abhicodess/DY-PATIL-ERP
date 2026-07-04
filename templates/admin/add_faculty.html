@@ -10,7 +10,9 @@
 {% if error %}<div class="alert al-err fu"><i class="fas fa-exclamation-circle"></i><span>{{ error }}</span></div>{% endif %}
 <div class="card fu fu1" style="max-width:580px">
   <div class="ch"><div class="ct">Faculty Information</div><div class="cs">Login: email / faculty123 (unless changed)</div></div>
-  <form method="POST" action="/save_faculty"><div class="cb">
+  <form method="POST" action="/save_faculty">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="cb">
     <div class="fg2">
       <div class="fgrp"><label>Full Name *</label><input type="text" name="name" required></div>
       <div class="fgrp"><label>Email *</label><input type="email" name="email" required></div>

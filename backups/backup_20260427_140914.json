@@ -1,0 +1,70 @@
+{
+  "created_at": "2026-04-27T14:09:14",
+  "tables": {
+    "attendance": [],
+    "attendance_summary": [],
+    "audit_logs": [
+      {
+        "id": 1,
+        "action": "Database Backup",
+        "details": "Downloaded college.db",
+        "role": "admin",
+        "user_id": 0,
+        "ip_addr": "127.0.0.1",
+        "created_at": "2026-04-21T10:52:13.711048"
+      },
+      {
+        "id": 2,
+        "action": "Database Backup",
+        "details": "Downloaded college.db",
+        "role": "admin",
+        "user_id": 0,
+        "ip_addr": "127.0.0.1",
+        "created_at": "2026-04-21T10:56:33.570146"
+      },
+      {
+        "id": 3,
+        "action": "Database Backup",
+        "details": "Downloaded college.db",
+        "role": "admin",
+        "user_id": 0,
+        "ip_addr": "127.0.0.1",
+        "created_at": "2026-04-21T10:56:53.740103"
+      },
+      {
+        "id": 4,
+        "action": "Database Backup",
+        "details": "Downloaded college.db",
+        "role": "admin",
+        "user_id": 0,
+        "ip_addr": "127.0.0.1",
+        "created_at": "2026-04-24T10:08:11.783519"
+      }
+    ],
+    "classrooms": [
+      {
+        "id": 1,
+        "name": "Main Hall",
+        "latitude": 40.7128,
+        "longitude": -74.006,
+        "radius": 100.0
+      }
+    ],
+    "cumulative_attendance": [],
+    "events": [],
+    "faculty": [],
+    "faculty_notes": [],
+    "faculty_notices": [],
+    "leave_applications": [],
+    "marks": [],
+    "messages": [],
+    "notifications": [],
+    "qr_sessions": [],
+    "result_summary": [],
+    "results": [],
+    "students": [],
+    "subjects": [],
+    "timetable": [],
+    "timetable_notifications": []
+  }
+}

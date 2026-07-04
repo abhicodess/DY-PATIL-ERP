@@ -10,6 +10,7 @@ from flask_jwt_extended import (
 )
 from utils.pg_wrapper import qone, exe
 from utils.tenant_jwt import tenant_jwt_required
+from extensions import csrf
 from schemas.auth import LoginSchema, LoginResponseSchema, RefreshResponseSchema, CSRFResponseSchema
 from schemas.common import ErrorSchema
 from services.student_service import StudentService
@@ -45,6 +46,35 @@ def login(login_data):
     password = login_data.get("password", "").strip()
     role = login_data.get("role", "").strip()
 
+    lockout_key = f"lockout:{username}"
+    attempts_key = f"attempts:{username}"
+
+    # Check lockout status
+    is_locked = False
+    try:
+        from extensions import redis_client
+        if redis_client.get(lockout_key):
+            is_locked = True
+    except Exception as e:
+        import logging
+        logging.warning(f"Redis error during lockout check: {e}")
+
+    if is_locked:
+        return jsonify({"error": "Account locked. Try again in 10 minutes."}), 423
+
+    def record_failure():
+        try:
+            from extensions import redis_client
+            attempts = redis_client.incr(attempts_key)
+            if attempts == 1:
+                redis_client.expire(attempts_key, 600)
+            if attempts >= 5:
+                redis_client.set(lockout_key, 1, ex=600)
+                redis_client.delete(attempts_key)
+        except Exception as e:
+            import logging
+            logging.warning(f"Redis error during failure recording: {e}")
+
     user_id = None
     name = ""
     department = None
@@ -55,6 +85,7 @@ def login(login_data):
             user_id = 1
             name = "Administrator"
         else:
+            record_failure()
             return {"error": "Invalid admin credentials", "code": "INVALID_CREDENTIALS"}, 401
 
     elif role == "faculty":
@@ -64,6 +95,7 @@ def login(login_data):
             name = faculty.name
             department = faculty.department
         else:
+            record_failure()
             return {"error": "Invalid faculty credentials", "code": "INVALID_CREDENTIALS"}, 401
 
     elif role == "student":
@@ -73,9 +105,18 @@ def login(login_data):
             name = student.name
             department = student.department
         else:
+            record_failure()
             return {"error": "Invalid student credentials", "code": "INVALID_CREDENTIALS"}, 401
     else:
         return {"error": "Invalid role specified", "code": "VALIDATION_ERROR"}, 422
+
+    # Reset attempts on success
+    try:
+        from extensions import redis_client
+        redis_client.delete(attempts_key)
+    except Exception as e:
+        import logging
+        logging.warning(f"Redis error during success reset: {e}")
 
     # Generate tokens with tenant context
     from utils.tenant_context import get_current_tenant
@@ -156,6 +197,7 @@ def token(login_data):
 @jwt_required(refresh=True)
 @auth_bp.response(200, RefreshResponseSchema)
 @auth_bp.doc(summary="Refresh access token", tags=["Authentication"], security=[{"BearerAuth": []}])
+@csrf.exempt
 def refresh_token_route():
     identity = get_jwt_identity()
     claims = get_jwt()

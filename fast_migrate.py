@@ -3,9 +3,13 @@ import psycopg2
 from psycopg2.extras import execute_values
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SQLITE_DB = "college.db"
 PG_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@db:5432/erp_db")
+
 
 def fast_migrate():
     if not os.path.exists(SQLITE_DB):

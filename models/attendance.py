@@ -7,9 +7,12 @@ from extensions import db
 
 class Attendance(db.Model):
     __tablename__ = 'attendance'
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'lecture_id', name='uq_attendance_student_lecture'),
+    )
     
     id = db.Column(db.Integer, primary_key=True)
-    student_name = db.Column(db.String(100), nullable=False)
+    student_name = db.Column(db.String(100), nullable=True)
     subject = db.Column(db.String(100), nullable=False)
     date = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(50), nullable=False)
@@ -19,6 +22,14 @@ class Attendance(db.Model):
     division = db.Column(db.String(50), default='')
     semester = db.Column(db.String(50), default='')
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)
+    lecture_id = db.Column(db.Integer, nullable=True)
+    subject_id = db.Column(db.Integer, nullable=True)
+    faculty_id = db.Column(db.Integer, nullable=True)
+    method = db.Column(db.String(50), default='Manual')
+    branch = db.Column(db.String(50), default='')
+    is_locked = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 BACKUP_DIR = "backups"
 ATTENDANCE_BACKUP_DIR = os.path.join(BACKUP_DIR, "attendance_uploads")
@@ -88,31 +99,32 @@ def ensure_attendance_upload_tables():
         )
     """
 
+    summary_sql = """
+        CREATE TABLE IF NOT EXISTS attendance_summary (
+            id SERIAL PRIMARY KEY,
+            student_id INTEGER,
+            student_name TEXT,
+            subject TEXT NOT NULL,
+            attended INTEGER NOT NULL DEFAULT 0,
+            total INTEGER NOT NULL DEFAULT 0,
+            division TEXT DEFAULT '',
+            semester TEXT DEFAULT '',
+            department TEXT DEFAULT '',
+            report_start_date DATE NULL,
+            report_end_date DATE NULL,
+            upload_batch_id INTEGER NULL,
+            UNIQUE(student_id, subject)
+        )
+    """
+
     if is_sqlite:
         batches_sql = batches_sql.replace("id SERIAL PRIMARY KEY", "id INTEGER PRIMARY KEY AUTOINCREMENT")
         rows_sql = rows_sql.replace("id SERIAL PRIMARY KEY", "id INTEGER PRIMARY KEY AUTOINCREMENT")
+        summary_sql = summary_sql.replace("id SERIAL PRIMARY KEY", "id INTEGER PRIMARY KEY AUTOINCREMENT")
 
     try:
-        # Create attendance_summary table first (since it's not a SQLAlchemy model)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS attendance_summary (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id INTEGER,
-                student_name TEXT,
-                subject TEXT NOT NULL,
-                attended INTEGER NOT NULL DEFAULT 0,
-                total INTEGER NOT NULL DEFAULT 0,
-                division TEXT DEFAULT '',
-                semester TEXT DEFAULT '',
-                department TEXT DEFAULT '',
-                report_start_date DATE NULL,
-                report_end_date DATE NULL,
-                upload_batch_id INTEGER NULL,
-                UNIQUE(student_id, subject)
-            )
-            """
-        )
+        # Create tables
+        conn.execute(summary_sql)
         conn.execute(batches_sql)
         conn.execute(rows_sql)
         

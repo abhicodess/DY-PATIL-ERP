@@ -104,6 +104,27 @@ class AdminCumulativeSmoke(unittest.TestCase):
         self.assertNotIn(b"Traceback", r.data)
         self.assertNotIn(b"Internal Server Error", r.data)
 
+    def test_api_attendance_trend(self):
+        r = self.client.get("/api/admin/attendance_trend?view=daily")
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertEqual(data["status"], "success")
+        self.assertIn("labels", data)
+        self.assertIn("data", data)
+
+    def test_api_attendance_calendar(self):
+        r = self.client.get("/api/admin/attendance_calendar?year=2026&month=6")
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertEqual(data["status"], "success")
+        self.assertIn("data", data)
+
+    def test_api_attendance_date_details(self):
+        r = self.client.get("/api/admin/attendance_date_details?date=2026-06-25")
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertEqual(data["status"], "success")
+
 
 if __name__ == "__main__":
     unittest.main()

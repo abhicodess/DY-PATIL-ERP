@@ -5,9 +5,24 @@ from utils.pg_wrapper import get_db
 
 def ensure_faculty_attendance_v2_schema():
     conn = get_db()
+    is_sqlite = False
+    try:
+        from extensions import db
+        if db.engine.dialect.name != 'postgresql':
+            is_sqlite = True
+    except Exception:
+        pass
+
+    def exec_sql(sql, params=None):
+        if is_sqlite and isinstance(sql, str):
+            sql = sql.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+        if params is not None:
+            return conn.execute(sql, params)
+        return conn.execute(sql)
+
     try:
         # 1. Faculty Subject Assignment Table
-        conn.execute("""
+        exec_sql("""
             CREATE TABLE IF NOT EXISTS faculty_subject_assignments (
                 id SERIAL PRIMARY KEY,
                 faculty_id INTEGER NOT NULL,
@@ -31,13 +46,13 @@ def ensure_faculty_attendance_v2_schema():
             ("academic_year", "TEXT DEFAULT ''"),
         ]:
             try:
-                conn.execute(f"ALTER TABLE attendance_sessions ADD COLUMN IF NOT EXISTS {column[0]} {column[1]}")
+                exec_sql(f"ALTER TABLE attendance_sessions ADD COLUMN IF NOT EXISTS {column[0]} {column[1]}")
             except Exception:
                 pass
 
         # 3. Attendance Audit Log Table
         # (This was already in attendance_model.py, but we ensure it matches user needs)
-        conn.execute("""
+        exec_sql("""
             CREATE TABLE IF NOT EXISTS attendance_audit (
                 id SERIAL PRIMARY KEY,
                 faculty_id INTEGER NOT NULL,

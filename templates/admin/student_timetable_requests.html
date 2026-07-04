@@ -1,0 +1,377 @@
+{% extends "common/base.html" %}
+{% block title %}Student Timetable Requests{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Student Timetable Approval{% endblock %}
+{% block breadcrumb %}<a href="/dashboard">Home</a> / Timetable / Requests{% endblock %}
+
+{% block content %}
+<!-- Notification Container -->
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+<!-- Page Header -->
+<div class="ph fu">
+  <div>
+    <div class="ph-title">Pending Student Timetable Requests</div>
+    <div class="ph-sub" id="request-count">{{ requests|length }} request(s) awaiting approval</div>
+  </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card fu">
+  <div class="ch">
+    <div class="ct"><i class="fa-solid fa-clock-rotate-left" style="color:var(--amber); margin-right:8px;"></i>Pending Requests</div>
+  </div>
+  <div class="cb p0" style="overflow-x: auto;">
+    {% if requests %}
+      <table class="tbl" style="width: 100%; border-collapse: collapse; text-align: left;" id="requests-table">
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th>Class / Semester</th>
+            <th>Day & Time</th>
+            <th>Subject</th>
+            <th>Room</th>
+            <th>Proposed By</th>
+            <th style="width: 180px; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+            <tr id="row-{{ r.id }}" style="border-bottom: 1px solid var(--border); transition: all 0.4s ease;">
+              <td>
+                <span class="tag t-bl" id="text-dept-{{ r.id }}" style="font-weight: 700;">{{ r.department }}</span>
+              </td>
+              <td>
+                <div id="text-div-sem-{{ r.id }}" style="font-weight: 600; color: var(--ink);">Sem {{ r.semester }} (Div {{ r.division }})</div>
+              </td>
+              <td>
+                <div id="text-day-{{ r.id }}" style="font-weight: 600; color: var(--ink);">{{ r.day }}</div>
+                <div id="text-time-{{ r.id }}" style="font-size: 12px; color: var(--blue);">{{ r.time_slot }}</div>
+              </td>
+              <td>
+                <strong id="text-sub-{{ r.id }}" style="color: var(--ink2);">{{ r.subject }}</strong>
+              </td>
+              <td>
+                <span id="text-room-{{ r.id }}" style="background: var(--bg2); padding: 3px 8px; border-radius: 4px; font-size: 12px;">{{ r.room }}</span>
+              </td>
+              <td>
+                <div style="font-weight: 600; color: var(--ink3); font-size: 12px;">
+                  <i class="fa-solid fa-user-tie" style="margin-right: 4px;"></i>{{ r.faculty_name }}
+                </div>
+              </td>
+              <td style="text-align: right; padding-right: 20px;">
+                <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                  <!-- Edit Button -->
+                  <button class="btn btn-out btn-sm" onclick="openEdit('{{ r.id }}', '{{ r.division }}', '{{ r.semester }}', '{{ r.department }}', '{{ r.day }}', '{{ r.time_slot }}', '{{ r.subject }}', '{{ r.room }}')" title="Edit request details">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                  </button>
+                  <!-- Approve Button -->
+                  <button class="btn btn-sm" style="background-color: var(--green); border-color: var(--green); color: white;" onclick="approveRequest('{{ r.id }}')" title="Approve Request">
+                    <i class="fa-solid fa-circle-check"></i> Approve
+                  </button>
+                  <!-- Reject Button -->
+                  <button class="btn btn-danger btn-sm" onclick="rejectRequest('{{ r.id }}')" title="Reject Request">
+                    <i class="fa-solid fa-circle-xmark"></i> Reject
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div id="no-requests-msg" style="text-align: center; padding: 50px; color: var(--ink3);">
+        <i class="fa-solid fa-clipboard-check" style="font-size: 54px; margin-bottom: 12px; display: block; color: var(--green);"></i>
+        <p style="font-size: 15px; font-weight: 600;">No pending requests!</p>
+        <p style="font-size: 12px; color: var(--ink4);">All student timetable requests have been processed.</p>
+      </div>
+    {% endif %}
+    
+    <div id="empty-state-placeholder" style="display: none; text-align: center; padding: 50px; color: var(--ink3);">
+      <i class="fa-solid fa-clipboard-check" style="font-size: 54px; margin-bottom: 12px; display: block; color: var(--green);"></i>
+      <p style="font-size: 15px; font-weight: 600;">No pending requests!</p>
+      <p style="font-size: 12px; color: var(--ink4);">All student timetable requests have been processed.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════ EDIT REQUEST MODAL ════════════════════════════════════ -->
+<div class="modal-bg" id="editModal">
+  <div class="modal-box" style="width: 500px; border-radius: var(--r-md); box-shadow: var(--sh-md); background: var(--white);">
+    <div class="ch flex-sb" style="padding-bottom: 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <div class="ct font-bold text-gray-800"><i class="fa-solid fa-edit" style="color: var(--blue); margin-right: 8px;"></i>Edit Timetable Request</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('editModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="editForm">
+      <div class="cb" style="display: flex; flex-direction: column; gap: 16px; padding: 20px;">
+        <input type="hidden" id="edit-id" name="id">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Department</label>
+            <select id="edit-department" name="department" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+              {% for dept in DEPARTMENTS %}
+                <option value="{{ dept }}">{{ dept }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Semester</label>
+            <select id="edit-semester" name="semester" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+              {% for sem in SEMESTERS %}
+                <option value="{{ sem }}">{{ sem }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Division</label>
+            <select id="edit-division" name="division" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+              {% for div in DIVISIONS %}
+                <option value="{{ div }}">{{ div }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Room / Lab</label>
+            <input type="text" id="edit-room" name="room" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Day</label>
+            <select id="edit-day" name="day" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+              {% for day in DAYS %}
+                <option value="{{ day }}">{{ day }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="fgrp">
+            <label style="font-weight: 600; margin-bottom: 4px; display: block;">Time Slot</label>
+            <select id="edit-time_slot" name="time_slot" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+              {% for period in PERIODS %}
+                <option value="{{ period }}">{{ period }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="fgrp">
+          <label style="font-weight: 600; margin-bottom: 4px; display: block;">Subject Name</label>
+          <input type="text" id="edit-subject" name="subject" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+        </div>
+      </div>
+      <div class="cf" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border);">
+        <button type="button" class="btn btn-out" onclick="closeModal('editModal')">Cancel</button>
+        <button type="submit" class="btn btn-dark"><i class="fa-solid fa-save" style="margin-right: 6px;"></i>Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Modal display utilities
+function M(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// Close modal when clicking outside
+document.querySelectorAll('.modal-bg').forEach(function(m) {
+  m.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+});
+
+// Toast notifications
+function showNotification(type, message) {
+  var container = document.getElementById('toast-container');
+  var toast = document.createElement('div');
+  
+  // Custom styled notifications
+  var bg = 'var(--blue-s)';
+  var border = 'var(--blue)';
+  var color = 'var(--blue)';
+  var icon = 'fa-circle-info';
+  
+  if (type === 'success') {
+    bg = 'var(--green-s)';
+    border = 'var(--green)';
+    color = 'var(--green)';
+    icon = 'fa-circle-check';
+  } else if (type === 'danger') {
+    bg = 'var(--red-s)';
+    border = 'var(--red)';
+    color = 'var(--red)';
+    icon = 'fa-circle-xmark';
+  }
+  
+  toast.innerHTML = `
+    <div style="background: ${bg}; border-left: 5px solid ${border}; color: ${color}; padding: 12px 20px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: space-between; min-width: 280px; box-shadow: var(--sh-md); font-weight: 600; font-size: 13px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid ${icon}"></i>
+        <span>${message}</span>
+      </div>
+      <button style="background: none; border: none; color: inherit; font-size: 14px; margin-left: 12px; cursor: pointer;" onclick="this.parentElement.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  `;
+  container.appendChild(toast);
+  
+  // Auto-remove toast after 4 seconds
+  setTimeout(function() {
+    toast.style.transition = 'all 0.5s';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 500);
+  }, 4000);
+}
+
+// Decrease Request Count Badge
+function updateRequestCount() {
+  var table = document.getElementById('requests-table');
+  var countBadge = document.getElementById('request-count');
+  
+  if (table) {
+    var count = table.querySelector('tbody').rows.length;
+    countBadge.textContent = count + ' request(s) awaiting approval';
+    if (count === 0) {
+      table.style.display = 'none';
+      document.getElementById('no-requests-msg').style.display = 'block';
+    }
+  }
+}
+
+// AJAX: Approve Request
+function approveRequest(id) {
+  if (!confirm("Are you sure you want to approve this student timetable request?")) return;
+  
+  fetch('/admin/student-timetable-requests/approve/' + id, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      var row = document.getElementById('row-' + id);
+      row.style.background = 'var(--green-s)';
+      row.style.opacity = '0';
+      setTimeout(() => {
+        row.remove();
+        updateRequestCount();
+      }, 500);
+      showNotification('success', data.message);
+    } else {
+      showNotification('danger', data.message);
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    showNotification('danger', 'An error occurred while approving the request.');
+  });
+}
+
+// AJAX: Reject Request
+function rejectRequest(id) {
+  if (!confirm("Are you sure you want to reject this student timetable request?")) return;
+  
+  fetch('/admin/student-timetable-requests/reject/' + id, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      var row = document.getElementById('row-' + id);
+      row.style.background = 'var(--red-s)';
+      row.style.opacity = '0';
+      setTimeout(() => {
+        row.remove();
+        updateRequestCount();
+      }, 500);
+      showNotification('success', data.message);
+    } else {
+      showNotification('danger', data.message);
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    showNotification('danger', 'An error occurred while rejecting the request.');
+  });
+}
+
+// Open Edit Modal with Request Data
+function openEdit(id, division, semester, department, day, time_slot, subject, room) {
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-division').value = division;
+  document.getElementById('edit-semester').value = semester;
+  document.getElementById('edit-department').value = department;
+  document.getElementById('edit-day').value = day;
+  document.getElementById('edit-time_slot').value = time_slot;
+  document.getElementById('edit-subject').value = subject;
+  document.getElementById('edit-room').value = room;
+  M('editModal');
+}
+
+// AJAX: Edit Form Submission
+document.getElementById('editForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var id = document.getElementById('edit-id').value;
+  var formData = new FormData(this);
+  
+  fetch('/admin/student-timetable-requests/edit/' + id, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      closeModal('editModal');
+      
+      // Update values in table row dynamically
+      document.getElementById('text-div-sem-' + id).innerHTML = 'Sem ' + formData.get('semester') + ' (Div ' + formData.get('division') + ')';
+      document.getElementById('text-dept-' + id).textContent = formData.get('department');
+      document.getElementById('text-day-' + id).textContent = formData.get('day');
+      document.getElementById('text-time-' + id).textContent = formData.get('time_slot');
+      document.getElementById('text-sub-' + id).textContent = formData.get('subject');
+      document.getElementById('text-room-' + id).textContent = formData.get('room');
+      
+      // Flash row color green momentarily for positive visual cue
+      var row = document.getElementById('row-' + id);
+      var originalBg = row.style.background;
+      row.style.background = 'var(--blue-s)';
+      setTimeout(() => {
+        row.style.background = originalBg;
+      }, 1000);
+      
+      showNotification('success', data.message);
+    } else {
+      showNotification('danger', data.message);
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    showNotification('danger', 'An error occurred while saving changes.');
+  });
+});
+</script>
+{% endblock %}

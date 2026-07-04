@@ -11,10 +11,17 @@
 <div class="card fu fu1">
   <div class="cb">
     {% for n in notices %}
-    <div class="notice">
+    <div class="notice" style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
       <div class="n-title">{{ n.title }}</div>
       <div class="n-meta"><i class="fas fa-user"></i> {{ n.faculty_name }} &nbsp;·&nbsp; <i class="fas fa-clock"></i> {{ n.created_at[:16] if n.created_at else "" }}</div>
       <div class="n-body">{{ n.message }}</div>
+      {% if n.attachment_path %}
+      <div style="margin-top: 8px;">
+        <a href="{{ n.attachment_path }}" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;background:rgba(0,0,0,0.05);border-radius:4px;color:var(--ink);font-weight:600;">
+          <i class="fas fa-paperclip"></i> {{ n.attachment_name or 'View Attachment' }}
+        </a>
+      </div>
+      {% endif %}
     </div>
     {% else %}
     <div class="empty-state"><i class="fas fa-bullhorn"></i><p>No notices at this time.</p></div>

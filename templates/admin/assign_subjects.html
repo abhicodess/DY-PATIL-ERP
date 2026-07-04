@@ -17,6 +17,7 @@
   </div>
   <div class="ph-actions">
     <form method="POST" action="/auto_assign_subjects" onsubmit="return confirm('Auto-match subjects to faculty by name? This will update teacher names to exactly match faculty DB names.')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-out btn-sm"><i class="fas fa-wand-magic-sparkles"></i> Auto-Match All</button>
     </form>
   </div>
@@ -100,6 +101,7 @@
             <span style="font-size:13px;font-weight:600;flex:1">{{ s.name }}</span>
             <span class="mono" style="font-size:10px;color:var(--ink3)">{{ s.subject_code or '' }}</span>
             <form method="POST" action="/unassign_subject" style="display:inline">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
               <input type="hidden" name="subject_id" value="{{ s.id }}">
               <input type="hidden" name="fac_id"     value="{{ fac_info.id }}">
               <button type="submit" class="btn btn-ghost btn-sm" title="Unassign" onclick="return confirm('Remove this subject from {{ fac_info.name }}?')">
@@ -122,6 +124,7 @@
           <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px"><i class="fas fa-paper-plane" style="color:var(--green)"></i> Send Student List to Faculty Inbox</div>
           {% for s in fac_subjects %}
           <form method="POST" action="/send_classlist" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="subject"   value="{{ s.name }}">
             <input type="hidden" name="dept"      value="{{ s.department or '' }}">
             <span style="font-size:12px;flex:1">{{ s.name[:30] }}</span>
@@ -150,6 +153,7 @@
             </div>
           </div>
           <form method="POST" action="/assign_subject_to_faculty">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="subject_id"   value="{{ s.id }}">
             <input type="hidden" name="faculty_name" value="{{ fac_info.name }}">
             <input type="hidden" name="fac_id"       value="{{ fac_info.id }}">

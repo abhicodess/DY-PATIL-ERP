@@ -1,0 +1,204 @@
+{% extends "common/base.html" %}
+{% block title %}Assign Student Timetable{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}F{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Assign Student Timetable{% endblock %}
+{% block breadcrumb %}<a href="/dashboard">Home</a> / Timetable / Assign{% endblock %}
+
+{% block content %}
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="margin-bottom: 20px;">
+      {% for category, message in messages %}
+        <div class="alert al-{% if category == 'success' %}ok{% elif category == 'danger' %}re{% else %}info{% endif %} fu">
+          <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}circle-xmark{% else %}circle-info{% endif %}"></i>
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Grid layout for Forms and Table -->
+<div style="display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start;">
+  
+  <!-- Left Side: Forms -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+    
+    <!-- Manual Assign Form -->
+    <div class="card fu">
+      <div class="ch">
+        <div class="ct"><i class="fa-solid fa-pen-to-square" style="color:var(--violet); margin-right:8px;"></i>Assign Single Slot</div>
+      </div>
+      <form method="POST" action="{{ url_for('student_timetable.assign_student_timetable') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="cb" style="display: flex; flex-direction: column; gap: 16px;">
+          
+          <div class="fg2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="fgrp">
+              <label>Department *</label>
+              <select name="department" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+                {% for dept in DEPARTMENTS %}
+                  <option value="{{ dept }}">{{ dept }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="fgrp">
+              <label>Semester *</label>
+              <select name="semester" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+                {% for sem in SEMESTERS %}
+                  <option value="{{ sem }}">{{ sem }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="fg2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="fgrp">
+              <label>Division *</label>
+              <select name="division" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+                {% for div in DIVISIONS %}
+                  <option value="{{ div }}">{{ div }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="fgrp">
+              <label>Room / Lab *</label>
+              <input type="text" name="room" placeholder="e.g., Room 302, Lab A" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+            </div>
+          </div>
+
+          <div class="fg2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="fgrp">
+              <label>Day *</label>
+              <select name="day" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+                {% for day in DAYS %}
+                  <option value="{{ day }}">{{ day }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="fgrp">
+              <label>Time Slot *</label>
+              <select name="time_slot" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+                {% for period in PERIODS %}
+                  <option value="{{ period }}">{{ period }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="fgrp">
+            <label>Subject Name *</label>
+            <input type="text" name="subject" placeholder="e.g., Machine Learning" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+          </div>
+          
+        </div>
+        <div class="cf" style="display: flex; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--border);">
+          <button type="submit" class="btn btn-dark"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i>Submit for Approval</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Excel Bulk Import Form -->
+    <div class="card fu">
+      <div class="ch">
+        <div class="ct"><i class="fa-solid fa-file-excel" style="color:var(--green); margin-right:8px;"></i>Bulk Import via Excel</div>
+      </div>
+      <form method="POST" action="{{ url_for('student_timetable.assign_student_timetable') }}" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="cb" style="display: flex; flex-direction: column; gap: 16px;">
+          <p style="font-size: 13px; color: var(--ink3); line-height: 1.6;">
+            Import multiple student timetable requests at once using an Excel template. 
+            The file must contain the following columns in order starting from Row 2:
+          </p>
+          
+          <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; font-family: var(--mono); font-size: 11px; color: var(--ink2);">
+            Division | Semester | Day | Time Slot | Subject | Room | [Department]
+          </div>
+          
+          <div class="fgrp" style="margin-top: 10px;">
+            <label>Select Excel File (.xlsx)</label>
+            <input type="file" name="excel_file" accept=".xlsx, .xls" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--white); color: var(--ink);">
+          </div>
+        </div>
+        <div class="cf" style="display: flex; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--border);">
+          <button type="submit" class="btn btn-dark" style="background-color: var(--green); border-color: var(--green);"><i class="fa-solid fa-upload" style="margin-right: 6px;"></i>Upload & Import</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  
+  <!-- Right/Lower Section: Status Table of Assigned Slots -->
+  <div class="card fu">
+    <div class="ch">
+      <div class="ct"><i class="fa-solid fa-list-check" style="color:var(--blue); margin-right:8px;"></i>My Timetable Assignment Requests</div>
+    </div>
+    <div class="cb p0" style="overflow-x: auto;">
+      {% if requests %}
+        <table class="tbl" style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Day & Time</th>
+              <th>Subject</th>
+              <th>Room</th>
+              <th>Status</th>
+              <th>Date Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in requests %}
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td>
+                  <div style="font-weight: 600; color: var(--ink);">{{ r.department }}</div>
+                  <div style="font-size: 11px; color: var(--ink3);">Sem {{ r.semester }} (Div {{ r.division }})</div>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: var(--ink);">{{ r.day }}</div>
+                  <div style="font-size: 12px; color: var(--blue);">{{ r.time_slot }}</div>
+                </td>
+                <td>
+                  <strong style="color: var(--ink2);">{{ r.subject }}</strong>
+                </td>
+                <td>
+                  <span style="background: var(--bg2); padding: 3px 8px; border-radius: 4px; font-size: 12px;">{{ r.room }}</span>
+                </td>
+                <td>
+                  {% if r.status == 'approved' %}
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 50px; font-size: 11px; font-weight: 700; background: var(--green-s); color: var(--green); border: 1px solid var(--green);">
+                      <i class="fa-solid fa-circle-check" style="margin-right: 5px;"></i> Approved
+                    </span>
+                  {% elif r.status == 'rejected' %}
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 50px; font-size: 11px; font-weight: 700; background: var(--red-s); color: var(--red); border: 1px solid var(--red);">
+                      <i class="fa-solid fa-circle-xmark" style="margin-right: 5px;"></i> Rejected
+                    </span>
+                  {% else %}
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 50px; font-size: 11px; font-weight: 700; background: var(--amber-s); color: var(--amber); border: 1px solid var(--amber);">
+                      <i class="fa-solid fa-clock" style="margin-right: 5px;"></i> Pending
+                    </span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 12px; color: var(--ink3);">
+                  {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'N/A' }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--ink3);">
+          <i class="fa-regular fa-calendar-times" style="font-size: 48px; margin-bottom: 12px; display: block; color: var(--border2);"></i>
+          <p style="font-size: 14px;">You haven't submitted any student timetable slots yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

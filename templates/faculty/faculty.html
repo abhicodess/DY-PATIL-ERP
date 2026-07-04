@@ -91,7 +91,8 @@
     <div class="ch flex-sb" style="padding-bottom:16px"><div class="ct">Edit Faculty</div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('editFacModal').classList.remove('show')"><i class="fas fa-xmark"></i></button>
     </div>
-    <form method="POST" action="/edit_faculty"><div class="cb" style="padding-top:0">
+    <form method="POST" action="/edit_faculty">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><div class="cb" style="padding-top:0">
       <input type="hidden" name="faculty_id" id="feid">
       <div class="fg2">
         <div class="fgrp"><label>Name *</label><input type="text" name="name" id="fen" required></div>
@@ -117,6 +118,7 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('impFacSmart').classList.remove('show')"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="/import_faculty_smart" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div class="cb" style="padding-top:0">
         <div class="alert al-info" style="margin-bottom:14px"><i class="fas fa-circle-info"></i>
           <div style="font-size:12px;line-height:1.7"><strong>Supports Faculty_Details_.xlsx</strong><br>
@@ -138,7 +140,7 @@
   </div>
 </div>
 
-<form method="POST" action="/fix_faculty" id="fixFacForm" style="display:none"></form>
+<form method="POST" action="/fix_faculty" id="fixFacForm" style="display:none"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"></form>
 {% endblock %}
 
 {% block extra_js %}

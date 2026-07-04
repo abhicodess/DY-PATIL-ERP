@@ -14,6 +14,13 @@ class Student(db.Model):
     division = db.Column(db.String(50), default='')
     prn = db.Column(db.String(100), nullable=True)
     must_change_password = db.Column(db.Boolean, default=False, server_default='0')
+    dob = db.Column(db.Date)
+    gender = db.Column(db.String(50))
+    contact_number = db.Column(db.String(50))
+    parent_contact = db.Column(db.String(50))
+    address = db.Column(db.Text)
+    admission_year = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=True)
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

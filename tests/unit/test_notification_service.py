@@ -144,3 +144,110 @@ def test_send_whatsapp_gupshup_failure_fallback(session):
         assert log is not None
         assert log[5] == "failed"
         assert "Gupshup API returned status 500" in log[9]
+
+
+def test_attendance_save_triggers_notification(client, session):
+    with client.session_transaction() as sess:
+        sess['faculty_id'] = 999
+        sess['name'] = 'Prof. Test Faculty'
+        sess['role'] = 'faculty'
+        
+    session.execute(db.text("DELETE FROM attendance_sessions"))
+    session.execute(db.text("DELETE FROM students"))
+    session.execute(db.text("""
+        INSERT INTO attendance_sessions (id, faculty_id, subject, division, branch, lecture_date, status)
+        VALUES (123, 999, 'Maths', 'A', 'Computer', '2026-06-24', 'draft')
+    """))
+    session.execute(db.text("""
+        INSERT INTO students (id, name, roll, division, department, year)
+        VALUES (1, 'Student 1', 'CS-001', 'A', 'Computer', 'TY')
+    """))
+    session.commit()
+
+    with patch('services.admin_notification_service.admin_notifier.notify_admin') as mock_notify:
+        resp = client.post('/faculty/api/save_attendance', json={
+            "session_id": 123,
+            "markings": {"1": "Present"}
+        })
+        assert resp.status_code == 200
+        mock_notify.assert_called_once()
+        args, kwargs = mock_notify.call_args
+        assert kwargs.get('event_type') == 'attendance_submitted'
+        assert kwargs.get('subject') == 'Maths'
+
+def test_marks_save_triggers_notification(client, session):
+    with client.session_transaction() as sess:
+        sess['faculty_id'] = 999
+        sess['name'] = 'Prof. Test Faculty'
+        sess['role'] = 'faculty'
+
+    session.execute(db.text("DELETE FROM students"))
+    session.execute(db.text("""
+        INSERT INTO students (id, name, roll, division, department, year)
+        VALUES (1, 'Student 1', 'CS-001', 'A', 'Computer', 'TY')
+    """))
+    session.commit()
+
+    with patch('services.admin_notification_service.admin_notifier.notify_admin') as mock_notify:
+        resp = client.post('/faculty_save_marks', data={
+            "student_name": "Student 1",
+            "roll": "CS-001",
+            "department": "Computer",
+            "exam_type": "Semester Exam",
+            "subject": "Physics",
+            "date": "2026-06-24",
+            "marks": "50",
+            "total": "60"
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        mock_notify.assert_called_once()
+        args, kwargs = mock_notify.call_args
+        assert kwargs.get('event_type') == 'marks_submitted'
+        assert kwargs.get('subject') == 'Physics'
+
+def test_notification_failure_does_not_break_attendance_save(client, session):
+    with client.session_transaction() as sess:
+        sess['faculty_id'] = 999
+        sess['name'] = 'Prof. Test Faculty'
+        sess['role'] = 'faculty'
+        
+    session.execute(db.text("DELETE FROM attendance_sessions"))
+    session.execute(db.text("""
+        INSERT INTO attendance_sessions (id, faculty_id, subject, division, branch, lecture_date, status)
+        VALUES (124, 999, 'Maths', 'A', 'Computer', '2026-06-24', 'draft')
+    """))
+    session.commit()
+
+    with patch('services.admin_notification_service.admin_notifier.notify_admin', side_effect=RuntimeError("Notification service failed")) as mock_notify:
+        resp = client.post('/faculty/api/save_attendance', json={
+            "session_id": 124,
+            "markings": {"1": "Present"}
+        })
+        assert resp.status_code == 200
+
+def test_notification_failure_does_not_break_marks_save(client, session):
+    with client.session_transaction() as sess:
+        sess['faculty_id'] = 999
+        sess['name'] = 'Prof. Test Faculty'
+        sess['role'] = 'faculty'
+
+    session.execute(db.text("DELETE FROM students"))
+    session.execute(db.text("""
+        INSERT INTO students (id, name, roll, division, department, year)
+        VALUES (1, 'Student 1', 'CS-001', 'A', 'Computer', 'TY')
+    """))
+    session.commit()
+
+    with patch('services.admin_notification_service.admin_notifier.notify_admin', side_effect=RuntimeError("Notification service failed")) as mock_notify:
+        resp = client.post('/faculty_save_marks', data={
+            "student_name": "Student 1",
+            "roll": "CS-001",
+            "department": "Computer",
+            "exam_type": "Semester Exam",
+            "subject": "Chemistry",
+            "date": "2026-06-24",
+            "marks": "40",
+            "total": "60"
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+

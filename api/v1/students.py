@@ -75,7 +75,7 @@ def get_students():
     }
     sort_col = allowed_sort_fields.get(sort_by, 'name')
 
-    query = "SELECT id, name, roll, department, year, email, division, prn FROM students WHERE is_active = TRUE"
+    query = "SELECT id, name, roll, department, year, email, division, prn, contact_number FROM students WHERE is_active = TRUE"
     params = {}
 
     if request.args.get('dept'):
@@ -129,7 +129,7 @@ def get_student(student_id):
     if role == 'student' and identity_id != student_id:
         return error_response("Access forbidden: Cannot view other student profiles", "FORBIDDEN", 403)
 
-    student = qone("SELECT id, name, roll, department, year, email, division, prn, photo FROM students WHERE id = :id AND is_active = TRUE", {"id": student_id})
+    student = qone("SELECT id, name, roll, department, year, email, division, prn, photo, contact_number FROM students WHERE id = :id AND is_active = TRUE", {"id": student_id})
     if not student:
         return error_response("Student not found", "NOT_FOUND", 404)
 
@@ -375,18 +375,25 @@ def get_student_results(student_id):
     if role == 'student' and identity_id != student_id:
         return error_response("Access forbidden: Cannot view other student profiles", "FORBIDDEN", 403)
 
-    # Student can only view published results
+    student = qone("SELECT name, roll FROM students WHERE id = :id AND is_active = TRUE", {"id": student_id})
+    if not student:
+        return success_response([], "Student results retrieved successfully")
+
     query = """
-        SELECT r.id, r.semester, r.internal_marks, r.external_marks, r.total, r.grade, r.is_published,
-               s.name as subject_name, s.code as subject_code
+        SELECT r.id, r.semester, 
+               (COALESCE(r.ut_marks, 0) + COALESCE(r.mse_marks, 0) + COALESCE(r.assignment_marks, 0) + 
+                COALESCE(r.attendance_marks, 0) + COALESCE(r.teaching_assessment, 0) + COALESCE(r.tw_marks, 0)) as internal_marks,
+               COALESCE(r.pr_or_marks, 0) as external_marks,
+               r.marks as total, r.grade, r.published as is_published,
+               COALESCE(s.name, r.subject) as subject_name, s.subject_code as subject_code
         FROM results r
-        JOIN subjects s ON r.subject_id = s.id
-        WHERE r.student_id = :student_id
+        LEFT JOIN subjects s ON r.subject = s.name
+        WHERE (r.roll = :roll OR r.student_name = :name)
     """
-    params = {"student_id": student_id}
+    params = {"roll": student["roll"], "name": student["name"]}
     
     if role == 'student':
-        query += " AND r.is_published = TRUE"
+        query += " AND r.published = 1"
 
     rows = qry(query, params)
     return success_response([dict(r) for r in rows], "Student results retrieved successfully")

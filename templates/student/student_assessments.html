@@ -1,0 +1,151 @@
+{% extends "common/base.html" %}
+{% block title %}My Assessments{% endblock %}
+{% block page_title %}My Assessments{% endblock %}
+{% block breadcrumb %}<a href="/student_dashboard">Home</a> / Assessments{% endblock %}
+
+{% block content %}
+<div class="ph fu">
+  <div>
+    <div class="ph-title">My Academic Assessments</div>
+    <div class="ph-sub" style="color: var(--ink3); font-size: 14px;">Track your assignment submissions, research papers, project reviews, and faculty feedback.</div>
+  </div>
+</div>
+
+<div class="g4060 fu fu1" style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+  <!-- OVERVIEW CARD -->
+  <div class="card" style="background: linear-gradient(135deg, var(--violet) 0%, var(--blue) 100%); color: white; padding: 24px; border: none;">
+    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+      <div style="background: rgba(255,255,255,0.2); border-radius: var(--r-md); padding: 16px; font-size: 32px;">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div>
+        <h2 style="margin: 0; color: white; font-weight: 800;">Academic Portfolio</h2>
+        <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">Logged in as: <strong>{{ student.name }}</strong> (Roll: {{ student.roll or 'N/A' }})</p>
+        <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">Branch / Year: <strong>{{ student.department }}</strong> / Year {{ student.year }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS LIST -->
+  {% for item in assessments %}
+    <div class="card" style="overflow: hidden; border-left: 5px solid {% if item.has_data %}var(--violet){% else %}var(--ink4){% endif %};">
+      <div class="ch flex-sb" style="background: var(--bg); border-bottom: 1px solid var(--border); padding: 16px 20px;">
+        <div>
+          <h3 class="ct" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--ink);">{{ item.subject }}</h3>
+          {% if item.has_data and item.data.faculty_name %}
+            <span class="cs" style="font-size: 12px; color: var(--ink3); margin-top: 4px; display: block;">
+              <i class="fas fa-user-tie" style="margin-right: 4px;"></i>Evaluated by: <strong>{{ item.data.faculty_name }}</strong>
+            </span>
+          {% endif %}
+        </div>
+        <div>
+          {% if item.has_data %}
+            <span class="tag t-gn" style="font-weight: 600; font-size: 11px;">Active Assessment</span>
+          {% else %}
+            <span class="tag t-gy" style="font-weight: 600; font-size: 11px;">No Data Published</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="cb" style="padding: 20px;">
+        {% if item.has_data %}
+          {% set data = item.data %}
+          
+          <!-- ASSIGNMENTS GRID -->
+          <div style="margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="fas fa-tasks" style="color: var(--violet); margin-right: 6px;"></i> Assignments
+            </h4>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              {% for i in range(1, 6) %}
+                {% set val = data['assignment_' ~ i] %}
+                <div class="tag {% if val %}t-gn{% else %}t-gy{% endif %}" style="padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; border-radius: var(--r-sm);">
+                  <i class="fas {% if val %}fa-check-circle{% else %}fa-minus-circle{% endif %}"></i>
+                  <strong>A{{ i }}:</strong> {{ val if val else 'Pending' }}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- RESEARCH & PUBLICATIONS -->
+          <div style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="fas fa-file-invoice" style="color: var(--teal); margin-right: 6px;"></i> Research Publications & IP
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+              <!-- Papers -->
+              <div style="background: var(--bg); padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border);">
+                <div style="font-weight: 700; font-size: 12px; color: var(--ink3); margin-bottom: 4px;">Journal Publications</div>
+                <div style="font-size: 13px; line-height: 1.5;">
+                  <strong>Q1 Rank:</strong> {% if data.paper_q1 %}<span style="color: var(--green); font-weight: 700;">{{ data.paper_q1 }}</span>{% else %}-{% endif %}<br>
+                  <strong>Q2 Rank:</strong> {% if data.paper_q2 %}<span style="color: var(--green); font-weight: 700;">{{ data.paper_q2 }}</span>{% else %}-{% endif %}<br>
+                  <strong>Q3 Rank:</strong> {% if data.paper_q3 %}<span style="color: var(--green); font-weight: 700;">{{ data.paper_q3 }}</span>{% else %}-{% endif %}<br>
+                  <strong>Q4 Rank:</strong> {% if data.paper_q4 %}<span style="color: var(--green); font-weight: 700;">{{ data.paper_q4 }}</span>{% else %}-{% endif %}
+                </div>
+              </div>
+              <!-- Intellectual Property -->
+              <div style="background: var(--bg); padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border);">
+                <div style="font-weight: 700; font-size: 12px; color: var(--ink3); margin-bottom: 4px;">Intellectual Property</div>
+                <div style="font-size: 13px; line-height: 1.5;">
+                  <strong>Patent Pub:</strong> {% if data.patent_publication %}<span style="color: var(--blue); font-weight: 700;">{{ data.patent_publication }}</span>{% else %}<span style="color: var(--ink4);">No patent recorded</span>{% endif %}<br>
+                  <strong>Copyright:</strong> {% if data.copyright %}<span style="color: var(--teal); font-weight: 700;">{{ data.copyright }}</span>{% else %}<span style="color: var(--ink4);">No copyright recorded</span>{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROJECT REVIEWS & DOCS -->
+          <div style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="fas fa-project-diagram" style="color: var(--blue); margin-right: 6px;"></i> Project Milestones
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+              <div style="background: var(--bg); padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border);">
+                <div style="font-weight: 700; font-size: 12px; color: var(--ink3); margin-bottom: 2px;">Project Review 1</div>
+                <strong>{% if data.project_review_1 %}{{ data.project_review_1 }}{% else %}<span style="color: var(--ink4); font-weight: 500;">Pending</span>{% endif %}</strong>
+              </div>
+              <div style="background: var(--bg); padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border);">
+                <div style="font-weight: 700; font-size: 12px; color: var(--ink3); margin-bottom: 2px;">Project Review 2</div>
+                <strong>{% if data.project_review_2 %}{{ data.project_review_2 }}{% else %}<span style="color: var(--ink4); font-weight: 500;">Pending</span>{% endif %}</strong>
+              </div>
+            </div>
+            
+            {% if data.implementation_documentation %}
+              <div style="background: var(--bg); padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border);">
+                <div style="font-weight: 700; font-size: 12px; color: var(--ink3); margin-bottom: 4px;">Implementation & Documentation Link / Info</div>
+                <div style="font-family: var(--font); font-size: 13px; word-break: break-all;">
+                  <i class="fas fa-file-code" style="color: var(--teal); margin-right: 6px;"></i>{{ data.implementation_documentation }}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- REMARKS -->
+          {% if data.remark %}
+            <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+              <div style="background: var(--violet-s); border-left: 4px solid var(--violet); padding: 12px 16px; border-radius: 0 var(--r-sm) var(--r-sm) 0;">
+                <div style="font-weight: 700; font-size: 12px; color: var(--violet); margin-bottom: 4px; text-transform: uppercase;">Faculty Feedback Remark</div>
+                <p style="margin: 0; font-style: italic; color: var(--ink2); font-size: 13px;">"{{ data.remark }}"</p>
+              </div>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <!-- NO DATA CONTENT -->
+          <div style="text-align: center; padding: 24px; color: var(--ink3);">
+            <i class="fas fa-clock" style="font-size: 24px; color: var(--ink4); margin-bottom: 8px;"></i>
+            <p style="margin: 0; font-style: italic; font-size: 13px;">No assessment information has been added by your faculty for this subject yet.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="cb" style="text-align: center; padding: 32px;">
+        <i class="fas fa-folder-open" style="font-size: 32px; color: var(--ink4); margin-bottom: 12px;"></i>
+        <p style="margin: 0; font-style: italic; color: var(--ink3);">No registered subjects or assessments found.</p>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

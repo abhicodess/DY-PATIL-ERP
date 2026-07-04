@@ -16,12 +16,21 @@ class Mark(db.Model):
     faculty_id = db.Column(db.Integer, nullable=True)
     roll = db.Column(db.String(50))
     department = db.Column(db.String(100))
+    semester = db.Column(db.String(50))
     date = db.Column(db.String(20))
     assignment_marks = db.Column(db.Float, default=0.0)
     attendance_marks = db.Column(db.Float, default=0.0)
     teaching_assessment = db.Column(db.Float, default=0.0)
     ut_marks = db.Column(db.Float, default=0.0)
     mse_marks = db.Column(db.Float, default=0.0)
+    remarks = db.Column(db.String(255), default='')
+    subject_code = db.Column(db.String(50), default='')
+    prn_number = db.Column(db.String(50), default='')
+    ut_published = db.Column(db.Boolean, default=False)
+    mse_published = db.Column(db.Boolean, default=False)
+    result_published = db.Column(db.Boolean, default=False)
+    grade = db.Column(db.String(10), default='')
+    result = db.Column(db.String(50), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ResultSummary(db.Model):
@@ -34,3 +43,19 @@ class ResultSummary(db.Model):
     cgpa = db.Column(db.Float)
     result_status = db.Column(db.String(20)) # Pass, Fail, ATKT
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SubjectMaster(db.Model):
+    __tablename__ = 'subjects_master'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    subject_code = db.Column(db.String(50), unique=True, nullable=False)
+    subject_name = db.Column(db.String(100), nullable=False)
+    department = db.Column(db.String(50))
+    semester = db.Column(db.String(50))
+    max_assignment = db.Column(db.Integer, default=5)
+    max_attendance = db.Column(db.Integer, default=5)
+    max_teaching = db.Column(db.Integer, default=10)
+    max_ut = db.Column(db.Integer, default=20)
+    max_mse = db.Column(db.Integer, default=20)
+    max_total = db.Column(db.Integer, default=60)
+

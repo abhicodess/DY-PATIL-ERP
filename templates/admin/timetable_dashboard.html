@@ -1,0 +1,907 @@
+{% extends "common/base.html" %}
+{% block title %}Faculty Timetable — Admin Panel{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}Admin Panel{% endblock %}{% endblock %}
+{% block av_color %}#2563EB{% endblock %}{% block av_letter %}A{% endblock %}{% block user_role %}Super Admin{% endblock %}
+
+{% block page_title %}Faculty Timetable{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / Faculty Timetable{% endblock %}
+
+{% block content %}
+<style>
+  /* Timetable Dashboard Layout styling */
+  .dash-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 16px;
+  }
+  
+  /* Stats Cards Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 16px;
+  }
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--sh-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-top: 4px solid var(--border);
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sh-md);
+  }
+  .stat-card.purple { border-top-color: #7C3AED; }
+  .stat-card.amber { border-top-color: #F59E0B; }
+  .stat-card.red { border-top-color: #EF4444; }
+  .stat-card.orange { border-top-color: #F97316; }
+  .stat-card.green { border-top-color: #10B981; }
+
+  .stat-number {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--ink3);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* Two column layout for Middle Section */
+  .grid-two-col {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+  }
+  @media (max-width: 1024px) {
+    .grid-two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Section Styles */
+  .section-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--sh-sm);
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Request Cards */
+  .req-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--sh-sm);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .req-card.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  .req-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .req-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .req-details {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .req-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .reject-box {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+    width: 100%;
+  }
+
+  /* Recent Activity Feed Timeline */
+  .activity-timeline {
+    position: relative;
+    padding-left: 20px;
+    border-left: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  .activity-item {
+    position: relative;
+  }
+  .activity-dot {
+    position: absolute;
+    left: -27px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--white);
+    box-shadow: 0 0 0 2px var(--border);
+  }
+  .activity-dot.approved { background-color: #10B981; box-shadow: 0 0 0 2px #d1fae5; }
+  .activity-dot.rejected { background-color: #EF4444; box-shadow: 0 0 0 2px #fee2e2; }
+  .activity-dot.pending { background-color: #F59E0B; box-shadow: 0 0 0 2px #fef3c7; }
+  .activity-dot.resubmitted { background-color: #F97316; box-shadow: 0 0 0 2px #ffedd5; }
+  
+  .activity-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink4);
+    margin-bottom: 4px;
+  }
+  .activity-text {
+    font-size: 12px;
+    color: var(--ink2);
+    line-height: 1.4;
+  }
+
+  /* Coverage Matrix Grid Table */
+  .matrix-table-wrap {
+    overflow-x: auto;
+  }
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .matrix-table th {
+    background: #0F172A;
+    color: white;
+    font-weight: 700;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #1E293B;
+  }
+  .matrix-table th:first-child {
+    text-align: left;
+    min-width: 150px;
+  }
+  .matrix-table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    position: relative;
+    cursor: pointer;
+  }
+  .matrix-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    background: var(--bg);
+  }
+  
+  /* Color intensities for cell counts */
+  .cell-0 { background-color: #FEF2F2 !important; color: #991b1b; } /* light red */
+  .cell-1-2 { background-color: #FEF3C7 !important; color: #92400e; } /* amber */
+  .cell-3-4 { background-color: #F0FDF4 !important; color: #166534; } /* light green */
+  .cell-5 { background-color: #DCFCE7 !important; color: #14532d; font-weight: 700; } /* green */
+
+  .cell-tooltip {
+    visibility: hidden;
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1F2937;
+    color: white;
+    text-align: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .cell-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1F2937 transparent transparent transparent;
+  }
+  .matrix-table td:hover .cell-tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+</style>
+
+<div id="erpToast" style="display:none; position:fixed;
+  top:20px; right:20px; padding:12px 20px; border-radius:8px;
+  font-size:14px; font-weight:500; z-index:2000;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  transition:opacity 0.3s ease;"></div>
+
+<div class="dash-container">
+  <!-- Section A: Stats bar -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card purple">
+      <div class="stat-number" id="stat-master">-</div>
+      <div class="stat-label">Master Slots</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-number" id="stat-approved">-</div>
+      <div class="stat-label">Approved Slots</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-number" id="stat-pending">-</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-number" id="stat-rejected">-</div>
+      <div class="stat-label">Rejected (24h)</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-number" id="stat-resubmissions">-</div>
+      <div class="stat-label">Re-submissions</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-number" id="stat-active-faculty">-</div>
+      <div class="stat-label">Active Faculty</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-number" id="stat-divisions">-</div>
+      <div class="stat-label">Divisions Covered</div>
+    </div>
+  </div>
+
+  <!-- Two Column Content Area -->
+  <div class="grid-two-col">
+    <!-- Left Column: Pending Requests -->
+    <div class="section-card">
+      <div class="section-title">
+        <span>Pending Requests (<span id="requestsCount">0</span>)</span>
+        <a href="/admin/timetable-requests" style="font-size:12px; color:#7C3AED; text-decoration:none; font-weight:600;">View All &rarr;</a>
+      </div>
+      <div id="requestsList">
+        <div style="padding: 20px; text-align: center; color: var(--ink3);">
+          <i class="fas fa-spinner fa-spin"></i> Loading pending requests...
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Recent Activity Feed -->
+    <div class="section-card">
+      <div class="section-title">Recent Activity</div>
+      <div class="activity-timeline" id="activityTimeline">
+        <div style="padding: 20px; text-align: center; color: var(--ink3);">
+          <i class="fas fa-spinner fa-spin"></i> Loading recent activity...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approved Faculty Slots -->
+  <div class="section-card">
+    <div class="section-title">
+      <span>Approved Faculty Slots (<span id="approvedCount">0</span>)</span>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="approvedSearch" placeholder="Filter by faculty, subject, div..." onkeyup="filterApprovedTable()" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; width:200px;" />
+      </div>
+    </div>
+    <div class="cb p0" style="max-height: 400px; overflow-y: auto;">
+      <table class="tbl" id="approvedTable">
+        <thead>
+          <tr>
+            <th>Faculty Name</th>
+            <th>Day</th>
+            <th>Time Slot</th>
+            <th>Subject</th>
+            <th>Type</th>
+            <th>Division</th>
+            <th>Room</th>
+            <th>Semester</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="approvedList">
+          <tr>
+            <td colspan="9" style="padding:20px; text-align:center; color:var(--ink3);">
+              <i class="fas fa-spinner fa-spin"></i> Loading approved slots...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Admin Edit Slot Modal -->
+  <div id="adminEditModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+    <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
+        <h3 style="margin:0"><i class="fas fa-edit" style="color:var(--blue)"></i> Admin Override: Edit Slot</h3>
+        <span class="close" onclick="closeEditModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+      </div>
+      <form id="adminEditForm">
+        <input type="hidden" name="id" id="edit-id">
+        <input type="hidden" name="current_status" id="edit-status">
+        
+        <!-- Day -->
+        <div class="form-group" style="margin-bottom:15px">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Day *</label>
+          <select name="day" id="edit-day" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" required>
+            <option>Monday</option><option>Tuesday</option>
+            <option>Wednesday</option><option>Thursday</option>
+            <option>Friday</option><option>Saturday</option>
+          </select>
+        </div>
+
+        <!-- Time Slot -->
+        <div class="form-group" style="margin-bottom:15px">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Time Slot *</label>
+          <select name="time_slot" id="edit-time" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" required>
+            <option>8:30-9:30</option><option>9:30-10:30</option>
+            <option>10:30-11:30</option><option>11:30-12:30</option>
+            <option>1:30-2:30</option><option>2:30-3:30</option>
+            <option>3:30-4:30</option><option>4:30-5:30</option>
+          </select>
+        </div>
+
+        <!-- Subject Name -->
+        <div class="form-group" style="margin-bottom:15px">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Subject Name *</label>
+          <input type="text" name="subject" id="edit-subject" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; box-sizing:border-box;" required>
+        </div>
+
+        <!-- Type -->
+        <div class="form-group" style="margin-bottom:15px">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Type *</label>
+          <select name="slot_type" id="edit-type" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" required>
+            <option value="Theory">Theory</option>
+            <option value="Lab">Lab</option>
+            <option value="Elective">Elective</option>
+            <option value="Minor">Minor</option>
+          </select>
+        </div>
+
+        <!-- Division & Room -->
+        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px">
+          <div class="form-group">
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Room / Lab</label>
+            <input type="text" name="room" id="edit-room" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; box-sizing:border-box;">
+          </div>
+          <div class="form-group">
+            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division *</label>
+            <select name="division" id="edit-division" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;" required>
+              <!-- Will be populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Semester -->
+        <div class="form-group" style="margin-bottom:20px">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Semester</label>
+          <input type="text" name="semester" id="edit-semester" style="width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; box-sizing:border-box;" placeholder="e.g. Sem 4">
+        </div>
+
+        <div style="text-align:right">
+          <button type="button" class="btn btn-out" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" id="editSlotSubmitBtn" class="btn btn-vi">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Section D: Coverage matrix -->
+  <div class="section-card">
+    <div class="section-title">Division Coverage Matrix</div>
+    <div class="matrix-table-wrap">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Division</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+          </tr>
+        </thead>
+        <tbody id="matrixBody">
+          <tr>
+            <td colspan="7" style="padding: 30px; text-align: center; color: var(--ink3);">
+              <i class="fas fa-spinner fa-spin"></i> Loading coverage data...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  loadStats();
+  loadPendingRequests();
+  loadActivity();
+  loadCoverage();
+  loadApprovedSlots();
+  loadDivisions();
+});
+
+// 1. Stats Bar
+async function loadStats() {
+  try {
+    const res = await fetch('/api/admin/timetable/stats');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    document.getElementById('stat-master').textContent = data.master_total;
+    document.getElementById('stat-approved').textContent = data.faculty_approved;
+    document.getElementById('stat-pending').textContent = data.pending_review;
+    document.getElementById('stat-rejected').textContent = data.rejected_today;
+    document.getElementById('stat-resubmissions').textContent = data.resubmissions;
+    document.getElementById('stat-active-faculty').textContent = data.faculty_active;
+    document.getElementById('stat-divisions').textContent = data.divisions_covered;
+  } catch (err) {
+    console.error("Failed to load stats", err);
+  }
+}
+
+// 2. Pending Requests
+async function loadPendingRequests() {
+  const listDiv = document.getElementById('requestsList');
+  const countSpan = document.getElementById('requestsCount');
+  
+  try {
+    const res = await fetch('/api/admin/timetable-requests');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const requests = data.requests || [];
+    countSpan.textContent = requests.length;
+    
+    listDiv.innerHTML = '';
+    if (requests.length === 0) {
+      listDiv.innerHTML = `
+        <div style="padding:40px; text-align:center; color:var(--ink3);">
+          <i class="fas fa-calendar-check" style="font-size:32px; color:var(--ink4); margin-bottom:8px;"></i>
+          <p style="font-size:14px; font-weight:600;">No pending requests requiring review</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Limit to first 4 requests on dashboard for compact view
+    requests.slice(0, 4).forEach(req => {
+      const card = document.createElement('div');
+      card.className = 'req-card';
+      card.id = `req-${req.id}`;
+      
+      card.innerHTML = `
+        <div class="req-header">
+          <div>
+            <span class="req-name">${req.faculty_display_name || req.faculty_name}</span>
+            <span style="color:var(--ink4); margin:0 4px;">·</span>
+            <span style="font-weight:700; color:#7C3AED; font-size:13px;">${req.subject}</span>
+            ${req.resubmission_count > 0 ? `
+              <span style="background:#fef3c7; color:#92400e; font-size:10px; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:6px;">
+                Re-sub #${req.resubmission_count}
+              </span>
+            ` : ''}
+          </div>
+          <span style="font-size:10px; color:var(--ink4);">${req.division}</span>
+        </div>
+        <div class="req-details">
+          ${req.day} ${req.time_slot} &nbsp;·&nbsp; ${req.slot_type} &nbsp;·&nbsp; Room: ${req.room || 'N/A'}
+          ${req.resubmission_count > 0 ? `
+            <div style="font-size:11px; margin-top:4px; padding:4px 8px; background:#f9fafb; border-radius:4px; color:#4b5563;">
+              <strong>Prev Rejection:</strong> "${req.last_rejected_note}"
+            </div>
+          ` : ''}
+        </div>
+        <div class="req-actions" id="actions-${req.id}">
+          <button class="btn btn-sm" style="background:#059669; color:#fff; padding:3px 8px; font-size:11px;" onclick="approveRequest(${req.id})">Approve</button>
+          <button class="btn btn-sm" style="background:#dc2626; color:#fff; padding:3px 8px; font-size:11px;" onclick="showRejectBox(${req.id})">Reject</button>
+          <button class="btn btn-sm btn-out" style="padding:3px 8px; font-size:11px;" onclick="openEditModal(${req.id}, '${req.day}', '${req.time_slot}', '${req.subject.replace(/'/g, "\\'")}', '${req.slot_type}', '${(req.room || '').replace(/'/g, "\\'")}', '${req.division}', '${req.semester || ''}', 'pending')"><i class="fas fa-edit"></i> Edit</button>
+        </div>
+        <div class="reject-box" id="reject-box-${req.id}">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="note-${req.id}" placeholder="Reason..." style="flex:1; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:11px;" />
+            <button class="btn btn-sm" style="background:#dc2626; color:#fff; padding:3px 8px; font-size:11px;" onclick="confirmReject(${req.id})">Confirm</button>
+            <button class="btn btn-sm btn-out" style="padding:3px 8px; font-size:11px;" onclick="hideRejectBox(${req.id})">Cancel</button>
+          </div>
+        </div>
+      `;
+      listDiv.appendChild(card);
+    });
+  } catch (err) {
+    listDiv.innerHTML = '<p style="color:#dc2626; font-size:12px; padding:20px; text-align:center;">Failed to load requests</p>';
+  }
+}
+
+async function approveRequest(id) {
+  try {
+    const res = await fetch(`/api/admin/timetable-requests/${id}/approve`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      }
+    });
+    if (!res.ok) throw new Error('Approve failed');
+    showToast('Approved successfully ✓', 'success');
+    fadeOutCard(id);
+    loadStats();
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+
+function showRejectBox(id) {
+  document.getElementById(`reject-box-${id}`).style.display = 'block';
+  document.getElementById(`actions-${id}`).style.display = 'none';
+}
+
+function hideRejectBox(id) {
+  document.getElementById(`reject-box-${id}`).style.display = 'none';
+  document.getElementById(`actions-${id}`).style.display = 'flex';
+}
+
+async function confirmReject(id) {
+  const note = document.getElementById(`note-${id}`).value.trim();
+  if (!note) {
+    showToast('Enter reason', 'danger');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/timetable-requests/${id}/reject`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({ note })
+    });
+    if (!res.ok) throw new Error('Reject failed');
+    showToast('Rejected successfully ✓', 'success');
+    fadeOutCard(id);
+    loadStats();
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+
+function fadeOutCard(id) {
+  const card = document.getElementById(`req-${id}`);
+  if (card) {
+    card.classList.add('fade-out');
+    setTimeout(() => {
+      card.remove();
+      const countSpan = document.getElementById('requestsCount');
+      let count = parseInt(countSpan.textContent) - 1;
+      countSpan.textContent = count >= 0 ? count : 0;
+      if (count === 0) {
+        document.getElementById('requestsList').innerHTML = `
+          <div style="padding:40px; text-align:center; color:var(--ink3);">
+            <i class="fas fa-calendar-check" style="font-size:32px; color:var(--ink4); margin-bottom:8px;"></i>
+            <p style="font-size:14px; font-weight:600;">No pending requests requiring review</p>
+          </div>
+        `;
+      }
+    }, 300);
+  }
+}
+
+// 3. Activity Feed
+async function loadActivity() {
+  const timeline = document.getElementById('activityTimeline');
+  try {
+    const res = await fetch('/api/admin/timetable/activity?limit=20');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    
+    timeline.innerHTML = '';
+    if (data.length === 0) {
+      timeline.innerHTML = '<p style="font-size:12px; color:var(--ink4); text-align:center; padding:20px;">No recent activity</p>';
+      return;
+    }
+    
+    data.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'activity-item';
+      
+      let dotClass = 'pending';
+      if (item.event_type === 'timetable_slot_approved') dotClass = 'approved';
+      else if (item.event_type === 'timetable_slot_rejected') dotClass = 'rejected';
+      else if (item.event_type === 'timetable_resubmitted') dotClass = 'resubmitted';
+
+      row.innerHTML = `
+        <div class="activity-dot ${dotClass}"></div>
+        <div class="activity-header">
+          <strong>${item.faculty_name}</strong>
+          <span>${timeAgo(item.created_at)}</span>
+        </div>
+        <div class="activity-text">${item.message}</div>
+      `;
+      timeline.appendChild(row);
+    });
+  } catch (err) {
+    timeline.innerHTML = '<p style="color:#dc2626; font-size:12px; padding:20px; text-align:center;">Failed to load activity</p>';
+  }
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return 'just now';
+  const diff = Date.now() - new Date(dateStr);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  return `${Math.floor(hrs/24)}d ago`;
+}
+
+// 4. Coverage Matrix
+async function loadCoverage() {
+  const tbody = document.getElementById('matrixBody');
+  try {
+    const res = await fetch('/api/admin/timetable/coverage');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    
+    tbody.innerHTML = '';
+    const divisions = Object.keys(data).sort();
+    
+    if (divisions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; text-align:center; color:var(--ink4);">No coverage data found</td></tr>';
+      return;
+    }
+    
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    
+    divisions.forEach(div => {
+      const tr = document.createElement('tr');
+      
+      // Division name cell
+      const tdDiv = document.createElement('td');
+      tdDiv.textContent = div;
+      tr.appendChild(tdDiv);
+      
+      // Days cells
+      days.forEach(day => {
+        const td = document.createElement('td');
+        const dayData = data[div][day] || { total: 0, theory: 0, lab: 0 };
+        const total = dayData.total;
+        
+        td.textContent = total;
+        
+        // Color classes
+        if (total === 0) td.className = 'cell-0';
+        else if (total <= 2) td.className = 'cell-1-2';
+        else if (total <= 4) td.className = 'cell-3-4';
+        else td.className = 'cell-5';
+        
+        // Tooltip
+        td.innerHTML += `
+          <div class="cell-tooltip">
+            ${total} slots: ${dayData.theory} theory, ${dayData.lab} lab
+          </div>
+        `;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:#dc2626; text-align:center; padding:20px;">Failed to load coverage matrix</td></tr>';
+  }
+}
+
+// Toast
+function showToast(message, type) {
+  const toast = document.getElementById('erpToast');
+  toast.textContent = message;
+  toast.style.background = type === 'success' ? '#059669' : '#dc2626';
+  toast.style.color = '#fff';
+  toast.style.display = 'block';
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 300);
+  }, 3000);
+}
+
+// Approved Slots Loader
+async function loadApprovedSlots() {
+  const tbody = document.getElementById('approvedList');
+  const countSpan = document.getElementById('approvedCount');
+  if(!tbody) return;
+  
+  try {
+    const res = await fetch('/api/admin/timetable-slots?status=approved');
+    if (!res.ok) throw new Error();
+    const slots = await res.json();
+    countSpan.textContent = slots.length;
+    
+    tbody.innerHTML = '';
+    if (slots.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:20px; text-align:center; color:var(--ink4);">No approved slots found</td></tr>';
+      return;
+    }
+    
+    slots.forEach(slot => {
+      const tr = document.createElement('tr');
+      tr.className = 'approved-row';
+      tr.innerHTML = `
+        <td><strong>${slot.faculty_name}</strong></td>
+        <td><span class="tag t-bl">${slot.day}</span></td>
+        <td class="mono">${slot.time_slot}</td>
+        <td>${slot.subject}</td>
+        <td><span class="tag ${slot.slot_type === 'Lab' ? 't-vi' : slot.slot_type === 'Elective' ? 't-gr' : slot.slot_type === 'Minor' ? 't-am' : 't-bl'}">${slot.slot_type}</span></td>
+        <td>${slot.division}</td>
+        <td>${slot.room || '—'}</td>
+        <td>${slot.semester || '—'}</td>
+        <td>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn btn-out btn-sm" onclick="openEditModal(${slot.id}, '${slot.day}', '${slot.time_slot}', '${slot.subject.replace(/'/g, "\\'")}', '${slot.slot_type}', '${(slot.room || '').replace(/'/g, "\\'")}', '${slot.division}', '${slot.semester || ''}', 'approved')" style="padding:3px 8px; font-size:11px;">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button class="btn btn-sm btn-dark" onclick="sendTimetableNotification(${slot.id})" style="padding:3px 8px; font-size:11px; background:#4f46e5; color:#fff; border:none;">
+              <i class="fas fa-bell"></i> Notify
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="9" style="color:#dc2626; text-align:center; padding:20px;">Failed to load approved slots</td></tr>';
+  }
+}
+
+function filterApprovedTable() {
+  const q = document.getElementById('approvedSearch').value.toLowerCase();
+  document.querySelectorAll('.approved-row').forEach(row => {
+    const txt = row.innerText.toLowerCase();
+    row.style.display = txt.includes(q) ? '' : 'none';
+  });
+}
+
+let divisionsList = [];
+async function loadDivisions() {
+  try {
+    const res = await fetch('/api/faculty/divisions');
+    const data = await res.json();
+    divisionsList = data.divisions || [];
+  } catch (e) {
+    divisionsList = ['SE CSE-A','SE CSE-B','SE AIDS','SE IT'];
+  }
+}
+
+function openEditModal(id, day, time_slot, subject, slot_type, room, division, semester, status) {
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-status').value = status;
+  document.getElementById('edit-day').value = day;
+  document.getElementById('edit-time').value = time_slot;
+  document.getElementById('edit-subject').value = subject;
+  document.getElementById('edit-type').value = slot_type;
+  document.getElementById('edit-room').value = room || '';
+  document.getElementById('edit-semester').value = semester || '';
+  
+  const divSelect = document.getElementById('edit-division');
+  divSelect.innerHTML = '';
+  divisionsList.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    if (d === division) opt.selected = true;
+    divSelect.appendChild(opt);
+  });
+  
+  document.getElementById('adminEditModal').style.display = 'block';
+}
+
+function closeEditModal() {
+  document.getElementById('adminEditModal').style.display = 'none';
+}
+
+document.getElementById('adminEditForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-id').value;
+  const status = document.getElementById('edit-status').value;
+  const payload = {
+    day: document.getElementById('edit-day').value,
+    time_slot: document.getElementById('edit-time').value,
+    subject: document.getElementById('edit-subject').value.trim(),
+    slot_type: document.getElementById('edit-type').value,
+    room: document.getElementById('edit-room').value.trim(),
+    division: document.getElementById('edit-division').value,
+    semester: document.getElementById('edit-semester').value.trim(),
+    status: status
+  };
+  
+  const btn = document.getElementById('editSlotSubmitBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch('/api/admin/timetable-slots/' + id, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.status === 200) {
+      showToast('Slot updated successfully!', 'success');
+      closeEditModal();
+      loadPendingRequests();
+      loadApprovedSlots();
+      loadStats();
+      loadCoverage();
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Failed to update slot.', 'danger');
+    }
+  } catch (err) {
+    showToast('Network error — please try again', 'danger');
+  } finally {
+    btn.textContent = 'Save Changes';
+    btn.disabled = false;
+  }
+};
+
+async function sendTimetableNotification(slotId) {
+  if (!confirm("Are you sure you want to send a broadcast notification for this approved timetable slot?")) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/admin/timetable-slots/${slotId}/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ csrf_token() }}'
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send notification');
+    
+    showToast('Notification broadcasted successfully! ✓', 'success');
+  } catch (err) {
+    showToast(err.message, 'danger');
+  }
+}
+</script>
+{% endblock %}
