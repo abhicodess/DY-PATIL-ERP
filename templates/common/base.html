@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}ERP{% endblock %} — DY Patil University</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
+  <!-- Font preconnect for faster load -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
-  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
   {% block head %}{% endblock %}
   <style>
     :root {
@@ -395,11 +395,38 @@
       color: var(--ink)
     }
 
+    /* ── Page transition & contain ── */
     .main {
       margin-left: var(--sb-w);
       padding: calc(var(--tb-h) + 28px) 28px 32px;
       max-width: calc(100vw - var(--sb-w));
       overflow-x: hidden;
+      contain: layout style;
+      animation: pageIn .3s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px) }
+      to   { opacity: 1; transform: translateY(0) }
+    }
+    .main.leaving {
+      animation: pageOut .18s ease-in both;
+    }
+    @keyframes pageOut {
+      to { opacity: 0; transform: translateY(-6px) }
+    }
+
+    /* ── Top progress bar ── */
+    #nprogress {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 2.5px; z-index: 9999;
+      background: linear-gradient(90deg, var(--blue), #60a5fa);
+      transform-origin: left;
+      transform: scaleX(0);
+      transition: transform .2s ease;
+      border-radius: 0 2px 2px 0;
+    }
+    #nprogress.running {
+      box-shadow: 0 0 8px rgba(37,99,235,.5);
     }
 
     .ph {
@@ -1976,6 +2003,77 @@
     document.getElementById('sbOverlay').addEventListener('click', closeSidebar);
     window.addEventListener('resize', function() { if (window.innerWidth > 768) closeSidebar(); });
   </script>
-  <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+  <script>
+  /* ── Buttery page transitions + progress bar ── */
+  (function(){
+    var bar = document.createElement('div');
+    bar.id = 'nprogress';
+    document.body.appendChild(bar);
+
+    var prog = 0, raf = null, done = false;
+
+    function setBar(n){
+      prog = n;
+      bar.style.transform = 'scaleX('+n+')';
+    }
+
+    function trickle(){
+      if(done) return;
+      /* Slow down as we approach 90% */
+      var inc = prog < .3 ? .06 : prog < .6 ? .035 : prog < .8 ? .015 : .005;
+      setBar(Math.min(prog + inc, .92));
+      raf = requestAnimationFrame(trickle);
+    }
+
+    function start(){
+      done = false; prog = 0;
+      bar.classList.add('running');
+      setBar(.08);
+      raf = requestAnimationFrame(trickle);
+    }
+
+    function finish(){
+      done = true;
+      if(raf) cancelAnimationFrame(raf);
+      bar.style.transition = 'transform .15s ease';
+      setBar(1);
+      setTimeout(function(){
+        bar.style.opacity = '0';
+        bar.style.transition = 'transform .15s ease, opacity .3s ease';
+        setTimeout(function(){ bar.style.transform='scaleX(0)'; bar.style.opacity='1'; bar.style.transition='transform .2s ease'; bar.classList.remove('running'); }, 350);
+      }, 180);
+    }
+
+    /* Intercept internal link clicks */
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a');
+      if(!a) return;
+      var href = a.getAttribute('href');
+      if(!href || href.startsWith('#') || href.startsWith('mailto') || href.startsWith('javascript')) return;
+      if(a.target === '_blank') return;
+      try{
+        var url = new URL(href, location.href);
+        if(url.origin !== location.origin) return;
+        if(url.pathname === location.pathname && url.search === location.search) return;
+      } catch(err){ return; }
+      /* Fade out current main */
+      var main = document.querySelector('.main');
+      if(main) main.classList.add('leaving');
+      start();
+    });
+
+    /* Intercept form submits */
+    document.addEventListener('submit', function(e){
+      if(e.target.method && e.target.method.toUpperCase() !== 'GET') start();
+    });
+
+    /* Complete on page load */
+    window.addEventListener('pageshow', finish);
+    if(document.readyState === 'complete') finish();
+    else window.addEventListener('load', finish);
+  })();
+  </script>
 </body>
 </html>
