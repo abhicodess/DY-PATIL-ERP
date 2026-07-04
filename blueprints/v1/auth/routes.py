@@ -41,6 +41,7 @@ def get_csrf_token():
 @auth_bp.alt_response(401, schema=ErrorSchema, description="Invalid credentials")
 @auth_bp.alt_response(422, schema=ErrorSchema, description="Validation error")
 @auth_bp.doc(summary="Generate access and refresh tokens", tags=["Authentication"])
+@csrf.exempt
 def login(login_data):
     username = login_data.get("username", "").strip()
     password = login_data.get("password", "").strip()

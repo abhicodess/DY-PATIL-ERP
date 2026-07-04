@@ -3,7 +3,7 @@ from blueprints.auth import auth_bp
 from services.student_service import StudentService
 from services.faculty_service import FacultyService
 from werkzeug.security import check_password_hash
-from extensions import limiter
+from extensions import limiter, csrf
 import os
 
 student_service = StudentService()
@@ -22,6 +22,7 @@ def index():
 @auth_bp.route("/admin_login", methods=["GET", "POST"])
 @auth_bp.route("/faculty_login", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
+@csrf.exempt
 def login():
     if request.method == "POST":
         role = request.form.get("role", "").strip()
