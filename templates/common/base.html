@@ -209,7 +209,7 @@
       border: none;
       width: 100%;
       text-align: left;
-      transition: all .13s;
+      transition: background .12s, color .12s;
       margin-bottom: 0;
       cursor: pointer
     }
@@ -291,7 +291,7 @@
       font-size: 13px;
       padding: 6px;
       border-radius: 6px;
-      transition: all .13s
+      transition: background .12s, color .12s
     }
 
     .sb-logout:hover {
@@ -385,7 +385,7 @@
       color: var(--ink3);
       font-size: 13px;
       cursor: pointer;
-      transition: all .13s;
+      transition: background .12s, color .12s, border-color .12s;
       position: relative;
       flex-shrink: 0
     }
@@ -688,7 +688,7 @@
       font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: all .15s;
+      transition: background .13s, color .13s, border-color .13s, box-shadow .13s, transform .13s;
       white-space: nowrap
     }
 
@@ -880,7 +880,7 @@
       border-radius: var(--r-sm);
       text-align: center;
       cursor: pointer;
-      transition: all .16s;
+      transition: background .13s, border-color .13s;
       background: var(--white);
       display: block
     }
@@ -905,7 +905,7 @@
       justify-content: center;
       margin: 0 auto 8px;
       font-size: 15px;
-      transition: all .16s
+      transition: background .13s, color .13s
     }
 
     .qa-lbl {
@@ -927,7 +927,7 @@
       font-size: 11px;
       font-weight: 700;
       cursor: pointer;
-      transition: all .13s;
+      transition: background .1s, border-color .1s, color .1s;
       color: var(--ink4)
     }
 
@@ -1508,7 +1508,7 @@
     @keyframes fadeUp {
       from {
         opacity: 0;
-        transform: translateY(10px)
+        transform: translateY(14px)
       }
 
       to {
@@ -1518,7 +1518,7 @@
     }
 
     .fu {
-      animation: fadeUp .3s ease both
+      animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both
     }
 
     .fu1 {
