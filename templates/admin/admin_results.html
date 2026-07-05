@@ -301,7 +301,7 @@
         <th width="25%">Candidate details</th>
         <th width="15%">Dept / Sem</th>
         <th width="20%">Subject Assessed</th>
-        <th width="12%">Aggregate / 60</th>
+        <th width="12%">Aggregate</th>
         <th width="5%">Grade</th>
         <th width="10%">Status</th>
         <th width="8%">Actions</th>
@@ -336,7 +336,7 @@
           </div>
         </td>
         <td>
-          {% set gc = '#16a34a' if p>=85 else ('#2563eb' if p>=70 else ('#8b5cf6' if p>=60 else ('#d97706' if p>=40 else '#dc2626'))) %}
+          {% set gc = '#16a34a' if r.grade == 'O' else ('#2563eb' if r.grade == 'A+' else ('#8b5cf6' if r.grade == 'A' else ('#d97706' if r.grade == 'B+' else ('#ea580c' if r.grade == 'B' else ('#ef4444' if r.grade == 'C' else ('#dc2626' if r.grade == 'F' else '#6b7280')))))) %}
           <div class="grade-badge" style="background:{{ gc }};">{{ r.grade or '?' }}</div>
         </td>
         <td>
