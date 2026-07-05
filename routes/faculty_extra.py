@@ -173,6 +173,32 @@ def faculty_marks():
                            students=students_list, my_subjects=my_subjects,
                            marks=marks, today=today_str())
 
+@faculty_extra_bp.route("/faculty/marks/add", methods=["GET"])
+@login_required("faculty")
+def faculty_add_marks_page():
+    my_subjects = qry("SELECT * FROM subjects WHERE teacher LIKE %s ORDER BY name", (f"%{session['name']}%",))
+    students_list = qry("SELECT name,roll FROM students ORDER BY name")
+    return render_template("faculty/add_mark.html",
+                           students=students_list, my_subjects=my_subjects,
+                           SEMESTERS=SEMESTERS)
+
+
+@faculty_extra_bp.route("/faculty/marks/edit/<int:mark_id>", methods=["GET"])
+@login_required("faculty")
+def faculty_edit_marks_page(mark_id):
+    fid = session["faculty_id"]
+    mark_row = qone("SELECT * FROM marks WHERE id=%s AND faculty_id=%s", (mark_id, fid))
+    if not mark_row:
+        from flask import flash
+        flash("Mark record not found.", "error")
+        return redirect("/faculty_marks")
+    my_subjects = qry("SELECT * FROM subjects WHERE teacher LIKE %s ORDER BY name", (f"%{session['name']}%",))
+    students_list = qry("SELECT name,roll FROM students ORDER BY name")
+    return render_template("faculty/edit_mark.html",
+                           mark=mark_row, students=students_list, my_subjects=my_subjects,
+                           SEMESTERS=SEMESTERS)
+
+
 @faculty_extra_bp.route("/faculty_save_marks", methods=["POST"])
 @login_required("faculty")
 def faculty_save_marks():
@@ -222,7 +248,7 @@ def faculty_save_marks():
     exam_type = data.get("exam_type", "Semester Exam")
     assignment_m = float(data.get("assignment_marks", 0) or 0)
     attendance_m = float(data.get("attendance_marks", 0) or 0)
-    teaching_m   = float(data.get("teaching_assessment", 0) or 0)
+    teaching_m   = float(data.get("teaching_assessment", 0) or data.get("teacher_assessment", 0) or 0)
     ut_m         = float(data.get("ut_marks", 0) or 0)
     mse_m        = float(data.get("mse_marks", 0) or 0)
     remarks      = data.get("remarks", "").strip()
@@ -1161,6 +1187,44 @@ def faculty_export_results():
     
     fname = f"results{'_'+subject if subject else ''}{'_'+semester if semester else ''}.xlsx"
     return send_file(output, as_attachment=True, download_name=fname, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@faculty_extra_bp.route("/faculty_edit_marks", methods=["POST"])
+@login_required("faculty")
+def faculty_edit_marks():
+    mid = request.form.get("mark_id")
+    fid = session["faculty_id"]
+    if not mid:
+        from flask import flash
+        flash("Missing mark ID", "error")
+        return redirect("/faculty_marks")
+        
+    assignment_m = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
+    attendance_m = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
+    teaching_m   = min(float(request.form.get("teaching_assessment", 0) or request.form.get("teacher_assessment", 0) or 0), 10.0)
+    ut_m         = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
+    mse_m        = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
+    remarks      = request.form.get("remarks", "").strip()
+    
+    total_calc = assignment_m + attendance_m + teaching_m + ut_m + mse_m
+    
+    from services.results_service import calculate_result
+    _, grade_val, result_val, passed = calculate_result(
+        assignment_m, attendance_m, teaching_m, ut_m, mse_m
+    )
+    
+    exe("""UPDATE marks SET subject=%s, semester=%s, remarks=%s,
+                           assignment_marks=%s, attendance_marks=%s, teaching_assessment=%s,
+                           ut_marks=%s, mse_marks=%s, marks=%s, total=60.0,
+                           grade=%s, result=%s
+           WHERE id=%s AND faculty_id=%s""",
+        (request.form.get("subject", ""), request.form.get("semester", ""), remarks,
+         assignment_m, attendance_m, teaching_m, ut_m, mse_m, total_calc,
+         grade_val, result_val, mid, fid))
+         
+    from flask import flash
+    flash("Mark record updated successfully.", "success")
+    return redirect("/faculty_marks?updated=1")
 
 
 

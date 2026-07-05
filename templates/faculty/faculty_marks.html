@@ -34,103 +34,52 @@
     </form>
   </div>
 </div>
-<div class="ph fu"><div class="ph-title">Marks Entry</div><div class="ph-actions"><a href="/export_marks_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export All</a><button class="btn btn-out btn-sm" onclick="document.getElementById('impMarksModal').classList.add('show')"><i class="fas fa-file-excel"></i> Import Excel</button></div></div>
-<div class="g4060 fu fu1">
-  <div class="card">
-    <div class="ch"><div class="ct">Enter Marks</div></div>
-    <form method="POST" action="/faculty_save_marks">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <div class="cb">
-        <div class="fgrp">
-          <label>Subject *</label>
-          <select name="subject" id="subject_select" required onchange="loadStudents()">
-            <option value="">Select Subject...</option>
-            {% for s in my_subjects %}
-            <option value="{{ s.name }}">{{ s.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="fgrp">
-          <label>Student Name *</label>
-          <select name="student_name" id="student_select" required>
-            <option value="">Choose subject first...</option>
-          </select>
-        </div>
-        <div class="fg2">
-          <div class="fgrp"><label>Marks Obtained *</label><input type="number" name="marks" step="0.5" min="0" required></div>
-        </div>
-        <div class="fg2">
-          <div class="fgrp"><label>Exam Type</label>
-            <select name="exam_type">
-              <option>Unit Test 1</option><option>Unit Test 2</option><option>Mid Sem</option>
-              <option>End Sem</option><option>Practical</option><option>Assignment</option>
-            </select>
-          </div>
-          <div class="fgrp"><label>Date</label><input type="date" name="date" value="{{ today }}"></div>
-        </div>
-        <div class="fgrp">
-          <label>Remarks</label>
-          <input type="text" name="remarks" placeholder="Enter remarks (e.g. Good performance, Needs improvement)...">
-        </div>
-      </div>
-      <div class="cf">
-        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save Marks</button>
-      </div>
-    </form>
+<div class="ph fu">
+  <div class="ph-title">Marks Entry</div>
+  <div class="ph-actions" style="display:flex; gap:8px;">
+    <a href="/export_marks_excel" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export All</a>
+    <button class="btn btn-out btn-sm" onclick="document.getElementById('impMarksModal').classList.add('show')"><i class="fas fa-file-excel"></i> Import Excel</button>
+    <a href="/faculty/marks/add" class="btn btn-dark btn-sm"><i class="fas fa-plus"></i> Add Marks</a>
   </div>
+</div>
 
-<script>
-async function loadStudents() {
-  const subj = document.getElementById('subject_select').value;
-  const sel = document.getElementById('student_select');
-  
-  if(!subj) {
-    sel.innerHTML = '<option value="">Choose subject first...</option>';
-    return;
-  }
-  
-  sel.innerHTML = '<option value="">Loading students...</option>';
-  
-  try {
-    const res = await fetch(`/faculty/api/students_by_subject?subject=${encodeURIComponent(subj)}`);
-    const students = await res.json();
-    
-    sel.innerHTML = '<option value="">Select Student...</option>';
-    students.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.name;
-      opt.textContent = `${s.name} (${s.roll || 'No Roll'})`;
-      sel.appendChild(opt);
-    });
-  } catch(e) {
-    sel.innerHTML = '<option value="">Error loading students</option>';
-  }
-}
-</script>
-  <div class="card">
-    <div class="ch"><div class="ct">Marks Records</div><div class="cs">{{ marks|length }} entries</div></div>
-    <div class="cb p0" style="padding-top:0">
-      <table class="tbl">
-        <thead><tr><th>Student</th><th>Subject</th><th>Marks</th><th>Type</th><th>Del</th></tr></thead>
-        <tbody>
-          {% for m in marks %}
-          <tr>
-            <td>{{ m.student_name }}</td>
-            <td style="font-size:12px;color:var(--ink3)">{{ m.subject }}</td>
-            <td>
-              <span class="mono" style="font-weight:700">{{ m.marks }}</span>
-              <span style="color:var(--ink4);font-size:11px">/{{ m.total }}</span>
-              {% set p = (m.marks/m.total*100)|round|int %}
-              <span class="grade {% if p>=90 %}g-ap{% elif p>=75 %}g-a{% elif p>=60 %}g-b{% elif p>=40 %}g-c{% else %}g-f{% endif %}" style="font-size:11px;margin-left:4px">{% if p>=90 %}A+{% elif p>=75 %}A{% elif p>=60 %}B+{% elif p>=40 %}B{% elif p>=33 %}C{% else %}F{% endif %}</span>
-            </td>
-            <td><span class="tag t-vi" style="font-size:10px">{{ m.exam_type }}</span></td>
-            <td><form method="POST" action="/faculty_delete_marks" onsubmit="return confirm('Delete?')"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="marks_id" value="{{ m.id }}"><button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button></form></td>
-          </tr>
-          {% else %}
-          <tr><td colspan="5"><div class="empty-state" style="padding:24px"><i class="fas fa-star"></i><p>No marks entered yet.</p></div></td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<div class="card fu fu1">
+  <div class="ch"><div class="ct">Marks Records</div><div class="cs">{{ marks|length }} entries</div></div>
+  <div class="cb p0" style="padding-top:0">
+    <table class="tbl">
+      <thead>
+        <tr><th>Student</th><th>Subject</th><th>Marks</th><th>Grade</th><th>Type</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for m in marks %}
+        <tr>
+          <td>{{ m.student_name }}</td>
+          <td style="font-size:12px;color:var(--ink3)">{{ m.subject }}</td>
+          <td>
+            <span class="mono" style="font-weight:700">{{ m.marks }}</span>
+            <span style="color:var(--ink4);font-size:11px">/{{ m.total }}</span>
+          </td>
+          <td>
+            {% set p = (m.marks/m.total*100)|round|int if m.total else 0 %}
+            <span class="grade {% if p>=90 %}g-ap{% elif p>=75 %}g-a{% elif p>=60 %}g-b{% elif p>=40 %}g-c{% else %}g-f{% endif %}" style="font-size:11px;">{% if p>=90 %}A+{% elif p>=75 %}A{% elif p>=60 %}B+{% elif p>=40 %}B{% elif p>=33 %}C{% else %}F{% endif %}</span>
+          </td>
+          <td><span class="tag t-vi" style="font-size:10px">{{ m.exam_type }}</span></td>
+          <td>
+            <div style="display:flex; align-items:center;">
+              <a href="/faculty/marks/edit/{{ m.id }}" class="btn btn-ghost btn-sm" style="padding:4px 8px; font-size:12px; margin-right:4px;" title="Edit"><i class="fas fa-pen"></i></a>
+              <form method="POST" action="/faculty_delete_marks" onsubmit="return confirm('Delete?')" style="display:inline">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="hidden" name="marks_id" value="{{ m.id }}">
+                <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 8px;"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state" style="padding:24px"><i class="fas fa-star"></i><p>No marks entered yet.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-</div>{% endblock %}
+</div>
+{% endblock %}

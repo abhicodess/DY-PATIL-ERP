@@ -1,0 +1,264 @@
+{% extends "common/base.html" %}
+{% block title %}Edit Marks — Faculty{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}{block sb_sub %}Faculty Panel{% endblock %}
+{% block av_color %}#7C3AED{% endblock %}{% block av_letter %}{{ session.name[0]|upper }}{% endblock %}{% block user_role %}Faculty{% endblock %}
+
+{% block page_title %}Edit Marks Record{% endblock %}
+{% block breadcrumb %}<a href="/faculty_dashboard">Home</a> / <a href="/faculty_marks">Marks Entry</a> / Edit{% endblock %}
+
+{% block content %}
+<style>
+  .form-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .form-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+  .form-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fgrp {
+    margin-bottom: 16px;
+  }
+  .fgrp label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink2);
+    margin-bottom: 6px;
+  }
+  .form-inp, .form-sel {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-inp:focus, .form-sel:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-s);
+  }
+  .score-hint {
+    font-size: 11px;
+    color: var(--ink4);
+    margin-top: 4px;
+    display: block;
+    font-weight: 500;
+  }
+  
+  /* Live preview box */
+  .preview-box {
+    grid-column: span 2;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-radius: 12px;
+    padding: 24px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.15);
+  }
+  .preview-item {
+    text-align: center;
+  }
+  .preview-val {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .preview-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink3);
+  }
+  .badge-pass { background: #064e3b; color: #34d399; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 12px; }
+  .badge-fail { background: #450a0a; color: #f87171; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 12px; }
+</style>
+
+<form method="POST" action="/faculty_edit_marks" id="editMarkForm">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="mark_id" value="{{ mark.id }}">
+  
+  <div class="form-container">
+    <!-- Left column: Student Details -->
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-user-graduate"></i> Student & Course Info</div>
+      
+      <div class="fgrp">
+        <label>Student Name</label>
+        <input type="text" value="{{ mark.student_name }}" class="form-inp" readonly style="background:#f1f5f9; cursor:not-allowed; color:var(--ink3)">
+      </div>
+
+      <div class="fgrp">
+        <label>Subject *</label>
+        <select name="subject" required class="form-sel">
+          {% for s in my_subjects %}
+          <option value="{{ s.name }}" {% if mark.subject == s.name %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="fgrp">
+        <label>Semester *</label>
+        <select name="semester" required class="form-sel">
+          {% for s in SEMESTERS %}
+          <option value="{{ s }}" {% if mark.semester == s %}selected{% endif %}>Semester {{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="fgrp">
+        <label>Exam Type *</label>
+        <select name="exam_type" required class="form-sel">
+          <option {% if mark.exam_type == 'Semester Exam' %}selected{% endif %}>Semester Exam</option>
+          <option {% if mark.exam_type == 'Unit Test 1' %}selected{% endif %}>Unit Test 1</option>
+          <option {% if mark.exam_type == 'Unit Test 2' %}selected{% endif %}>Unit Test 2</option>
+          <option {% if mark.exam_type == 'Mid Sem' %}selected{% endif %}>Mid Sem</option>
+          <option {% if mark.exam_type == 'End Sem' %}selected{% endif %}>End Sem</option>
+          <option {% if mark.exam_type == 'Practical' %}selected{% endif %}>Practical</option>
+          <option {% if mark.exam_type == 'Assignment' %}selected{% endif %}>Assignment</option>
+        </select>
+      </div>
+      
+      <div class="fgrp">
+        <label>Remarks</label>
+        <input type="text" name="remarks" value="{{ mark.remarks or '' }}" class="form-inp" placeholder="e.g. Good performance, Needs improvement...">
+      </div>
+    </div>
+
+    <!-- Right column: Marks Breakdown -->
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-calculator"></i> Marks Breakdown (Aggregate out of 60)</div>
+      
+      <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+        <div class="fgrp">
+          <label>Assignment Marks *</label>
+          <input type="number" name="assignment_marks" id="val_assign" step="0.5" min="0" max="5" value="{{ mark.assignment_marks or 0 }}" class="form-inp m-val" required oninput="recalc()">
+          <span class="score-hint">Max: 5 marks</span>
+        </div>
+
+        <div class="fgrp">
+          <label>Attendance Marks *</label>
+          <input type="number" name="attendance_marks" id="val_attend" step="0.5" min="0" max="5" value="{{ mark.attendance_marks or 0 }}" class="form-inp m-val" required oninput="recalc()">
+          <span class="score-hint">Max: 5 marks</span>
+        </div>
+
+        <div class="fgrp">
+          <label>Teaching Assessment *</label>
+          <input type="number" name="teaching_assessment" id="val_ta" step="0.5" min="0" max="10" value="{{ mark.teaching_assessment or 0 }}" class="form-inp m-val" required oninput="recalc()">
+          <span class="score-hint">Max: 10 marks</span>
+        </div>
+
+        <div class="fgrp">
+          <label>Unit Test / UT *</label>
+          <input type="number" name="ut_marks" id="val_ut" step="0.5" min="0" max="20" value="{{ mark.ut_marks or 0 }}" class="form-inp m-val" required oninput="recalc()">
+          <span class="score-hint">Max: 20 marks</span>
+        </div>
+
+        <div class="fgrp">
+          <label>Mid-Sem / MSE *</label>
+          <input type="number" name="mse_marks" id="val_mse" step="0.5" min="0" max="20" value="{{ mark.mse_marks or 0 }}" class="form-inp m-val" required oninput="recalc()">
+          <span class="score-hint">Max: 20 marks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom: Live Preview Box -->
+    <div class="preview-box">
+      <div class="preview-item">
+        <div class="preview-val" id="lbl_total">0.0</div>
+        <div class="preview-label">Calculated Score / 60</div>
+      </div>
+      
+      <div class="preview-item">
+        <div class="preview-val" id="lbl_pct">0%</div>
+        <div class="preview-label">Percentage</div>
+      </div>
+
+      <div class="preview-item">
+        <div class="preview-val" id="lbl_grade" style="color:#60a5fa">F</div>
+        <div class="preview-label">Estimated Grade</div>
+      </div>
+
+      <div class="preview-item">
+        <div class="preview-val" id="lbl_status"><span class="badge-fail">Fail</span></div>
+        <div class="preview-label">Status</div>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <a href="/faculty_marks" class="btn btn-out" style="background:#334155; border:none; color:#f1f5f9;">Cancel</a>
+        <button type="submit" class="btn btn-dark" style="background:#2563eb;"><i class="fas fa-save"></i> Save Changes</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+function recalc() {
+  const assign = parseFloat(document.getElementById('val_assign').value) || 0;
+  const attend = parseFloat(document.getElementById('val_attend').value) || 0;
+  const ta = parseFloat(document.getElementById('val_ta').value) || 0;
+  const ut = parseFloat(document.getElementById('val_ut').value) || 0;
+  const mse = parseFloat(document.getElementById('val_mse').value) || 0;
+  
+  const total = assign + attend + ta + ut + mse;
+  const percentage = (total / 60) * 100;
+  
+  document.getElementById('lbl_total').textContent = total.toFixed(2);
+  document.getElementById('lbl_pct').textContent = percentage.toFixed(1) + '%';
+  
+  // Grade calculation logic (matches results_service.py)
+  let grade = 'F';
+  let gradeColor = '#f87171';
+  
+  // Pass requirements: ut >= 8 AND mse >= 8 AND total >= 24
+  let passed = (ut >= 8) && (mse >= 8) && (total >= 24);
+  
+  if (passed) {
+    if (percentage >= 75) { grade = 'O'; gradeColor = '#34d399'; }
+    else if (percentage >= 65) { grade = 'A'; gradeColor = '#60a5fa'; }
+    else if (percentage >= 55) { grade = 'B'; gradeColor = '#c084fc'; }
+    else if (percentage >= 45) { grade = 'C'; gradeColor = '#fbbf24'; }
+    else { grade = 'D'; gradeColor = '#fb923c'; }
+  } else {
+    grade = 'F';
+    gradeColor = '#f87171';
+  }
+  
+  document.getElementById('lbl_grade').textContent = grade;
+  document.getElementById('lbl_grade').style.color = gradeColor;
+  
+  const statusEl = document.getElementById('lbl_status');
+  if (passed) {
+    statusEl.innerHTML = '<span class="badge-pass">Pass</span>';
+  } else {
+    statusEl.innerHTML = '<span class="badge-fail">Fail</span>';
+  }
+}
+// Initial run
+recalc();
+</script>
+{% endblock %}
