@@ -644,6 +644,34 @@ def faculty_results():
         results=results, my_subjects=my_subjects,
         students=students_list, today=today_str(), SEMESTERS=SEMESTERS)
 
+
+@faculty_extra_bp.route("/faculty/results/add", methods=["GET"])
+@login_required("faculty")
+def faculty_add_result_page():
+    my_subjects = qry("SELECT name FROM subjects WHERE teacher LIKE %s ORDER BY name",
+                      (f"%{session['name']}%",))
+    students_list = qry("SELECT name,roll FROM students ORDER BY name")
+    return render_template("faculty/add_result.html",
+        my_subjects=my_subjects, students=students_list,
+        today=today_str(), SEMESTERS=SEMESTERS)
+
+
+@faculty_extra_bp.route("/faculty/results/edit/<int:result_id>", methods=["GET"])
+@login_required("faculty")
+def faculty_edit_result_page(result_id):
+    fid = session["faculty_id"]
+    res_row = qone("SELECT * FROM results WHERE id=%s AND faculty_id=%s", (result_id, fid))
+    if not res_row:
+        from flask import flash
+        flash("Result record not found.", "error")
+        return redirect("/faculty_results")
+    my_subjects = qry("SELECT name FROM subjects WHERE teacher LIKE %s ORDER BY name",
+                      (f"%{session['name']}%",))
+    students_list = qry("SELECT name,roll FROM students ORDER BY name")
+    return render_template("faculty/edit_result.html",
+        result=res_row, my_subjects=my_subjects, students=students_list,
+        SEMESTERS=SEMESTERS)
+
 @faculty_extra_bp.route("/faculty_save_result", methods=["POST"])
 @login_required("faculty")
 def faculty_save_result():

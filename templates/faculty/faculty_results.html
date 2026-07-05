@@ -93,8 +93,8 @@
           <td>{% if r.published %}<span class="tag t-bl"><i class="fas fa-lock" style="font-size:10px"></i> Live</span>{% else %}<span class="tag t-am">Draft</span>{% endif %}</td>
           <td>
             {% if not r.published %}
-            <div class="flex-ac gap4">
-              <button class="icon-btn" title="Edit Component Details" onclick="openEdit({{ r.id }}, '{{ r.subject|replace("'","\\'") }}', '{{ r.semester }}', {{ r.assignment_marks|default(0) }}, {{ r.attendance_marks|default(0) }}, {{ r.teacher_assessment|default(0) }}, {{ r.ut_marks|default(0) }}, {{ r.mse_marks|default(0) }}, {{ r.tw_marks|default(0) }}, {{ r.pr_or_marks|default(0) }}, '{{ r.exam_type|replace("'","\\'") }}')"><i class="fas fa-pen"></i></button>
+             <div class="flex-ac gap4">
+              <a href="/faculty/results/edit/{{ r.id }}" class="icon-btn" title="Edit Result"><i class="fas fa-pen"></i></a>
               <form method="post" action="/faculty_delete_result" style="display:inline">
                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <input type="hidden" name="result_id" value="{{ r.id }}">
@@ -112,79 +112,7 @@
   </div>
 </div>
 
-{# ── Add Modal ───────────────────────────────────────────── #}
-<div id="addModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('addModal')">
-  <div class="modal-bx">
-    <div class="modal-hd"><span>Add Result</span><button class="modal-cls" onclick="closeModal('addModal')"><i class="fas fa-times"></i></button></div>
-    <form method="post" action="/faculty_save_result">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <div class="form-grid2">
-        <div class="fg">
-          <label class="fl">Student Name *</label>
-          <input type="text" name="student_name" required class="form-inp" list="stu-list" placeholder="Type to search…">
-          <datalist id="stu-list">{% for s in students %}<option value="{{ s.name }}">{{ s.roll }}</option>{% endfor %}</datalist>
-        </div>
-        <div class="fg">
-          <label class="fl">Subject *</label>
-          <input type="text" name="subject" required class="form-inp" list="subj-list">
-          <datalist id="subj-list">{% for s in my_subjects %}<option value="{{ s.name }}">{% endfor %}</datalist>
-        </div>
-        <div class="fg"><label class="fl">Semester</label><select name="semester" class="form-sel">{% for s in SEMESTERS %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}</select></div>
-        <div class="fg"><label class="fl">Exam Type</label><select name="exam_type" class="form-sel"><option>Semester Exam</option><option>Unit Test 1</option><option>Unit Test 2</option><option>Practical</option><option>Internal</option></select></div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
-          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-chart-pie"></i> Marks Breakdown (60 Marks Aggregate)</div>
-          <div class="form-grid2">
-            <div class="fg"><label class="fl">Assignment</label><input type="number" name="assignment_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Attendance</label><input type="number" name="attendance_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Teacher Assessment</label><input type="number" name="teacher_assessment" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Unit Test / UT</label><input type="number" name="ut_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Mid-Sem / MSE</label><input type="number" name="mse_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Term Work / TW</label><input type="number" name="tw_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-            <div class="fg" style="grid-column: span 2;"><label class="fl">Practical / PR / OR</label><input type="number" name="pr_or_marks" step="0.01" min="0" value="0" class="form-inp"></div>
-          </div>
-      </div>
-      <input type="hidden" name="total" value="60">
-      <div class="modal-ft">
-        <button type="button" class="btn btn-out btn-sm" onclick="closeModal('addModal')">Cancel</button>
-        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Save</button>
-      </div>
-    </form>
-  </div>
-</div>
 
-{# ── Edit Modal ──────────────────────────────────────────── #}
-<div id="editModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('editModal')">
-  <div class="modal-bx">
-    <div class="modal-hd"><span>Edit Result</span><button class="modal-cls" onclick="closeModal('editModal')"><i class="fas fa-times"></i></button></div>
-    <form method="post" action="/faculty_edit_result">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="result_id" id="edit_id">
-      <div class="form-grid2">
-        <div class="fg" style="grid-column:span 2"><label class="fl">Subject</label><input type="text" name="subject" id="edit_subject" class="form-inp" list="subj-list"></div>
-        <div class="fg"><label class="fl">Semester</label><select name="semester" id="edit_semester" class="form-sel">{% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}</select></div>
-        <div class="fg"><label class="fl">Exam Type</label><select name="exam_type" id="edit_examtype" class="form-sel"><option>Semester Exam</option><option>Unit Test 1</option><option>Unit Test 2</option><option>Practical</option><option>Internal</option></select></div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:20px;">
-          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:#0f172a; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;"><i class="fas fa-sliders"></i> Internal Marks Scaling (60 Marks Aggregate)</div>
-          <div class="form-grid2">
-            <div class="fg"><label class="fl">Assign</label><input type="number" name="assignment_marks" id="edit_assign" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">Attndn</label><input type="number" name="attendance_marks" id="edit_attend" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">T. Assess</label><input type="number" name="teacher_assessment" id="edit_ta" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">UT Mark</label><input type="number" name="ut_marks" id="edit_ut" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">MSE Mark</label><input type="number" name="mse_marks" id="edit_mse" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg"><label class="fl">TW</label><input type="number" name="tw_marks" id="edit_tw" step="0.01" min="0" class="form-inp"></div>
-            <div class="fg" style="grid-column: span 2;"><label class="fl">PR / OR</label><input type="number" name="pr_or_marks" id="edit_pr_or" step="0.01" min="0" class="form-inp"></div>
-          </div>
-      </div>
-      <input type="hidden" name="total" value="60">
-      <div class="modal-ft">
-        <button type="button" class="btn btn-out btn-sm" onclick="closeModal('editModal')">Cancel</button>
-        <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Update</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 {# ── Excel Modal ── #}
 <div id="excelModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('excelModal')">
@@ -230,26 +158,6 @@
 <script>
 function openModal(id){document.getElementById(id).style.display='flex';}
 function closeModal(id){document.getElementById(id).style.display='none';}
-function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
-  document.getElementById('edit_id').value = id;
-  document.getElementById('edit_subject').value = subject;
-  
-  // Set the precise values out of 60 dynamically mapped fields
-  document.getElementById('edit_assign').value = assign;
-  document.getElementById('edit_attend').value = attend;
-  document.getElementById('edit_ta').value = ta;
-  document.getElementById('edit_ut').value = ut;
-  document.getElementById('edit_mse').value = mse;
-  document.getElementById('edit_tw').value = tw;
-  document.getElementById('edit_pr_or').value = pr_or;
-  
-  var ss = document.getElementById('edit_semester');
-  for(var o of ss.options) o.selected = (o.value === String(semester));
-  var es = document.getElementById('edit_examtype');
-  for(var o of es.options) o.selected = (o.value === examtype);
-  
-  openModal('editModal');
-}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.modal-ov').forEach(function(m){m.style.display='none';});});
 </script>
 {% endblock %}
