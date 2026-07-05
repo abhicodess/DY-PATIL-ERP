@@ -16,7 +16,8 @@
     <div class="ph-title">My Results</div>
     <div class="ph-sub">Results you have entered for your subjects</div>
   </div>
-  <div class="ph-actions">
+  <div class="ph-actions" style="display:flex; gap:8px;">
+    <button class="btn btn-out btn-sm" onclick="openModal('excelModal')"><i class="fas fa-file-excel"></i> Excel Import/Export</button>
     <button class="btn btn-dark btn-sm" onclick="openModal('addModal')"><i class="fas fa-plus"></i> Add Result</button>
   </div>
 </div>
@@ -182,6 +183,45 @@
         <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-save"></i> Update</button>
       </div>
     </form>
+  </div>
+</div>
+
+{# ── Excel Modal ── #}
+<div id="excelModal" class="modal-ov" style="display:none" onclick="if(event.target===this)closeModal('excelModal')">
+  <div class="modal-bx" style="max-width: 500px;">
+    <div class="modal-hd">
+      <span>Excel Actions (Import / Export)</span>
+      <button class="modal-cls" onclick="closeModal('excelModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-content" style="padding: 20px;">
+      <!-- Export Section -->
+      <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+        <h4 style="font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--ink); margin-bottom: 8px;"><i class="fas fa-file-export"></i> Export Results</h4>
+        <p style="font-size: 12px; color: var(--ink3); margin-bottom: 12px;">Download all your entered results matching current subject and semester filters.</p>
+        <a href="/faculty_export_results?subject={{ subj_filt or '' }}&semester={{ sem_filt or '' }}" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export to Excel (.xlsx)</a>
+      </div>
+
+      <!-- Import Section -->
+      <div>
+        <h4 style="font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--ink); margin-bottom: 8px;"><i class="fas fa-file-import"></i> Import Results</h4>
+        <p style="font-size: 12px; color: var(--ink3); margin-bottom: 12px;">Upload an Excel sheet to import or batch update student results. Standard headers: Student Name, Roll, Subject, Semester, Assignment, Attendance, Teacher Assessment, UT, MSE, TW, PR OR.</p>
+        <form method="POST" action="/faculty_import_results" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="import-zone" onclick="document.getElementById('f_results_excel').click()" style="border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; background: var(--bg); transition: background 0.15s, border-color 0.15s;">
+            <i class="fas fa-file-excel" style="color:#059669; font-size: 32px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;"></i>
+            <p style="font-weight: 600; font-size: 13px; color: var(--ink2);">Click to choose Excel file</p>
+            <small style="color: var(--ink4); font-size: 11px;">Supports .xlsx</small>
+            <input type="file" name="file" id="f_results_excel" accept=".xlsx,.xls" style="display:none"
+                   onchange="document.getElementById('fn_results_excel').textContent='✓  '+this.files[0].name;document.getElementById('imp_results_btn').disabled=false;">
+          </div>
+          <p id="fn_results_excel" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></p>
+          <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn btn-out btn-sm" onclick="closeModal('excelModal')">Cancel</button>
+            <button type="submit" class="btn btn-dark btn-sm" id="imp_results_btn" disabled><i class="fas fa-upload"></i> Import Now</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 

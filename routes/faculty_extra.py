@@ -980,3 +980,159 @@ def publish_result():
     return jsonify({"updated": cur.rowcount}), 200
 
 
+@faculty_extra_bp.route("/faculty_import_results", methods=["POST"])
+@login_required("faculty")
+def faculty_import_results():
+    f = request.files.get("file")
+    if not f:
+        from flask import flash
+        flash("No file selected", "error")
+        return redirect("/faculty_results")
+    fid = session["faculty_id"]
+    try:
+        wb = load_workbook(f, data_only=True)
+        ws = wb.active
+        added = 0
+        hdr_row = 1
+        for i in range(1, min(ws.max_row+1, 10)):
+            vals = [str(ws.cell(i,c).value or "").lower() for c in range(1, min(ws.max_column+1, 15))]
+            if any("name" in v or "student" in v or "marks" in v or "subject" in v for v in vals):
+                hdr_row = i
+                break
+        hdrs = [str(ws.cell(hdr_row,c).value or "").lower().strip() for c in range(1, ws.max_column+1)]
+        def gcol(kws):
+            for k in kws:
+                for idx, h in enumerate(hdrs):
+                    if k in h: return idx + 1
+            return None
+        cn = gcol(["name", "student"])
+        cr = gcol(["roll"])
+        cs = gcol(["subject"])
+        csem = gcol(["semester", "sem"])
+        c_exam = gcol(["exam type", "exam"])
+        c_assign = gcol(["assignment"])
+        c_attend = gcol(["attendance"])
+        c_ta = gcol(["teacher assessment", "ta", "teaching assessment", "assess"])
+        c_ut = gcol(["ut", "unit test"])
+        c_mse = gcol(["mse", "mid-sem", "mid sem"])
+        c_tw = gcol(["term work", "tw"])
+        c_pr = gcol(["practical", "pr", "or"])
+        if not cn or not cs:
+            from flask import flash
+            flash("Invalid Excel format. Name and Subject columns are required.", "error")
+            return redirect("/faculty_results")
+        for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
+            if not row or len(row) < cn: continue
+            name = str(row[cn-1] or "").strip()
+            if not name or name.lower() in ("name", "student name", "student"): continue
+            roll = str(row[cr-1] or "").strip() if cr and cr <= len(row) else ""
+            subj = str(row[cs-1] or "").strip() if cs and cs <= len(row) else ""
+            sem = str(row[csem-1] or "IV").strip() if csem and csem <= len(row) else "IV"
+            exam_t = str(row[c_exam-1] or "Semester Exam").strip() if c_exam and c_exam <= len(row) else "Semester Exam"
+            def get_val(col_idx):
+                if col_idx and col_idx <= len(row) and row[col_idx-1] is not None:
+                    try: return float(row[col_idx-1])
+                    except: return 0.0
+                return 0.0
+            assign = get_val(c_assign)
+            attend = get_val(c_attend)
+            ta = get_val(c_ta)
+            ut = get_val(c_ut)
+            mse = get_val(c_mse)
+            tw = get_val(c_tw)
+            pr = get_val(c_pr)
+            stu_id = resolve_student_id(name, roll)
+            sr = qone("SELECT roll, department, year FROM students WHERE id=%s", (stu_id,)) if stu_id else None
+            dept = sr["department"] if sr else ""
+            yr = sr["year"] if sr else ""
+            roll = sr["roll"] if sr else roll
+            marks_val = min(assign + attend + ta + ut + mse + tw + pr, 60.0)
+            total_val = 60.0
+            g_letter = grade(marks_val, total_val)
+            res_val = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
+            existing = qone("SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s AND semester=%s",
+                            (name, roll, subj, exam_t, sem))
+            if existing:
+                exe("""UPDATE results SET marks=%s, total=%s, grade=%s, result=%s,
+                                         assignment_marks=%s, attendance_marks=%s, teaching_assessment=%s,
+                                         ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s
+                       WHERE id=%s""",
+                    (marks_val, total_val, g_letter, res_val, assign, attend, ta, ut, mse, tw, pr, existing["id"]))
+            else:
+                exe("""INSERT INTO results(student_name, roll, department, year, semester, subject,
+                                           marks, total, exam_type, grade, result, faculty_id, published,
+                                           assignment_marks, attendance_marks, teaching_assessment,
+                                           ut_marks, mse_marks, tw_marks, pr_or_marks)
+                       VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, %s, %s, %s, %s)""",
+                    (name, roll, dept, yr, sem, subj, marks_val, total_val, exam_t, g_letter, res_val, fid,
+                     assign, attend, ta, ut, mse, tw, pr))
+            added += 1
+        from flask import flash
+        flash(f"Successfully imported {added} results.", "success")
+    except Exception as e:
+        import traceback
+        from flask import current_app, flash
+        current_app.logger.error(f"Faculty results import error: {traceback.format_exc()}")
+        flash(f"Error importing Excel: {str(e)}", "error")
+    return redirect("/faculty_results")
+
+
+@faculty_extra_bp.route("/faculty_export_results")
+@login_required("faculty")
+def faculty_export_results():
+    fid = session["faculty_id"]
+    subject = request.args.get("subject","").strip()
+    semester = request.args.get("semester","").strip()
+    
+    sql = "SELECT * FROM results WHERE faculty_id=%s"
+    params = [fid]
+    if subject:
+        sql += " AND subject=%s"
+        params.append(subject)
+    if semester:
+        sql += " AND semester=%s"
+        params.append(semester)
+        
+    sql += " ORDER BY student_name, subject, exam_type"
+    rows = qry(sql, params)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Results"
+    
+    hdrs = ["Student Name", "Roll", "Subject", "Semester", "Exam Type",
+            "Assignment", "Attendance", "Teacher Assessment", "UT", "MSE", "TW", "PR OR",
+            "Aggregate", "Total", "Percentage", "Grade", "Result"]
+            
+    for c, h in enumerate(hdrs, 1):
+        cell = ws.cell(1, c, h)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1E3A5F")
+        cell.alignment = Alignment(horizontal="center")
+        
+    for r, row in enumerate(rows, 2):
+        obtained = float(row["marks"] or 0.0)
+        tot = float(row["total"] or 60.0)
+        p = round(obtained / tot * 100, 1) if tot else 0
+        
+        vals = [
+            row["student_name"], row["roll"], row["subject"], row["semester"], row["exam_type"],
+            row["assignment_marks"], row["attendance_marks"], row["teaching_assessment"],
+            row["ut_marks"], row["mse_marks"], row["tw_marks"], row["pr_or_marks"],
+            obtained, tot, f"{p}%", row["grade"], row["result"]
+        ]
+        for c, v in enumerate(vals, 1):
+            ws.cell(r, c, v)
+            
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(len(str(col[0].value or "")) + 4, 12)
+        
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    fname = f"results{'_'+subject if subject else ''}{'_'+semester if semester else ''}.xlsx"
+    return send_file(output, as_attachment=True, download_name=fname, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
