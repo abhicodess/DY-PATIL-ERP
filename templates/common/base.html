@@ -1860,6 +1860,9 @@
             <a href="/faculty_timetable" class="sb-link {{ 'active' if request.path == '/faculty_timetable' }}"><i class="fa-solid fa-table-cells"></i> Timetable</a>
             <a href="/faculty/assign-student-timetable" class="sb-link {{ 'active' if request.path == '/faculty/assign-student-timetable' }}"><i class="fa-solid fa-calendar-plus"></i> Assign Student Timetable</a>
 
+            <div class="sb-sec">Examinations & Marks</div>
+            <a href="/faculty_marks" class="sb-link {{ 'active' if 'faculty_marks' in request.path }}"><i class="fa-solid fa-star"></i> Marks Entry</a>
+            <a href="/faculty_results" class="sb-link {{ 'active' if 'faculty_results' in request.path }}"><i class="fa-solid fa-square-poll-vertical"></i> Results Entry</a>
 
             <div class="sb-sec">Communication</div>
             <a href="/messages" class="sb-link {{ 'active' if 'messages' in request.path }}"><i class="fa-solid fa-envelope"></i> Messages</a>
