@@ -57,5 +57,24 @@ class SubjectMaster(db.Model):
     max_teaching = db.Column(db.Integer, default=10)
     max_ut = db.Column(db.Integer, default=20)
     max_mse = db.Column(db.Integer, default=20)
+    max_tw = db.Column(db.Integer, default=0)
+    max_pr_or = db.Column(db.Integer, default=0)
     max_total = db.Column(db.Integer, default=60)
+
+
+class MarksComponents(db.Model):
+    __tablename__ = 'marks_components'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'))
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='CASCADE'))
+    semester = db.Column(db.String(50), nullable=False)
+    component_type = db.Column(db.String(100), nullable=False)
+    max_marks = db.Column(db.Float, default=100.0)
+    obtained_marks = db.Column(db.Float, nullable=True)
+    is_absent = db.Column(db.Boolean, default=False)
+    entered_by = db.Column(db.Integer, db.ForeignKey('faculty.id', ondelete='SET NULL'), nullable=True)
+    is_overridden = db.Column(db.Boolean, default=False)
+    reason_for_override = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

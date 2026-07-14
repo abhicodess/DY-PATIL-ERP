@@ -1,7 +1,8 @@
 {% extends "common/base.html" %}
-{% block title %}Timetable{% endblock %}
-{% block sb_title %}DY Patil ERP{% endblock %}{% block sb_sub %}{% if session.role=='admin' %}Admin Panel{% else %}Faculty Portal{% endif %}{% endblock %}
-{% block av_color %}{% if session.role=='admin' %}#2563EB{% else %}#7C3AED{% endif %}{% endblock %}
+{% block title %}Weekly Timetable Manager{% endblock %}
+{% block sb_title %}DY Patil ERP{% endblock %}
+{% block sb_sub %}{% if session.role=='admin' %}Admin Panel{% else %}Faculty Portal{% endif %}{% endblock %}
+{% block av_color %}{% if session.role=='admin' %}#1e3a8a{% else %}#5b21b6{% endif %}{% endblock %}
 {% block av_letter %}{{ session.name[0]|upper if session.role=='faculty' else 'A' }}{% endblock %}
 {% block user_role %}{{ session.role|title }}{% endblock %}
 
@@ -12,539 +13,1476 @@
 {% block content %}
 <style>
 /* ═══════════════════════════════════════════════════════════
-   TIMETABLE — Modern High-Density Grid
-   Days as Rows (Sticky Left), Times as Columns (Sticky Top)
+   TIMETABLE — Modern ERP High-Density Grid
+   Days as Columns, Times as Rows (Academic Standard Layout)
    ═══════════════════════════════════════════════════════════ */
 
+/* ERP Theme Styles */
 :root {
-  --tt-header-bg: #0f172a;
-  --tt-cell-bg: #ffffff;
-  --tt-border: #e2e8f0;
-  --tt-sticky-bg: #f8fafc;
+  --erp-navy: #1e3a8a;
+  --erp-slate: #334155;
+  --erp-bg: #f8fafc;
+  --erp-border: #cbd5e1;
+  --erp-card-bg: #ffffff;
+  --erp-hover: #f1f5f9;
+  
+  /* Slot Types Color Coding */
+  --color-theory: #2563eb;    /* Royal Blue */
+  --color-lab: #7c3aed;       /* Violet */
+  --color-elective: #059669;  /* Emerald */
+  --color-minor: #d97706;     /* Amber */
+  --color-practical: #0891b2; /* Cyan */
+  --color-other: #64748b;     /* Slate */
 }
 
-.tt-container {
-  position: relative;
-  min-height: 600px;
-  max-height: calc(100vh - 200px);
+body {
+  background-color: var(--erp-bg) !important;
+  color: var(--erp-slate) !important;
+}
+
+/* Dashboard Layout */
+.erp-container {
+  background: var(--erp-card-bg);
+  border: 1px solid var(--erp-border);
   border-radius: 12px;
-  border: 1px solid var(--tt-border);
-  background: var(--tt-cell-bg);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  overflow: auto;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  margin-bottom: 24px;
+  overflow: hidden;
 }
 
-.tt-tbl {
+.erp-card-header {
+  background: #fdfdfd;
+  border-bottom: 1px solid var(--erp-border);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* View Mode Selector Tabs */
+.view-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+  gap: 2px;
+  margin-bottom: 16px;
+  border: 1px solid var(--erp-border);
+  width: fit-content;
+}
+
+.view-tab {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: none;
+}
+
+.view-tab.active {
+  background: #ffffff;
+  color: var(--erp-navy);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Filter Strip */
+.filter-bar {
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px !important;
+  border: 1px solid var(--erp-border) !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  color: #334155 !important;
+  background: #ffffff !important;
+  outline: none;
+  min-width: 140px;
+  flex: 1 1 auto;
+}
+
+.filter-select:focus, .filter-select.active {
+  border-color: var(--erp-navy) !important;
+  box-shadow: 0 0 0 2px rgba(30,58,138,0.1) !important;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 200px;
+  flex: 1.5 1 auto;
+}
+
+.search-input-wrap input {
+  border: none;
+  background: none;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  color: #334155;
+}
+
+.search-input-wrap i {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Timetable Academic Grid */
+.tt-scroll-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.tt-grid-table {
+  width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  width: 100%;
-  min-width: 1200px;
   table-layout: fixed;
+  min-width: 1000px;
 }
 
-/* STICKY TIME HEADER */
-.tt-tbl thead th {
+.tt-grid-table th {
+  background: var(--erp-navy);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 8px;
+  border-right: 1px solid rgba(255,255,255,0.1);
   position: sticky;
   top: 0;
-  z-index: 30;
-  background: var(--tt-header-bg);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 12px 8px;
+  z-index: 10;
+}
+
+.tt-grid-table th:first-child {
+  width: 140px;
+}
+
+.tt-grid-table td {
+  border-right: 1px solid var(--erp-border);
+  border-bottom: 1px solid var(--erp-border);
+  padding: 8px;
+  vertical-align: top;
+  background-color: #ffffff;
+}
+
+/* Time slot Row Header */
+.tt-time-header {
+  background: #f8fafc !important;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 12px;
   text-align: center;
-  border-right: 1px solid rgba(255,255,255,0.1);
-  border-bottom: 1px solid var(--tt-border);
+  vertical-align: middle !important;
+  border-left: 1px solid var(--erp-border);
 }
 
-/* CORNER CELL */
-.tt-tbl thead th:first-child {
-  left: 0;
-  z-index: 40;
-  background: var(--tt-header-bg);
-  border-right: 2px solid rgba(255,255,255,0.2);
-  width: 120px;
-}
-
-/* STICKY DAY COLUMN */
-.tt-day {
-  position: sticky;
-  left: 0;
-  z-index: 20;
-  background: var(--tt-sticky-bg);
-  border-right: 2px solid var(--tt-border);
-  border-bottom: 1px solid var(--tt-border);
-  padding: 12px 15px;
-  vertical-align: top;
-}
-
-.tt-day-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tt-day-name { font-weight: 700; color: #1e293b; font-size: 14px; }
-.tt-day-sub { font-size: 10px; color: #64748b; font-weight: 500; }
-
-/* DATA CELLS */
 .tt-cell {
-  background: var(--tt-cell-bg);
-  border-right: 1px solid var(--tt-border);
-  border-bottom: 1px solid var(--tt-border);
-  padding: 6px;
-  vertical-align: top;
+  position: relative;
   min-height: 100px;
-  transition: background 0.2s;
+  transition: background-color 0.15s ease;
 }
 
-.tt-cell:hover { background: #f1f5f9; }
+.tt-cell:hover {
+  background-color: #f8fafc;
+}
 
-/* SLOT CARDS */
-.sc {
+/* Slot Card styling */
+.sc-card {
   position: relative;
-  background: #fff;
-  border: 1px solid var(--tt-border);
-  border-radius: 8px;
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border) !important;
+  border-radius: 6px;
   padding: 10px;
   margin-bottom: 6px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   width: 100%;
+  cursor: grab;
 }
 
-.sc:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); border-color: #cbd5e1; }
-
-/* SUBJECT TYPES COLOR CODING */
-.sc.ty { border-top: 4px solid #3b82f6; } /* Theory */
-.sc.la { border-top: 4px solid #8b5cf6; } /* Lab */
-.sc.el { border-top: 4px solid #10b981; } /* Elective */
-.sc.mi { border-top: 4px solid #f59e0b; } /* Minor */
-.sc.pr { border-top: 4px solid #06b6d4; } /* Practical */
-
-.sc-name { font-weight: 700; color: #0f172a; font-size: 12px; line-height: 1.25; margin-bottom: 4px; }
-.sc-details { display: flex; flex-direction: column; gap: 2px; }
-.sc-item { font-size: 10px; color: #64748b; display: flex; align-items: center; gap: 5px; }
-.sc-item i { width: 14px; opacity: 0.7; }
-
-.sc-badge-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-.sc-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; }
-.sc-div { font-size: 10px; font-weight: 600; color: #3b82f6; font-family: monospace; }
-
-/* ADMIN TOOLS */
-.dot-btn {
-  position: absolute; top: 8px; right: 8px;
-  width: 24px; height: 24px; border-radius: 6px;
-  border: none; background: transparent; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: #94a3b8; transition: all 0.2s; visibility: hidden;
+.sc-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  border-color: rgba(30,58,138,0.3) !important;
 }
-.sc:hover .dot-btn { visibility: visible; }
-.dot-btn:hover { background: #f1f5f9; color: #1e293b; }
 
-.sc-drop {
-  position: absolute; top: 35px; right: 8px; z-index: 100;
-  background: #fff; border: 1px solid var(--tt-border);
-  border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  min-width: 160px; display: none; overflow: hidden;
+.sc-card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
 }
-.sc-drop.open { display: block; animation: slideDown 0.2s ease-out; }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+/* Solid Border-left for slot types */
+.sc-card.type-Theory { border-left: 4px solid var(--color-theory) !important; }
+.sc-card.type-Lab { border-left: 4px solid var(--color-lab) !important; }
+.sc-card.type-Elective { border-left: 4px solid var(--color-elective) !important; }
+.sc-card.type-Minor { border-left: 4px solid var(--color-minor) !important; }
+.sc-card.type-Practical { border-left: 4px solid var(--color-practical) !important; }
+
+.sc-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 12px;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.sc-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sc-info-item {
+  font-size: 11px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-info-item i {
+  width: 12px;
+  color: #94a3b8;
+}
+
+.sc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #f1f5f9;
+}
+
+.sc-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sc-division-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--erp-navy);
+}
+
+/* Conflict highlights */
+.sc-card.conflict-border {
+  border: 2px solid #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+/* Compact Mode Styles */
+.compact-mode .tt-cell {
+  min-height: 50px !important;
+  padding: 4px !important;
+}
+.compact-mode .sc-card {
+  padding: 4px 6px !important;
+  margin-bottom: 2px !important;
+}
+.compact-mode .sc-title {
+  font-size: 10px !important;
+  margin-bottom: 2px !important;
+}
+.compact-mode .sc-info-row {
+  display: none !important;
+}
+.compact-mode .sc-badge {
+  display: none !important;
+}
+.compact-mode .tt-cell-add-btn {
+  padding: 2px !important;
+  font-size: 10px !important;
+}
+
+/* Table Style high-density mode */
+.table-style .sc-card {
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 4px 6px !important;
+  margin-bottom: 2px !important;
+  background: transparent !important;
+  cursor: default !important;
+  transform: none !important;
+}
+.table-style .sc-card:hover {
+  box-shadow: none !important;
+  transform: none !important;
+}
+.table-style .sc-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin-bottom: 2px !important;
+}
+.table-style .sc-badge {
+  display: inline-block !important;
+  font-size: 8px !important;
+  padding: 1px 4px !important;
+}
+.table-style .sc-info-row {
+  font-size: 10px !important;
+  gap: 1px !important;
+}
+.table-style .tt-cell {
+  min-height: 70px !important;
+  background: #ffffff !important;
+  border-right: 1px solid var(--erp-border) !important;
+  border-bottom: 1px solid var(--erp-border) !important;
+}
+
+/* Card actions dropdown trigger */
+.sc-actions-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: all 0.2s;
+  visibility: hidden;
+}
+
+.sc-card:hover .sc-actions-btn {
+  visibility: visible;
+}
+
+.sc-actions-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #1e293b;
+}
+
+.sc-dropdown {
+  position: absolute;
+  top: 30px;
+  right: 6px;
+  z-index: 100;
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  min-width: 140px;
+  display: none;
+  overflow: hidden;
+}
+
+.sc-dropdown.open {
+  display: block;
+  animation: erpSlideDown 0.15s ease-out;
+}
+
+@keyframes erpSlideDown {
+  from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.ddi {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  width: 100%; text-align: left; background: none; border: none;
-  font-size: 12px; font-weight: 500; color: #475569; cursor: pointer;
+.sc-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
 }
-.ddi:hover { background: #f1f5f9; color: #0f172a; }
-.ddi.red { color: #ef4444; }
-.ddi.red:hover { background: #fee2e2; }
 
-/* EMPTY STATE AND ADD */
-.cell-add {
-  display: flex; align-items: center; justify-content: center;
-  height: 40px; border: 2px dashed #e2e8f0; border-radius: 8px;
-  margin-top: 4px; color: #94a3b8; font-size: 12px; cursor: pointer;
-  transition: all 0.2s;
+.sc-dropdown-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
 }
-.cell-add:hover { border-color: #3b82f6; background: #eff6ff; color: #3b82f6; }
 
-
-
-.empty-ph{
-  height:42px;border:2px dashed var(--border2);border-radius:7px;
-  background:var(--bg);display:flex;align-items:center;justify-content:center;
-  font-size:11px;color:var(--ink4);cursor:pointer;transition:all .15s
+.sc-dropdown-item.text-danger:hover {
+  background: #fef2f2;
 }
-.tt-cell:hover .empty-ph{border-color:var(--blue-m);color:var(--blue)}
 
-/* Filter bar */
-.fbar{
-  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
-  background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);
-  padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)
+/* Empty placeholder add slot button */
+.tt-cell-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border: 1px dashed var(--erp-border);
+  border-radius: 6px;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
 }
-.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none;min-width:130px;flex:1 1 auto}
-.ff:focus,.ff.on{border-color:var(--blue);background:var(--blue-s);color:var(--blue);font-weight:600}
-.fsrch{display:flex;align-items:center;gap:7px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 12px;min-width:210px;flex:1;max-width:300px}
-.fsrch input{border:none;background:none;font-size:12px;outline:none;width:100%;font-family:var(--font)}
-.fsrch i{color:var(--ink4);font-size:11px;flex-shrink:0}
-.fbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
-/* Stats strip */
-.tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.tts-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 16px;flex:1;min-width:90px;display:flex;align-items:center;gap:10px}
-.tts-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
-.tts-v{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--ink)}
-.tts-l{font-size:10px;color:var(--ink3)}
+.tt-cell-add-btn:hover {
+  border-color: var(--erp-navy);
+  background: rgba(30,58,138,0.03);
+  color: var(--erp-navy);
+}
 
-/* Legend */
-.leg{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 14px;background:var(--bg);border-radius:var(--r-sm);margin-bottom:12px;font-size:11px}
-.li{display:flex;align-items:center;gap:4px;font-weight:600;color:var(--ink3)}
-.ldot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.tt-cell.dz-over {
+  background-color: rgba(30,58,138,0.05);
+  border: 2px dashed var(--erp-navy);
+}
 
-/* View toggle */
-.vtog{display:flex;background:var(--bg2);border-radius:8px;padding:3px;gap:2px}
-.vtb{padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .15s;background:none;font-family:var(--font)}
-.vtb.on{background:var(--white);color:var(--blue);box-shadow:var(--sh-sm)}
+/* Legend strip */
+.legend-strip {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 20px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
 
-/* Conflict banner */
-.cf-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r-sm);padding:12px 16px;margin-bottom:12px;font-size:12px;color:#991b1b;display:none}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #475569;
+}
 
-/* Toast */
-#toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;max-width:360px}
-#toast.ok{background:#ECFDF5;color:#065f46;border:1px solid #A7F3D0}
-#toast.err{background:#FEF2F2;color:#991b1b;border:1px solid #FECACA}
-#toast.warn{background:#FFFBEB;color:#92400e;border:1px solid #FDE68A}
-.tt-day.today { background: #f0f7ff !important; border-left: 3px solid var(--blue) !important; }
-.tt-day.today .tt-day-name { color: var(--blue); }
-.sc.conflict-border { border: 2px solid #ef4444 !important; animation: pulse-red 2s infinite; }
-@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* Print Stylesheet overrides */
+.print-header {
+  display: none;
+}
 
 @media print {
   @page {
-    size: landscape;
+    size: A4 landscape;
     margin: 8mm;
   }
+  
   html, body {
-    background: #fff !important;
-    color: #000 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: "Times New Roman", Times, serif !important;
   }
-  .sidebar, .topbar, .fbar, .tts-row, .leg, .dot-btn, .cell-add, .empty-ph, .modal-bg, button, form, .vtog, #toast, .ph-actions, .breadcrumb, .alert-bar {
+  
+  /* Hide UI elements */
+  .sidebar, .topbar, .filter-bar, .view-tabs, .legend-strip, 
+  .ph-actions, .breadcrumb, .alert-bar, .tt-cell-add-btn,
+  .sc-actions-btn, .modal-bg, #toast, .alert, button, form {
     display: none !important;
   }
-  .shell {
-    display: block !important;
-    min-height: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-  .main {
+  
+  /* Full width container styling */
+  .shell, .main {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-width: 100% !important;
     overflow: visible !important;
   }
-  .card, .card-view-grid {
+  
+  .erp-container {
+    border: none !important;
     box-shadow: none !important;
-    border: 1px solid #cbd5e1 !important;
-    margin-bottom: 20px !important;
-    page-break-inside: avoid !important;
-    background: #fff !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
     overflow: visible !important;
-  }
-  .cb, div {
-    overflow: visible !important;
-  }
-  table, .tbl, .tt-tbl {
     width: 100% !important;
-    max-width: 100% !important;
+  }
+  
+  .erp-card-header {
+    display: none !important;
+  }
+
+  /* Print Letterhead */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 15px;
+    border-bottom: 2px double #000000;
+    padding-bottom: 8px;
+  }
+  
+  .print-org-name {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  
+  .print-sub-org {
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  
+  .print-doc-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 8px;
+    text-decoration: underline;
+  }
+  
+  .print-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    font-size: 11px;
+    margin-top: 6px;
+    text-align: left;
+    padding: 0 10px;
+  }
+  
+  /* Grid table print tweaks */
+  .tt-grid-table {
+    width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
-    overflow: visible !important;
+    page-break-inside: avoid !important;
   }
-  th, td, .tbl th, .tbl td, .tt-tbl th, .tt-tbl td {
-    border: 1px solid #cbd5e1 !important;
-    padding: 6px 4px !important;
-    font-size: 10px !important;
-    color: #000 !important;
-    background: #fff !important;
+  
+  .tt-grid-table th {
+    background: #e2e8f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    font-size: 11px !important;
+    padding: 6px 2px !important;
+    font-weight: 700 !important;
   }
-  .sc {
+  
+  .tt-grid-table td {
+    border: 1px solid #000000 !important;
+    padding: 6px !important;
+    background-color: #ffffff !important;
+  }
+  
+  .tt-time-header {
+    background: #f1f5f9 !important;
+    font-weight: 700 !important;
+    border: 1px solid #000000 !important;
+  }
+  
+  /* Card items inside cells */
+  .sc-card {
+    border: 1px solid #7f8c8d !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    margin-bottom: 4px !important;
+    padding: 4px !important;
+    page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+  
+  .sc-card.type-Theory { border-left: 3px solid #000000 !important; }
+  .sc-card.type-Lab { border-left: 3px solid #000000 !important; }
+  .sc-card.type-Elective { border-left: 3px solid #000000 !important; }
+  
+  .sc-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+  
+  .sc-info-item {
+    font-size: 9px !important;
+    color: #000000 !important;
+  }
+  
+  .sc-info-item i {
+    display: none !important;
+  }
+  
+  .sc-footer {
+    margin-top: 4px !important;
+    padding-top: 3px !important;
+    border-top: 0.5px solid #bdc3c7 !important;
+  }
+  
+  .sc-badge {
+    font-size: 8px !important;
+    padding: 0px 3px !important;
+    border: 0.5px solid #000000 !important;
+    background: transparent !important;
+  }
+  
+  .sc-division-tag {
+    font-size: 8px !important;
+    font-weight: 700 !important;
+  }
+} /* end @media print */
+
+/* ── ERP TIMETABLE CARD ──────────────────────────────────────── */
+.tt-erp-card {
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
 }
 
-/* Mobile Helpers */
-.mob-view-toggle {
-  display: none;
+/* Header */
+.tt-erp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--erp-border);
+}
+.tt-erp-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+.tt-erp-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 3px;
+}
+.tt-erp-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  font-size: 14px;
+  transition: background 0.15s;
+  flex-shrink: 0;
 }
-@media (max-width: 768px) {
-  .mob-view-toggle {
-    display: flex;
-  }
+.tt-erp-close-btn:hover { background: #0f172a; }
+
+/* Toolbar */
+.tt-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  overflow-x: auto;
+  gap: 4px;
+  background: #fafafa;
 }
+.tt-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.tt-tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--erp-border);
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all 0.12s ease;
+  line-height: 1;
+}
+.tt-tbtn:hover { background: #f1f5f9; border-color: #94a3b8; }
+.tt-tbtn.active {
+  background: #e0e7ff;
+  border-color: #6366f1;
+  color: #4338ca;
+  font-weight: 600;
+}
+.tt-tbtn-primary {
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+.tt-tbtn-primary:hover { background: #5b21b6 !important; }
+.tt-tbtn-danger {
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+}
+.tt-tbtn-danger:hover { background: #fef2f2 !important; }
+.tt-tbtn-add {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+.tt-tbtn-add:hover { background: #1e293b !important; }
+
+/* Alerts */
+.tt-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+}
+.tt-alert-ok {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.tt-alert-warn {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+/* Segment tabs row */
+.tt-seg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tt-seg-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid var(--erp-border);
+  border-radius: 9px;
+  padding: 4px;
+}
+.tt-seg {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.tt-seg:hover { color: #334155; background: rgba(0,0,0,0.03); }
+.tt-seg.active {
+  background: #ffffff;
+  color: #1e3a8a;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.tt-seg-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tt-seg-lbl {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tt-seg-select {
+  padding: 7px 28px 7px 10px;
+  border: 1px solid var(--erp-border);
+  border-radius: 7px;
+  font-size: 13px;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+  min-width: 150px;
+  cursor: pointer;
+}
+.tt-seg-select:focus { border-color: #6366f1; }
+
+/* Statistics Cards */
+.tt-stats-row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  background: #fafafa;
+  overflow-x: auto;
+}
+.tt-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+.tt-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.tt-stat-icon-grid  { background: #ede9fe; color: #7c3aed; }
+.tt-stat-icon-theory{ background: #dbeafe; color: #2563eb; }
+.tt-stat-icon-lab   { background: #f3e8ff; color: #9333ea; }
+.tt-stat-icon-elec  { background: #dcfce7; color: #16a34a; }
+.tt-stat-icon-fac   { background: #fff7ed; color: #ea580c; }
+.tt-stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+.tt-stat-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+/* Legend bar */
+.tt-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--erp-border);
+  font-size: 12px;
+  color: #475569;
+  flex-wrap: wrap;
+}
+.tt-legend-label {
+  font-weight: 600;
+  color: #334155;
+  margin-right: 4px;
+}
+.tt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+.tt-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.tt-legend-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.tt-legend-hint kbd {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+}
+
+/* Filter bar */
+.tt-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  align-items: center;
+}
+.tt-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #f8fafc;
+  border: 1px solid var(--erp-border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  min-width: 200px;
+  flex: 1.5 1 auto;
+}
+.tt-filter-search i { color: #94a3b8; font-size: 13px; }
+.tt-filter-search input {
+  border: none;
+  background: none;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  color: #334155;
+}
+.tt-filter-sel {
+  padding: 7px 10px;
+  border: 1px solid var(--erp-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #374151;
+  background: #f8fafc;
+  outline: none;
+  min-width: 120px;
+  cursor: pointer;
+  flex: 1 1 auto;
+}
+.tt-filter-sel:focus, .tt-filter-sel.active {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.1);
+  background: #ffffff;
+}
+.tt-filter-row2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.tt-filter-btn-apply {
+  padding: 8px 14px;
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  color: #4338ca;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.tt-filter-btn-apply:hover { background: #c7d2fe; }
+.tt-filter-btn-fix {
+  padding: 8px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  color: #c2410c;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.tt-filter-btn-fix:hover { background: #fed7aa; }
+/* Title highlight */
+.tt-erp-hl {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+/* Filter row 1 */
+.tt-filter-row1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Clear Filters button */
+.tt-filter-btn-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+.tt-filter-btn-clear:hover { background: #f1f5f9; color: #374151; }
+
+/* Results badge */
+.tt-filter-results {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+/* Sub-view tabs (Card View / Table View) */
+.tt-subview-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 16px 0;
+  border-top: 1px solid var(--erp-border);
+  background: #fff;
+  padding-bottom: 0;
+}
+.tt-svtab {
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f8fafc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+.tt-svtab:hover { color: #1e3a8a; background: #f1f5f9; }
+.tt-svtab.active {
+  background: #ffffff;
+  color: #1e3a8a;
+  font-weight: 700;
+  border-color: var(--erp-border);
+  border-bottom-color: #ffffff;
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark navy grid header */
+.tt-grid-head-row th {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  padding: 10px 8px !important;
+  text-align: center;
+}
+.tt-grid-corner {
+  text-align: left !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px;
+  min-width: 90px;
+}
+.tt-grid-time-col {
+  min-width: 110px;
+  text-align: center;
+}
+.tt-th-time {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tt-th-loc {
+  font-size: 9px;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Day row header */
+.tt-day-header {
+  background: #f8fafc !important;
+  border-right: 2px solid var(--erp-border) !important;
+  padding: 12px 10px !important;
+  font-weight: 700;
+  vertical-align: top;
+  min-width: 90px;
+}
+.tt-day-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.tt-day-count {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
 </style>
 
-<!-- ═══ PAGE HEADER ══════════════════════════════════════════ -->
-<div class="ph fu">
-  <div>
-    <div class="ph-title">Weekly Timetable</div>
-    <div class="ph-sub">{{ total }} slots &nbsp;·&nbsp; {{ time_slots|length }} periods &nbsp;·&nbsp; Academic Year 2025–26</div>
-  </div>
-  <div class="ph-actions">
-    <div class="vtog">
-      <button class="vtb {{ 'on' if view == 'grid' or not view }}" id="vg" onclick="setView('grid',this)"><i class="fas fa-table-cells"></i> Grid</button>
-      <button class="vtb {{ 'on' if view == 'list' }}"    id="vl" onclick="setView('list',this)"><i class="fas fa-list"></i> List</button>
-      <button class="vtb {{ 'on' if view == 'wl' }}"    id="vw" onclick="setView('wl',this)"><i class="fas fa-chart-bar"></i> Load</button>
-    </div>
-    <button onclick="toggleCompact()" id="compBtn" class="btn btn-out btn-sm"><i class="fas fa-compress"></i> Compact</button>
-    {% if session.role == 'admin' %}
-    <button onclick="openBroadcastModal()" class="btn btn-vi btn-sm"><i class="fas fa-paper-plane"></i> Send to Students</button>
-    <button onclick="openSlotSettings()" class="btn btn-out btn-sm"><i class="fas fa-clock"></i> Manage Slots</button>
+<!-- ═══ OFFICIAL PRINT HEADER ════════════════════════════════ -->
+<div class="print-header">
+  <div class="print-org-name">D. Y. Patil College of Engineering</div>
+  <div class="print-sub-org">Academic Management System</div>
+  <div class="print-doc-title">
+    {% if view == 'grid' %}
+      CLASS WEEKLY TIMETABLE: {{ f_div or 'All Divisions' }}
+    {% elif view == 'faculty' %}
+      FACULTY WEEKLY TIMETABLE: {{ f_teach or 'All Faculty' }}
+    {% elif view == 'room' %}
+      ROOM TIMETABLE: {{ f_room or 'All Rooms' }}
+    {% else %}
+      WEEKLY TIMETABLE SCHEDULE
     {% endif %}
-    <a href="/export_timetable_excel?q={{ q }}&day={{ f_day }}&subject={{ f_subj }}&teacher={{ f_teach }}&division={{ f_div }}&slot_type={{ f_type }}&semester={{ f_sem }}&view={{ view }}" class="btn btn-out btn-sm"><i class="fas fa-download"></i> Export</a>
-    <button onclick="window.print()" class="btn btn-out btn-sm"><i class="fas fa-print"></i> Print</button>
+  </div>
+  <div class="print-meta-grid">
+    <div><strong>Academic Year:</strong> 2025–26 &nbsp;·&nbsp; <strong>Term:</strong> Semester VI</div>
+    <div style="text-align:right"><strong>Generated On:</strong> <span id="print-date"></span></div>
+  </div>
+</div>
 
-    {% if session.role == 'faculty' %}
-      {% if show_personal %}
-        <a href="{{ request.path }}?all=true" class="btn btn-out btn-sm">
-          <i class="fas fa-globe"></i> View Master Timetable
-        </a>
-      {% else %}
-        <a href="{{ request.path }}?personal=true" class="btn btn-out btn-sm">
-          <i class="fas fa-user-check"></i> View My Timetable
-        </a>
+<!-- ═══ ERP TIMETABLE CARD ══════════════════════════════════════ -->
+<div class="tt-erp-card">
+
+  <!-- Card Header -->
+  <div class="tt-erp-header">
+    <div>
+      <div class="tt-erp-title">Class Timetable:
+        {% if view_type == 'faculty' or view == 'faculty' %}
+          <span class="tt-erp-hl">{{ f_teach or 'All Faculty' }}</span>
+        {% elif view_type == 'room' or view == 'room' %}
+          <span class="tt-erp-hl">{{ f_room or 'All Rooms' }}</span>
+        {% elif view == 'list' %}
+          <span class="tt-erp-hl">Master View</span>
+        {% else %}
+          <span class="tt-erp-hl">{{ f_div or 'All Divisions' }}</span>
+        {% endif %}
+      </div>
+      <div class="tt-erp-sub">{{ total }} slots &nbsp;·&nbsp; {{ time_slots|length }} periods &nbsp;·&nbsp; Academic Year 2025–26</div>
+    </div>
+    <button class="tt-erp-close-btn" onclick="window.history.back()" title="Close"><i class="fas fa-xmark"></i></button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="tt-toolbar">
+    <div class="tt-toolbar-left">
+      <a href="?view=grid&view_type={{ view_type }}{{ ('&division='+f_div) if f_div }}{{ ('&teacher='+f_teach) if f_teach }}{{ ('&room='+f_room) if f_room }}" class="tt-tbtn {{ 'active' if view == 'grid' or not view }}"><i class="fas fa-table-cells"></i> Grid</a>
+      <a href="?view=list&view_type={{ view_type }}{{ ('&division='+f_div) if f_div }}{{ ('&teacher='+f_teach) if f_teach }}{{ ('&room='+f_room) if f_room }}" class="tt-tbtn {{ 'active' if view == 'list' }}"><i class="fas fa-list-ul"></i> List</a>
+      <a href="?view=wl&view_type={{ view_type }}{{ ('&division='+f_div) if f_div }}{{ ('&teacher='+f_teach) if f_teach }}{{ ('&room='+f_room) if f_room }}" class="tt-tbtn {{ 'active' if view == 'wl' }}"><i class="fas fa-chart-bar"></i> Load</a>
+      <button onclick="toggleCompactMode()" class="tt-tbtn tt-tbtn-compact"><i class="fas fa-compress"></i> Compact</button>
+      {% if session.role == 'admin' %}
+        <button onclick="openBroadcastModal()" class="tt-tbtn tt-tbtn-primary"><i class="fas fa-paper-plane"></i> Send to Students</button>
+        <button onclick="M.show('addModal')" class="tt-tbtn"><i class="fas fa-cog"></i> Manage Slots</button>
       {% endif %}
-    {% endif %}
-
-    {% if session.role == 'admin' %}
-      <a href="/timetable_share" class="btn btn-out btn-sm"><i class="fas fa-paper-plane"></i> Share Schedule</a>
-      <button onclick="openCopyDayModal()" class="btn btn-out btn-sm"><i class="fas fa-copy"></i> Copy Day</button>
-      <button onclick="M.show('impModal')" class="btn btn-out btn-sm"><i class="fas fa-file-excel"></i> Import</button>
-      <form method="POST" action="/clear_timetable" style="display:inline" onsubmit="return confirm('Delete ALL timetable slots?')">
-        <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Clear All</button>
-      </form>
-      <button onclick="M.show('addModal')" class="btn btn-dark btn-sm"><i class="fas fa-plus"></i> Add Slot</button>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Broadcast Modal (Admin) -->
-<div id="broadcastModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
-  <div class="modal-content" style="background-color:#fff; margin:10% auto; padding:25px; border-radius:12px; width:80%; max-width:500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px">
-      <h3 style="margin:0"><i class="fas fa-paper-plane" style="color:var(--blue)"></i> Broadcast Schedule</h3>
-      <span class="close" onclick="closeBroadcastModal()" style="font-size:24px; font-weight:bold; cursor:pointer; color:#999">&times;</span>
+      <a href="/export_timetable_excel?q={{ q }}&day={{ f_day }}&subject={{ f_subj }}&teacher={{ f_teach }}&division={{ f_div }}&slot_type={{ f_type }}&semester={{ f_sem }}&room={{ f_room }}&view={{ view }}" class="tt-tbtn"><i class="fas fa-download"></i> Export</a>
+      <button onclick="window.print()" class="tt-tbtn"><i class="fas fa-print"></i> Print</button>
+      <button onclick="navigator.share ? navigator.share({title:'Timetable',url:window.location.href}) : prompt('Copy URL:',window.location.href)" class="tt-tbtn"><i class="fas fa-share-nodes"></i> Share Schedule</button>
+      {% if session.role == 'admin' %}
+        <button onclick="openCopyDayModal()" class="tt-tbtn"><i class="fas fa-copy"></i> Copy Day</button>
+        <button onclick="M.show('impModal')" class="tt-tbtn"><i class="fas fa-file-import"></i> Import</button>
+        <form method="POST" action="/clear_timetable" style="display:inline" onsubmit="return confirm('Delete ALL timetable slots? This cannot be undone.')">
+          <button type="submit" class="tt-tbtn tt-tbtn-danger"><i class="fas fa-fire"></i> Clear All</button>
+        </form>
+        <button onclick="M.show('addModal')" class="tt-tbtn tt-tbtn-add"><i class="fas fa-plus"></i> Add</button>
+      {% endif %}
     </div>
-    <form id="broadcastForm">
-      <div class="form-group" style="margin-bottom:15px">
-        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Target Department</label>
-        <select name="department" class="ff" style="width:100%">
-          <option value="All">All Departments</option>
-          {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px">
-        <div class="form-group">
-          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Year</label>
-          <select name="year" class="ff" style="width:100%">
-            <option value="All">All</option>
-            <option value="FE">FE</option><option value="SE">SE</option><option value="TE">TE</option><option value="BE">BE</option>
+  </div>
+
+  <!-- ALERTS -->
+  {% if request.args.get('imported') %}<div class="tt-alert tt-alert-ok"><i class="fas fa-circle-check"></i> {{ request.args.get('imported') }} slots imported successfully.</div>{% endif %}
+  {% if request.args.get('cleared') %}<div class="tt-alert tt-alert-ok"><i class="fas fa-circle-check"></i> All timetable data cleared.</div>{% endif %}
+  {% if request.args.get('saved') %}<div class="tt-alert tt-alert-ok"><i class="fas fa-circle-check"></i> Slot saved successfully.</div>{% endif %}
+  {% if request.args.get('deleted') %}<div class="tt-alert tt-alert-ok"><i class="fas fa-circle-check"></i> Slot deleted.</div>{% endif %}
+  {% if request.args.get('cleaned') %}<div class="tt-alert tt-alert-ok"><i class="fas fa-circle-check"></i> {{ request.args.get('cleaned') }} entries cleaned/fixed successfully.</div>{% endif %}
+  {% if request.args.get('error') %}<div class="tt-alert tt-alert-warn"><i class="fas fa-triangle-exclamation"></i> {{ request.args.get('error') }}</div>{% endif %}
+
+  <!-- Segment tabs + principal filter on right -->
+  <div class="tt-seg-row">
+    <div class="tt-seg-tabs">
+      <button class="tt-seg {{ 'active' if view_type == 'class' }}" onclick="changeSegment('class')">
+        <i class="fas fa-users-rectangle"></i> Class / Division
+      </button>
+      <button class="tt-seg {{ 'active' if view_type == 'faculty' }}" onclick="changeSegment('faculty')">
+        <i class="fas fa-chalkboard-user"></i> Faculty member
+      </button>
+      <button class="tt-seg {{ 'active' if view_type == 'room' }}" onclick="changeSegment('room')">
+        <i class="fas fa-door-open"></i> Classroom / Lab
+      </button>
+      <button class="tt-seg {{ 'active' if view_type == 'master' }}" onclick="changeSegment('master')">
+        <i class="fas fa-table-list"></i> Master view
+      </button>
+    </div>
+    <div class="tt-seg-right">
+      <!-- Contextual principal filter -->
+      <form method="GET" action="{{ request.path }}" id="segFilterForm" style="display:flex;align-items:center;gap:8px">
+        <input type="hidden" name="view" id="segFilterView" value="{{ view or 'grid' }}">
+        <input type="hidden" name="view_type" id="segFilterViewType" value="{{ view_type or 'class' }}">
+        {% if view_type == 'faculty' or view == 'faculty' %}
+          <label class="tt-seg-lbl">Select Faculty:</label>
+          <select name="teacher" class="tt-seg-select" onchange="this.form.submit()">
+            <option value="">All Faculty</option>
+            {% for t in teachers %}<option value="{{ t }}" {{ 'selected' if f_teach==t }}>{{ t }}</option>{% endfor %}
           </select>
-        </div>
-        <div class="form-group">
-          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division</label>
-          <input type="text" name="division" class="ff" style="width:100%" placeholder="e.g. A">
-        </div>
-      </div>
-      <div style="text-align:right">
-        <button type="button" class="btn btn-out" onclick="closeBroadcastModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Send Update</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ALERTS -->
-{% if request.args.get('imported') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>{{ request.args.get('imported') }} slots imported successfully.</span></div>{% endif %}
-{% if request.args.get('cleared') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>All timetable data cleared.</span></div>{% endif %}
-{% if request.args.get('saved') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot saved.</span></div>{% endif %}
-{% if request.args.get('deleted') %}<div class="alert al-ok fu"><i class="fas fa-check-circle"></i><span>Slot deleted.</span></div>{% endif %}
-
-<!-- ═══ STATS STRIP ══════════════════════════════════════════ -->
-<div class="tts-row fu fu1">
-  <div class="tts-card"><div class="tts-ico ic-bl"><i class="fas fa-table-cells"></i></div><div><div class="tts-v">{{ total }}</div><div class="tts-l">Total Slots</div></div></div>
-  <div class="tts-card"><div class="tts-ico ic-bl"><i class="fas fa-book-open"></i></div><div><div class="tts-v">{{ theory }}</div><div class="tts-l">Theory</div></div></div>
-  <div class="tts-card"><div class="tts-ico ic-vi"><i class="fas fa-flask"></i></div><div><div class="tts-v">{{ lab }}</div><div class="tts-l">Lab</div></div></div>
-  <div class="tts-card"><div class="tts-ico ic-gr"><i class="fas fa-leaf"></i></div><div><div class="tts-v">{{ elec }}</div><div class="tts-l">Elective</div></div></div>
-  <div class="tts-card"><div class="tts-ico ic-am"><i class="fas fa-users"></i></div><div><div class="tts-v">{{ filtered_teachers }}</div><div class="tts-l">Faculty</div></div></div>
-</div>
-
-<!-- ═══ LEGEND ═══════════════════════════════════════════════ -->
-<div class="leg fu">
-  <strong style="color:var(--ink2);margin-right:4px">Subject type:</strong>
-  <div class="li"><div class="ldot" style="background:#2563EB"></div>Theory</div>
-  <div class="li"><div class="ldot" style="background:#7C3AED"></div>Lab</div>
-  <div class="li"><div class="ldot" style="background:#059669"></div>Elective</div>
-  <div class="li"><div class="ldot" style="background:#D97706"></div>Minor</div>
-  <div class="li"><div class="ldot" style="background:#0891B2"></div>Practical</div>
-  <div style="margin-left:auto;font-size:11px;color:var(--ink4)"><kbd>N</kbd>=Add &nbsp;<kbd>C</kbd>=Compact &nbsp;<kbd>Esc</kbd>=Close</div>
-</div>
-
-<!-- ═══ FILTER BAR ════════════════════════════════════════════ -->
-<form method="GET" action="{{ request.path }}" id="filterForm" class="fbar fu">
-  <input type="hidden" name="view" id="filterView" value="{{ view or 'grid' }}">
-  <div class="fsrch">
-    <i class="fas fa-magnifying-glass"></i>
-    <input type="text" name="q" value="{{ q }}" placeholder="Search subject, teacher, room…">
-  </div>
-  <select class="ff {{ 'on' if f_subj }}" name="subject" onchange="this.form.submit()">
-    <option value="">All Subjects</option>
-    {% for s in subjects %}<option value="{{ s }}" {{ 'selected' if f_subj==s }}>{{ s[:30] }}</option>{% endfor %}
-  </select>
-  <select class="ff {{ 'on' if f_teach }}" name="teacher" onchange="this.form.submit()">
-    <option value="">All Faculty</option>
-    {% for t in teachers %}<option value="{{ t }}" {{ 'selected' if f_teach==t }}>{{ t[:24] }}</option>{% endfor %}
-  </select>
-  <select class="ff {{ 'on' if f_div }}" name="division" onchange="this.form.submit()">
-    <option value="">All Divisions</option>
-    {% for d in divs %}<option value="{{ d }}" {{ 'selected' if f_div==d }}>{{ d }}</option>{% endfor %}
-  </select>
-  <select class="ff {{ 'on' if f_day }}" name="day" onchange="this.form.submit()">
-    <option value="">All Days</option>
-    {% for d in DAYS %}<option value="{{ d }}" {{ 'selected' if f_day==d }}>{{ d }}</option>{% endfor %}
-  </select>
-  <select class="ff {{ 'on' if f_type }}" name="slot_type" onchange="this.form.submit()">
-    <option value="">All Types</option>
-    <option value="Theory"    {{ 'selected' if f_type=='Theory' }}>Theory</option>
-    <option value="Lab"       {{ 'selected' if f_type=='Lab' }}>Lab</option>
-    <option value="Elective"  {{ 'selected' if f_type=='Elective' }}>Elective</option>
-    <option value="Minor"     {{ 'selected' if f_type=='Minor' }}>Minor</option>
-  </select>
-  <select class="ff {{ 'on' if f_sem }}" name="semester" onchange="this.form.submit()">
-    <option value="">All Semesters</option>
-    {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}" {{ 'selected' if f_sem==s|string }}>Sem {{ s }}</option>{% endfor %}
-  </select>
-  <div class="fbar-actions">
-    <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-search"></i></button>
-    {% if session.role == 'admin' %}
-    <button type="button" class="btn btn-am btn-sm" onclick="if(confirm('Remove invalid rows?')) document.getElementById('fixDataForm').submit()"><i class="fas fa-broom"></i> Fix Data</button>
-    {% endif %}
-    {% if q or f_day or f_subj or f_teach or f_div or f_type or f_sem %}
-    <a href="{{ request.path }}" class="btn btn-out btn-sm"><i class="fas fa-xmark"></i> Clear Filters</a>
-    <span style="font-size:12px;color:var(--blue);font-weight:600"><i class="fas fa-filter"></i> {{ entries|length }} results</span>
-    {% endif %}
-  </div>
-</form>
-
-<form id="fixDataForm" method="POST" action="/clean_timetable" style="display:none">
-  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-</form>
-
-<!-- ═══ GRID VIEW ════════════════════════════════════════════ -->
-<div id="vwGrid" class="fu fu2" {% if view and view != 'grid' %}style="display:none"{% endif %}>
-{% if time_slots %}
-
-  <!-- Mobile View Selector Toggle -->
-  <div class="mob-view-toggle">
-    <div class="vtog">
-      <button class="vtb" id="mobToggleCard" onclick="toggleTimetableMobileView('card')"><i class="fas fa-list"></i> Card View</button>
-      <button class="vtb" id="mobToggleTable" onclick="toggleTimetableMobileView('table')"><i class="fas fa-table-cells"></i> Table View</button>
+        {% elif view_type == 'room' or view == 'room' %}
+          <label class="tt-seg-lbl">Select Room:</label>
+          <select name="room" class="tt-seg-select" onchange="this.form.submit()">
+            <option value="">All Rooms</option>
+            {% for r in rooms %}<option value="{{ r }}" {{ 'selected' if f_room==r }}>{{ r }}</option>{% endfor %}
+          </select>
+        {% else %}
+          <label class="tt-seg-lbl">Select Division:</label>
+          <select name="division" class="tt-seg-select" onchange="this.form.submit()">
+            <option value="">All Divisions</option>
+            {% for d in divs %}<option value="{{ d }}" {{ 'selected' if f_div==d }}>{{ d }}</option>{% endfor %}
+          </select>
+        {% endif %}
+      </form>
     </div>
   </div>
 
-  <!-- TABLE VIEW (scrollable container + sticky day column) -->
-  <div id="mobileTableView" class="tt-scroll-wrap">
-    <table class="tt-tbl" id="mainTbl">
+  <!-- Statistics Cards -->
+  <div class="tt-stats-row">
+    <div class="tt-stat-card">
+      <div class="tt-stat-icon tt-stat-icon-grid"><i class="fas fa-table-cells-large"></i></div>
+      <div class="tt-stat-body">
+        <div class="tt-stat-num">{{ total }}</div>
+        <div class="tt-stat-lbl">TOTAL SLOTS</div>
+      </div>
+    </div>
+    <div class="tt-stat-card">
+      <div class="tt-stat-icon tt-stat-icon-theory"><i class="fas fa-book-open"></i></div>
+      <div class="tt-stat-body">
+        <div class="tt-stat-num">{{ theory }}</div>
+        <div class="tt-stat-lbl">THEORY</div>
+      </div>
+    </div>
+    <div class="tt-stat-card">
+      <div class="tt-stat-icon tt-stat-icon-lab"><i class="fas fa-flask"></i></div>
+      <div class="tt-stat-body">
+        <div class="tt-stat-num">{{ lab }}</div>
+        <div class="tt-stat-lbl">LAB</div>
+      </div>
+    </div>
+    <div class="tt-stat-card">
+      <div class="tt-stat-icon tt-stat-icon-elec"><i class="fas fa-bolt"></i></div>
+      <div class="tt-stat-body">
+        <div class="tt-stat-num">{{ elec }}</div>
+        <div class="tt-stat-lbl">ELECTIVE</div>
+      </div>
+    </div>
+    <div class="tt-stat-card">
+      <div class="tt-stat-icon tt-stat-icon-fac"><i class="fas fa-user-tie"></i></div>
+      <div class="tt-stat-body">
+        <div class="tt-stat-num">{{ filtered_teachers }}</div>
+        <div class="tt-stat-lbl">FACULTY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend + keyboard hints -->
+  <div class="tt-legend-bar">
+    <span class="tt-legend-label">Subject type:</span>
+    <span class="tt-legend-item"><span class="tt-legend-dot" style="background:var(--color-theory)"></span> Theory</span>
+    <span class="tt-legend-item"><span class="tt-legend-dot" style="background:var(--color-lab)"></span> Lab</span>
+    <span class="tt-legend-item"><span class="tt-legend-dot" style="background:var(--color-elective)"></span> Elective</span>
+    <span class="tt-legend-item"><span class="tt-legend-dot" style="background:var(--color-minor)"></span> Minor</span>
+    <span class="tt-legend-item"><span class="tt-legend-dot" style="background:var(--color-practical)"></span> Practical</span>
+    <span class="tt-legend-hint"><kbd>N</kbd>=Add &nbsp;<kbd>C</kbd>=Compact &nbsp;<kbd>Esc</kbd>=Close</span>
+  </div>
+
+  <!-- FILTER BAR -->
+  <form method="GET" action="{{ request.path }}" id="filterForm" class="tt-filter-bar">
+    <input type="hidden" name="view" id="filterView" value="{{ view or 'grid' }}">
+    <input type="hidden" name="view_type" value="{{ view_type or 'class' }}">
+    <!-- Row 1: Search + dropdowns -->
+    <div class="tt-filter-row1">
+      <div class="tt-filter-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" name="q" value="{{ q }}" placeholder="Search subject, teacher, room...">
+      </div>
+      <select class="tt-filter-sel {{ 'active' if f_subj }}" name="subject" onchange="this.form.submit()">
+        <option value="">All Subjects</option>
+        {% for s in subjects %}<option value="{{ s }}" {{ 'selected' if f_subj==s }}>{{ s }}</option>{% endfor %}
+      </select>
+      <select class="tt-filter-sel {{ 'active' if f_teach }}" name="teacher" onchange="this.form.submit()">
+        <option value="">All Faculty</option>
+        {% for t in teachers %}<option value="{{ t }}" {{ 'selected' if f_teach==t }}>{{ t }}</option>{% endfor %}
+      </select>
+      <select class="tt-filter-sel {{ 'active' if f_div }}" name="division" onchange="this.form.submit()" style="{% if f_div %}background:#e0e7ff;border-color:#6366f1;color:#4338ca;font-weight:600;{% endif %}">
+        <option value="">All Divisions</option>
+        {% for d in divs %}<option value="{{ d }}" {{ 'selected' if f_div==d }}>{{ d }}</option>{% endfor %}
+      </select>
+      <select class="tt-filter-sel {{ 'active' if f_room }}" name="room" onchange="this.form.submit()">
+        <option value="">All Rooms</option>
+        {% for r in rooms %}<option value="{{ r }}" {{ 'selected' if f_room==r }}>{{ r }}</option>{% endfor %}
+      </select>
+      <select class="tt-filter-sel {{ 'active' if f_day }}" name="day" onchange="this.form.submit()">
+        <option value="">All Days</option>
+        {% for d in DAYS %}<option value="{{ d }}" {{ 'selected' if f_day==d }}>{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <!-- Row 2: Types + semester + actions -->
+    <div class="tt-filter-row2">
+      <select class="tt-filter-sel {{ 'active' if f_type }}" name="slot_type" onchange="this.form.submit()">
+        <option value="">All Types</option>
+        <option value="Theory" {{ 'selected' if f_type=='Theory' }}>Theory</option>
+        <option value="Lab" {{ 'selected' if f_type=='Lab' }}>Lab</option>
+        <option value="Elective" {{ 'selected' if f_type=='Elective' }}>Elective</option>
+        <option value="Minor" {{ 'selected' if f_type=='Minor' }}>Minor</option>
+        <option value="Practical" {{ 'selected' if f_type=='Practical' }}>Practical</option>
+      </select>
+      <select class="tt-filter-sel {{ 'active' if f_sem }}" name="semester" onchange="this.form.submit()">
+        <option value="">All Semesters</option>
+        {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}" {{ 'selected' if f_sem==s|string }}>Sem {{ s }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="tt-filter-btn-apply"><i class="fas fa-magnifying-glass"></i></button>
+      {% if session.role == 'admin' %}
+        <a href="/timetable_v2/fix_data" class="tt-filter-btn-fix"><i class="fas fa-wrench"></i> Fix Data</a>
+      {% endif %}
+      {% if q or f_day or f_subj or f_teach or f_div or f_type or f_sem or f_room %}
+        {% set clear_url = request.path ~ "?view=" ~ view ~ "&view_type=" ~ view_type %}
+        {% if view_type == 'class' and f_div %}{% set clear_url = clear_url ~ "&division=" ~ f_div %}{% endif %}
+        {% if view_type == 'faculty' and f_teach %}{% set clear_url = clear_url ~ "&teacher=" ~ f_teach %}{% endif %}
+        {% if view_type == 'room' and f_room %}{% set clear_url = clear_url ~ "&room=" ~ f_room %}{% endif %}
+        <a href="{{ clear_url }}" class="tt-filter-btn-clear"><i class="fas fa-xmark"></i> Clear Filters</a>
+      {% endif %}
+      <span class="tt-filter-results"><i class="fas fa-filter"></i> {{ total }} results</span>
+    </div>
+  </form>
+
+  <!-- Card View / Table View sub-tabs -->
+  <div class="tt-subview-tabs">
+    <button class="tt-svtab {{ 'active' if not request.args.get('grid_style') or request.args.get('grid_style') == 'card' }}" onclick="setGridStyle('card')"><i class="fas fa-id-card"></i> Card View</button>
+    <button class="tt-svtab {{ 'active' if request.args.get('grid_style') == 'table' }}" onclick="setGridStyle('table')"><i class="fas fa-table"></i> Table View</button>
+  </div>
+
+</div>
+<!-- ═══ END ERP TIMETABLE CARD ═══════════════════════════════════ -->
+
+
+<!-- ═══ MAIN DYNAMIC CONTENT CONTAINER ═══════════════════════ -->
+
+<!-- 1. GRID VIEWS (Class, Faculty, Room) -->
+{% if view == 'grid' or view == 'faculty' or view == 'room' or not view %}
+<div class="erp-container" style="border-radius:0 0 12px 12px; margin-top:-1px;">
+  <div class="tt-scroll-wrap">
+    <table class="tt-grid-table {{ 'table-style' if request.args.get('grid_style') == 'table' }}">
       <thead>
-        <tr>
-          <th>DAY / TIME</th>
+        <tr class="tt-grid-head-row">
+          <th class="tt-grid-corner">DAY / TIME</th>
           {% for ts in time_slots %}
-          <th>{{ ts }}</th>
+            <th class="tt-grid-time-col">
+              <div class="tt-th-time">{{ ts }}</div>
+              <div class="tt-th-loc">LOC{{ loop.index }}</div>
+            </th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
         {% for day in DAYS %}
+        {% set day_slot_count = namespace(n=0) %}
+        {% for ts in time_slots %}{% for s in grid[day][ts] %}
+          {% set matches_s = false %}
+          {% if (view == 'grid' or not view) and (not f_div or s.division == f_div) %}{% set matches_s = true %}{% endif %}
+          {% if view == 'faculty' and (not f_teach or s.teacher == f_teach or s.faculty_id|string == f_teach) %}{% set matches_s = true %}{% endif %}
+          {% if view == 'room' and (not f_room or s.room == f_room) %}{% set matches_s = true %}{% endif %}
+          {% if matches_s and (filtered_ids is none or s.id in filtered_ids) %}
+            {% set day_slot_count.n = day_slot_count.n + 1 %}
+          {% endif %}
+        {% endfor %}{% endfor %}
         <tr>
-          <td class="tt-day {{ 'today' if day==today_name }}">
-            <div class="tt-day-inner">
-              <div class="tt-day-name">{{ day }}</div>
-              <div class="tt-day-sub">
-                {% if any_filter %}
-                  {% set dcnt = namespace(n=0) %}
-                  {% for ts2 in time_slots %}{% for s2 in grid[day][ts2] %}{% if (filtered_ids is none) or (s2.id in filtered_ids) %}{% set dcnt.n = dcnt.n+1 %}{% endif %}{% endfor %}{% endfor %}
-                  {{ dcnt.n }} matches
-                {% else %}
-                  {% set dcnt = namespace(n=0) %}{% for ts2 in time_slots %}{% set dcnt.n = dcnt.n + grid[day][ts2]|length %}{% endfor %}
-                  {{ dcnt.n }} slots
-                {% endif %}
-              </div>
-            </div>
+          <td class="tt-day-header">
+            <div class="tt-day-name">{{ day }}</div>
+            <div class="tt-day-count">{{ day_slot_count.n }} slots</div>
           </td>
-
           {% for ts in time_slots %}
           <td class="tt-cell" data-day="{{ day }}" data-time="{{ ts }}">
             {% for slot in grid[day][ts] %}
-            {% set st = slot.slot_type or 'Theory' %}
-            {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
-            {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
-            <div class="sc {{ cls }}" id="sc{{ slot.id }}" data-id="{{ slot.id }}" data-day="{{ day }}" data-time="{{ ts }}"
-                 data-subject="{{ slot.subject }}" data-teacher="{{ slot.teacher }}" data-room="{{ slot.room }}"
-                 data-type="{{ st }}" data-division="{{ slot.division }}">
-              <div class="sc-name">{{ slot.subject }}</div>
-              <div class="sc-details">
-                {% if slot.teacher %}<div class="sc-item"><i class="fas fa-user"></i> {{ slot.teacher }}</div>{% endif %}
-                {% if slot.room %}<div class="sc-item"><i class="fas fa-location-dot"></i> {{ slot.room }}</div>{% endif %}
-              </div>
-              
-              <div class="sc-badge-row">
-                <span class="sc-badge">{{ st }}</span>
-                {% if slot.division %}<span class="sc-div">{{ slot.division }}</span>{% endif %}
-              </div>
+              {% set st = slot.slot_type or 'Theory' %}
+              {% set matches_filter = false %}
+              {% if view == 'grid' or not view %}
+                {% if not f_div or slot.division == f_div %}{% set matches_filter = true %}{% endif %}
+              {% elif view == 'faculty' %}
+                {% if not f_teach or slot.teacher == f_teach or slot.faculty_id|string == f_teach %}{% set matches_filter = true %}{% endif %}
+              {% elif view == 'room' %}
+                {% if not f_room or slot.room == f_room %}{% set matches_filter = true %}{% endif %}
+              {% endif %}
+              {% if matches_filter and (filtered_ids is none or slot.id in filtered_ids) %}
+              <div class="sc-card type-{{ st }}" id="sc{{ slot.id }}" data-id="{{ slot.id }}"
+                   data-day="{{ day }}" data-time="{{ ts }}" draggable="true"
+                   data-subject="{{ slot.subject }}" data-teacher="{{ slot.teacher }}" data-room="{{ slot.room }}"
+                   data-type="{{ st }}" data-division="{{ slot.division }}" data-semester="{{ slot.semester }}">
 
-              {% if session.role == 'admin' %}
-              <button class="dot-btn" onclick="event.stopPropagation();DD.toggle({{ slot.id }})">
-                <i class="fas fa-ellipsis-vertical"></i>
-              </button>
-              <div class="sc-drop" id="dd{{ slot.id }}">
-                <button class="ddi" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
-                <form method="POST" action="/duplicate_timetable" style="display:block">
-                  <input type="hidden" name="tt_id" value="{{ slot.id }}">
-                  <button type="submit" class="ddi"><i class="fas fa-copy"></i> Duplicate</button>
-                </form>
-                <button class="ddi red" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+                <!-- Type badge + division -->
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;">
+                  <span class="sc-badge" style="background:{% if st=='Theory' %}#dbeafe;color:#1d4ed8{% elif st=='Lab' %}#f3e8ff;color:#7c3aed{% elif st=='Elective' %}#dcfce7;color:#15803d{% elif st=='Minor' %}#fef3c7;color:#d97706{% else %}#e0f2fe;color:#0369a1{% endif %};border:none;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">{{ st }}</span>
+                  <span class="sc-division-tag" style="font-size:9px;font-weight:700;color:#64748b;">{{ slot.division }}</span>
+                </div>
+
+                <div class="sc-title">{{ slot.subject }}</div>
+
+                <div class="sc-info-row">
+                  {% if slot.teacher %}<div class="sc-info-item"><i class="fas fa-user-tie"></i> {{ slot.teacher }}</div>{% endif %}
+                  {% if slot.room %}<div class="sc-info-item"><i class="fas fa-location-dot"></i> {{ slot.room }}</div>{% endif %}
+                </div>
+
+                {% if session.role == 'admin' %}
+                <button class="sc-actions-btn" onclick="event.stopPropagation();toggleCardDropdown({{ slot.id }})">
+                  <i class="fas fa-ellipsis-vertical"></i>
+                </button>
+                <div class="sc-dropdown" id="dd{{ slot.id }}">
+                  <button class="sc-dropdown-item" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
+                  <button class="sc-dropdown-item" onclick="QF.open({{ slot.id }})"><i class="fas fa-user-tie"></i> Quick Faculty</button>
+                  <button class="sc-dropdown-item" onclick="QR.open({{ slot.id }})"><i class="fas fa-location-dot"></i> Quick Room</button>
+                  <button class="sc-dropdown-item" onclick="SUB.open({{ slot.id }})"><i class="fas fa-calendar-day"></i> Substitute</button>
+                  <form method="POST" action="/duplicate_timetable" style="display:block">
+                    <input type="hidden" name="tt_id" value="{{ slot.id }}">
+                    <button type="submit" class="sc-dropdown-item"><i class="fas fa-copy"></i> Duplicate</button>
+                  </form>
+                  <button class="sc-dropdown-item text-danger" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+                {% endif %}
               </div>
               {% endif %}
-            </div>
-            {% endif %}
             {% endfor %}
 
-            {% if session.role == 'admin' and not any_filter %}
-            <div class="cell-add" onclick="A.prefill('{{ day }}','{{ ts }}')">
+            {% if session.role == 'admin' %}
+            <div class="tt-cell-add-btn" onclick="A.prefill('{{ day }}','{{ ts }}')">
               <i class="fas fa-plus"></i>
             </div>
             {% endif %}
@@ -555,149 +1493,217 @@
       </tbody>
     </table>
   </div>
-
-  <!-- CARD VIEW (collapsible days accordion - default on mobile) -->
-  <div id="mobileCardView" data-today="{{ today_name }}">
-    {% for day in DAYS %}
-    <div class="tt-accordion-card">
-      <div class="tt-accordion-header" data-target="body-day-{{ day }}" data-day="{{ day }}">
-        <div class="tt-day-inner">
-          <div class="tt-day-name">{{ day }} {% if day==today_name %}<span class="tag t-bl" style="font-size:10px; margin-left:6px;">TODAY</span>{% endif %}</div>
-        </div>
-        <div>
-          {% set day_cnt = namespace(value=0) %}
-          {% for ts in time_slots %}
-            {% for slot in grid[day][ts] %}
-              {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
-                {% set day_cnt.value = day_cnt.value + 1 %}
-              {% endif %}
-            {% endfor %}
-          {% endfor %}
-          <span style="font-size:12px; color:var(--ink3);">{{ day_cnt.value }} Periods &nbsp; <i class="fas fa-chevron-down"></i></span>
-        </div>
-      </div>
-      <div class="tt-accordion-body" id="body-day-{{ day }}">
-        {% set day_has_periods = namespace(value=false) %}
-        {% for ts in time_slots %}
-          {% for slot in grid[day][ts] %}
-            {% if (not any_filter) or (filtered_ids is none) or (slot.id in filtered_ids) %}
-              {% set day_has_periods.value = true %}
-              {% set st = slot.slot_type or 'Theory' %}
-              {% set cls = {'Lab':'la','Elective':'el','Minor':'mi','Practical':'pr'}.get(st,'ty') %}
-              <div class="tt-period-card filterable-card">
-                <div class="tt-period-meta">
-                  <span class="tt-period-time"><i class="fas fa-clock"></i> {{ ts }}</span>
-                  <span class="tag {% if st=='Lab' %}t-vi{% elif st=='Elective' %}t-gr{% elif st=='Minor' %}t-am{% else %}t-bl{% endif %}" style="font-size:10px;">{{ st }}</span>
-                </div>
-                <div style="font-size:14px; font-weight:700; color:var(--ink); margin: 6px 0;">{{ slot.subject }}</div>
-                <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--ink3);">
-                  {% if slot.teacher %}<span><i class="fas fa-user"></i> {{ slot.teacher }}</span>{% endif %}
-                  {% if slot.room %}<span><i class="fas fa-location-dot"></i> {{ slot.room }}</span>{% endif %}
-                  {% if slot.division %}<span><i class="fas fa-users"></i> Division: {{ slot.division }}</span>{% endif %}
-                </div>
-                {% if session.role == 'admin' %}
-                <div style="margin-top:10px; display:flex; gap:8px;">
-                  <button class="btn btn-out btn-sm" onclick="ED.open({{ slot.id }})"><i class="fas fa-pen"></i> Edit</button>
-                  <button class="btn btn-danger btn-sm" onclick="DEL.show({{ slot.id }},'{{ slot.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i> Delete</button>
-                </div>
-                {% endif %}
-              </div>
-            {% endif %}
-          {% endfor %}
-        {% endfor %}
-        {% if not day_has_periods.value %}
-          <div style="padding: 16px; text-align: center; color: var(--ink4); font-size: 13px;">No classes scheduled</div>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Floating Today Button -->
-  <button class="floating-today-btn mobile-only" onclick="scrollToTodayTimetable()"><i class="fas fa-calendar-day"></i> Today</button>
-
-{% else %}
-<div class="card"><div class="cb">
-  <div class="empty-state" style="padding:60px">
-    <i class="fas fa-table-cells" style="font-size:38px;color:var(--ink4)"></i>
-    <p style="font-size:15px;font-weight:700;margin-top:14px">No timetable data yet</p>
-    <p style="font-size:13px;margin-top:6px;color:var(--ink3)">Import your TY-TT Excel file or add slots manually</p>
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:20px">
-      <button onclick="M.show('impModal')" class="btn btn-dark"><i class="fas fa-file-excel"></i> Import Excel</button>
-      <button onclick="M.show('addModal')" class="btn btn-out"><i class="fas fa-plus"></i> Add Manually</button>
-    </div>
-  </div>
-</div></div>
+</div>
 {% endif %}
-</div>
 
-<!-- ═══ LIST VIEW ════════════════════════════════════════════ -->
-<div id="vwList" {% if view != 'list' %}style="display:none"{% endif %} class="fu fu2">
-  <div class="card">
-    <div class="ch flex-sb"><div class="ct">All Slots</div><div class="cs">{{ entries|length }} records</div></div>
-    <div class="cb p0" style="padding-top:0">
-      <table class="tbl tbl-to-card">
-        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th><th>Room</th><th>Type</th><th>Division</th><th>Actions</th></tr></thead>
-        <tbody>
-          {% for e in entries %}
-          <tr class="filterable-card">
-            <td data-label="Day"><span class="tag t-bl">{{ e.day }}</span></td>
-            <td data-label="Time" class="mono" style="font-size:11px;white-space:nowrap">{{ e.time }}</td>
-            <td data-label="Subject"><strong>{{ e.subject }}</strong></td>
-            <td data-label="Teacher" style="font-size:12px;color:var(--ink3)">{{ e.teacher or '—' }}</td>
-            <td data-label="Room" class="mono" style="font-size:11px">{{ e.room or '—' }}</td>
-            <td data-label="Type"><span class="tag {% if e.slot_type=='Lab' %}t-vi{% elif e.slot_type=='Elective' %}t-gr{% elif e.slot_type=='Minor' %}t-am{% else %}t-bl{% endif %}">{{ e.slot_type or 'Theory' }}</span></td>
-            <td data-label="Division" style="font-size:11px;color:var(--ink4)">{{ e.division or '—' }}</td>
-            <td class="action-td">
-              <div class="flex-ac gap6">
-                <button class="btn btn-out btn-sm" onclick="ED.open({{ e.id }})"><i class="fas fa-pen"></i></button>
-                <button class="btn btn-danger btn-sm" onclick="DEL.show({{ e.id }},'{{ e.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i></button>
-              </div>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="8"><div class="empty-state" style="padding:28px"><p>No slots. <a href="{{ request.path }}" style="color:var(--blue)">Clear filters →</a></p></div></td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+
+<!-- 2. MASTER LIST VIEW -->
+{% if view == 'list' %}
+<div class="erp-container">
+  <div class="erp-card-header">
+    <div style="font-weight: 700; font-size: 15px; color: var(--erp-navy);">Consolidated Timetable Slots</div>
+    <div style="font-size: 12px; color: #64748b;">Total {{ entries|length }} records found</div>
   </div>
-</div>
-
-<!-- ═══ WORKLOAD VIEW ════════════════════════════════════════ -->
-<div id="vwWl" {% if view != 'wl' %}style="display:none"{% endif %} class="fu fu2">
-  <div class="g2">
-    <div class="card">
-      <div class="ch"><div class="ct">Faculty Teaching Load</div><div class="cs">Slots per week</div></div>
-      <div class="cb">
-        {% set max_wl = workload[0][1] if workload else 1 %}
-        {% for name, cnt in workload %}
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
-          <div style="width:165px;font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ name }}">{{ name[:22] }}</div>
-          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:var(--blue);width:{{ (cnt/max_wl*100)|round }}%"></div></div>
-          <div style="font-size:12px;font-weight:700;color:var(--blue);width:24px;text-align:right">{{ cnt }}</div>
-        </div>
-        {% else %}<div class="empty-state" style="padding:28px"><p>No data.</p></div>{% endfor %}
-      </div>
-    </div>
-    <div class="card">
-      <div class="ch"><div class="ct">Day-wise Slots</div></div>
-      <div class="cb">
-        {% for day in DAYS %}
-        {% set cntns = namespace(n=0) %}{% for ts2 in time_slots %}{% set cntns.n = cntns.n + grid[day][ts2]|length %}{% endfor %}{% set cnt = cntns.n %}
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="width:100px;font-size:12px;font-weight:{% if day==today_name %}700{% else %}600{% endif %};color:{% if day==today_name %}var(--blue){% else %}var(--ink){% endif %}">{{ day }}{% if day==today_name %} <span style="font-size:9px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:3px">TODAY</span>{% endif %}</div>
-          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:{% if day==today_name %}var(--blue){% else %}var(--ink3){% endif %};width:{{ [cnt*5,100]|min }}%"></div></div>
-          <div style="font-size:12px;font-weight:600;color:var(--ink3);width:28px;text-align:right">{{ cnt }}</div>
-        </div>
+  <div class="cb p0">
+    <table class="tbl tbl-to-card">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Time Period</th>
+          <th>Subject</th>
+          <th>Faculty</th>
+          <th>Room</th>
+          <th>Type</th>
+          <th>Class Division</th>
+          {% if session.role == 'admin' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td data-label="Day"><strong>{{ e.day }}</strong></td>
+          <td data-label="Time" class="mono" style="font-size:12px;">{{ e.time }}</td>
+          <td data-label="Subject"><strong>{{ e.subject }}</strong></td>
+          <td data-label="Teacher" style="font-size:13px;">{{ e.teacher or '—' }}</td>
+          <td data-label="Room" class="mono" style="font-size:12px;">{{ e.room or '—' }}</td>
+          <td data-label="Type">
+            <span class="sc-badge" style="border: 1px solid var(--erp-border);">{{ e.slot_type or 'Theory' }}</span>
+          </td>
+          <td data-label="Division"><strong>{{ e.division or '—' }}</strong></td>
+          {% if session.role == 'admin' %}
+          <td class="action-td">
+            <div class="flex-ac gap6">
+              <button class="btn btn-out btn-sm" onclick="ED.open({{ e.id }})"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-danger btn-sm" onclick="DEL.show({{ e.id }},'{{ e.subject|replace("'","\\'") }}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state" style="padding:40px;">
+              <p>No timetable slots match the selected filters. <a href="{{ request.path }}?view=list" style="color:var(--erp-navy); font-weight:700;">Reset Filters →</a></p>
+            </div>
+          </td>
+        </tr>
         {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- 3. WORKLOAD VIEW -->
+{% if view == 'wl' %}
+<div class="g2">
+  <div class="erp-container">
+    <div class="erp-card-header">
+      <div style="font-weight: 700; font-size: 15px; color: var(--erp-navy);">Faculty Workload Analytics</div>
+      <div style="font-size: 12px; color: #64748b;">Teaching load per week</div>
+    </div>
+    <div class="cb" style="padding: 20px;">
+      {% set max_wl = workload[0][1] if workload else 1 %}
+      {% for name, cnt in workload %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <div style="width:160px;font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ name }}">{{ name }}</div>
+        <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+          <div style="height:100%;border-radius:4px;background:var(--erp-navy);width:{{ (cnt/max_wl*100)|round }}%"></div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--erp-navy);width:30px;text-align:right">{{ cnt }} hr</div>
       </div>
+      {% else %}
+        <div class="empty-state" style="padding:28px"><p>No slots found to calculate workload.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <div class="erp-container">
+    <div class="erp-card-header">
+      <div style="font-weight: 700; font-size: 15px; color: var(--erp-navy);">Weekly Load Balance</div>
+    </div>
+    <div class="cb" style="padding: 20px;">
+      {% for day in DAYS %}
+      {% set cntns = namespace(n=0) %}
+      {% for ts2 in time_slots %}{% set cntns.n = cntns.n + grid[day][ts2]|length %}{% endfor %}
+      {% set cnt = cntns.n %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <div style="width:100px;font-size:12px;font-weight:{% if day==today_name %}700{% else %}600{% endif %};color:{% if day==today_name %}var(--erp-navy){% else %}#1e293b{% endif %}">
+          {{ day }}
+          {% if day==today_name %}<span style="font-size:9px;background:var(--erp-navy);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">TODAY</span>{% endif %}
+        </div>
+        <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+          <div style="height:100%;border-radius:4px;background:{% if day==today_name %}#3b82f6{% else %}#64748b{% endif %};width:{{ [cnt*5,100]|min }}%"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#64748b;width:28px;text-align:right">{{ cnt }}</div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </div>
+{% endif %}
 
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS SECTION
+     ═══════════════════════════════════════════════════════════ -->
 
-<!-- ════ MODALS ═══════════════════════════════════════════════ -->
+<!-- QUICK CHANGE FACULTY -->
+<div class="modal-bg" id="facModal">
+  <div class="modal-box" style="width:380px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Quick Change Faculty</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('facModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_timetable" id="facForm">
+      <input type="hidden" name="tt_id" id="f-id">
+      <input type="hidden" name="day" id="f-day">
+      <input type="hidden" name="time" id="f-time">
+      <input type="hidden" name="subject" id="f-subj">
+      <input type="hidden" name="slot_type" id="f-type">
+      <input type="hidden" name="room" id="f-room">
+      <input type="hidden" name="division" id="f-div">
+      <input type="hidden" name="semester" id="f-sem">
+      <div class="cb" style="padding-top:0">
+        <div class="fgrp"><label>New Faculty *</label>
+          <input type="text" name="teacher" id="f-tchr" list="tdl3" required>
+          <datalist id="tdl3">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('facModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- QUICK CHANGE ROOM -->
+<div class="modal-bg" id="roomModal">
+  <div class="modal-box" style="width:380px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Quick Change Room</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('roomModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/edit_timetable" id="roomForm">
+      <input type="hidden" name="tt_id" id="r-id">
+      <input type="hidden" name="day" id="r-day">
+      <input type="hidden" name="time" id="r-time">
+      <input type="hidden" name="subject" id="r-subj">
+      <input type="hidden" name="slot_type" id="r-type">
+      <input type="hidden" name="teacher" id="r-tchr">
+      <input type="hidden" name="division" id="r-div">
+      <input type="hidden" name="semester" id="r-sem">
+      <div class="cb" style="padding-top:0">
+        <div class="fgrp"><label>Room / Lab</label>
+          <input type="text" name="room" id="r-room" list="rdl3" placeholder="e.g. Lab-303">
+          <datalist id="rdl3">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('roomModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- FACULTY SUBSTITUTION MODAL -->
+<div class="modal-bg" id="substituteModal">
+  <div class="modal-box" style="width:420px">
+    <div class="ch flex-sb" style="padding-bottom:12px">
+      <div class="ct">Schedule Faculty Substitution</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('substituteModal')"><i class="fas fa-xmark"></i></button>
+    </div>
+    <form method="POST" action="/add_substitution" id="substituteForm">
+      <input type="hidden" name="tt_id" id="sub-tt-id">
+      <div class="cb" style="padding-top:0">
+        <div class="fgrp">
+          <label>Original Lecture Details</label>
+          <div style="background:#f1f5f9; padding:10px; border-radius:6px; font-size:12px; line-height:1.5; color:#475569;" id="sub-details-text">
+            Day: Monday | Time: 9:30-10:30 | Subject: ML
+          </div>
+        </div>
+        <div class="fgrp">
+          <label>Substitution Date *</label>
+          <input type="date" name="session_date" id="sub-date" required>
+        </div>
+        <div class="fgrp">
+          <label>Substitute Faculty *</label>
+          <select name="substitute_faculty_id" id="sub-faculty" class="filter-select" style="width:100%" required>
+            <option value="">Select Faculty</option>
+            {% for f in faculty_list %}
+              <option value="{{ f.id }}">{{ f.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="cf">
+        <button type="submit" class="btn btn-dark"><i class="fas fa-calendar-check"></i> Assign Substitution</button>
+        <button type="button" class="btn btn-out" onclick="M.hide('substituteModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- ADD MODAL -->
 <div class="modal-bg" id="addModal">
@@ -713,43 +1719,52 @@
           <div class="fgrp"><label>Day *</label>
             <select name="day" id="a-day">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
           </div>
-          <div class="fgrp"><label>Time *</label>
-            <input type="text" name="time" id="a-time" list="tsdl" placeholder="9:30-10:30" required>
+          <div class="fgrp"><label>Time Period *</label>
+            <input type="text" name="time" id="a-time" list="tsdl" placeholder="e.g. 09:30-10:30" required>
             <datalist id="tsdl">
               {% for ts in time_slots %}<option value="{{ ts }}">{% endfor %}
-              <option value="9:30-10:30"><option value="10:30-11:30">
-              <option value="11:45-12:45"><option value="12:45-1:45">
-              <option value="2:30-3:30"><option value="3:30-4:30">
             </datalist>
           </div>
         </div>
-        <div class="fgrp"><label>Subject *</label>
+        <div class="fgrp"><label>Subject Name *</label>
           <input type="text" name="subject" id="a-subj" list="sdl" required oninput="autoType(this,'a-type')">
           <datalist id="sdl">{% for s in subjects %}<option value="{{ s }}">{% endfor %}</datalist>
         </div>
         <div class="fg2">
           <div class="fgrp"><label>Type</label>
-            <select name="slot_type" id="a-type"><option>Theory</option><option>Lab</option><option>Elective</option><option>Minor</option><option>Practical</option></select>
+            <select name="slot_type" id="a-type">
+              <option>Theory</option>
+              <option>Lab</option>
+              <option>Elective</option>
+              <option>Minor</option>
+              <option>Practical</option>
+            </select>
           </div>
-          <div class="fgrp"><label>Teacher</label>
+          <div class="fgrp"><label>Faculty *</label>
             <input type="text" name="teacher" id="a-tchr" list="tdl">
             <datalist id="tdl">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
           </div>
         </div>
         <div class="fg2">
           <div class="fgrp"><label>Room / Lab</label>
-            <input type="text" name="room" id="a-room" list="rdl" placeholder="Lab-303">
+            <input type="text" name="room" id="a-room" list="rdl" placeholder="e.g. Room-302">
             <datalist id="rdl">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
           </div>
-          <div class="fgrp"><label>Division</label>
-            <input type="text" name="division" id="a-div" list="ddl" placeholder="TE CSE-A">
+          <div class="fgrp"><label>Division Class *</label>
+            <input type="text" name="division" id="a-div" list="ddl" placeholder="e.g. TE CSE-A" required>
             <datalist id="ddl">{% for d in divs %}<option value="{{ d }}">{% endfor %}</datalist>
           </div>
         </div>
+        <div class="fgrp"><label>Semester (Arabic numeral, e.g. 6)</label>
+          <select name="semester" id="a-sem">
+            <option value="">Select Semester</option>
+            {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <div class="cf">
-        <button type="button" class="btn btn-dark" onclick="CF.check('add')"><i class="fas fa-plus"></i> Add Slot</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('addForm').submit()" style="color:var(--ink4)">Skip check →</button>
+        <button type="button" class="btn btn-dark" onclick="CF.check('add')"><i class="fas fa-plus"></i> Save Slot</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('addForm').submit()" style="color:var(--color-other)">Skip check →</button>
         <button type="button" class="btn btn-out" onclick="M.hide('addModal')">Cancel</button>
       </div>
     </form>
@@ -774,24 +1789,28 @@
           <div class="fgrp"><label>Day *</label>
             <select name="day" id="e-day">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
           </div>
-          <div class="fgrp"><label>Time *</label>
+          <div class="fgrp"><label>Time Period *</label>
             <input type="text" name="time" id="e-time" list="tsdl2">
             <datalist id="tsdl2">
               {% for ts in time_slots %}<option value="{{ ts }}">{% endfor %}
-              <option value="9:30-10:30"><option value="10:30-11:30"><option value="11:45-12:45">
-              <option value="12:45-1:45"><option value="2:30-3:30"><option value="3:30-4:30">
             </datalist>
           </div>
         </div>
-        <div class="fgrp"><label>Subject *</label>
+        <div class="fgrp"><label>Subject Name *</label>
           <input type="text" name="subject" id="e-subj" list="sdl2" required oninput="autoType(this,'e-type')">
           <datalist id="sdl2">{% for s in subjects %}<option value="{{ s }}">{% endfor %}</datalist>
         </div>
         <div class="fg2">
           <div class="fgrp"><label>Type</label>
-            <select name="slot_type" id="e-type"><option>Theory</option><option>Lab</option><option>Elective</option><option>Minor</option><option>Practical</option></select>
+            <select name="slot_type" id="e-type">
+              <option>Theory</option>
+              <option>Lab</option>
+              <option>Elective</option>
+              <option>Minor</option>
+              <option>Practical</option>
+            </select>
           </div>
-          <div class="fgrp"><label>Teacher</label>
+          <div class="fgrp"><label>Faculty *</label>
             <input type="text" name="teacher" id="e-tchr" list="tdl2">
             <datalist id="tdl2">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
           </div>
@@ -801,15 +1820,21 @@
             <input type="text" name="room" id="e-room" list="rdl2">
             <datalist id="rdl2">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
           </div>
-          <div class="fgrp"><label>Division</label>
-            <input type="text" name="division" id="e-div" list="ddl2">
+          <div class="fgrp"><label>Division Class *</label>
+            <input type="text" name="division" id="e-div" list="ddl2" required>
             <datalist id="ddl2">{% for d in divs %}<option value="{{ d }}">{% endfor %}</datalist>
           </div>
         </div>
+        <div class="fgrp"><label>Semester</label>
+          <select name="semester" id="e-sem">
+            <option value="">Select Semester</option>
+            {% for s in [1,2,3,4,5,6,7,8] %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <div class="cf">
-        <button type="button" class="btn btn-dark" onclick="CF.check('edit')"><i class="fas fa-save"></i> Save</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('editForm').submit()" style="color:var(--ink4)">Skip check →</button>
+        <button type="button" class="btn btn-dark" onclick="CF.check('edit')"><i class="fas fa-save"></i> Save Changes</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('editForm').submit()" style="color:var(--color-other)">Skip check →</button>
         <button type="button" class="btn btn-out" onclick="M.hide('editModal')">Cancel</button>
       </div>
     </form>
@@ -818,10 +1843,10 @@
 
 <!-- DELETE CONFIRM MODAL -->
 <div class="modal-bg" id="delModal">
-  <div class="modal-box" style="width:340px;text-align:center">
-    <div style="font-size:40px;margin-bottom:12px">🗑️</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--ink)">Delete Slot?</div>
-    <div id="del-name" style="font-size:13px;color:var(--ink3);margin-bottom:22px"></div>
+  <div class="modal-box" style="width:360px;text-align:center">
+    <div style="font-size:44px;margin-bottom:12px">⚠️</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:6px;color:#0f172a">Delete Timetable Slot?</div>
+    <div id="del-name" style="font-size:13px;color:#64748b;margin-bottom:22px"></div>
     <form method="POST" action="/delete_timetable" id="delForm">
       <input type="hidden" name="tt_id" id="del-id">
       <div class="cf" style="justify-content:center">
@@ -832,104 +1857,52 @@
   </div>
 </div>
 
-<!-- QUICK CHANGE FACULTY -->
-<div class="modal-bg" id="facModal">
-  <div class="modal-box" style="width:380px">
-    <div class="ch flex-sb" style="padding-bottom:12px">
-      <div class="ct">Change Faculty</div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('facModal')"><i class="fas fa-xmark"></i></button>
-    </div>
-    <form method="POST" action="/edit_timetable">
-      <input type="hidden" name="tt_id" id="f-id">
-      <input type="hidden" name="day" id="f-day">
-      <input type="hidden" name="time" id="f-time">
-      <input type="hidden" name="subject" id="f-subj">
-      <input type="hidden" name="slot_type" id="f-type">
-      <input type="hidden" name="room" id="f-room">
-      <input type="hidden" name="division" id="f-div">
-      <div class="cb" style="padding-top:0">
-        <div class="fgrp"><label>New Faculty *</label>
-          <input type="text" name="teacher" id="f-tchr" list="tdl3" required>
-          <datalist id="tdl3">{% for t in teachers %}<option value="{{ t }}">{% endfor %}</datalist>
-        </div>
-      </div>
-      <div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button><button type="button" class="btn btn-out" onclick="M.hide('facModal')">Cancel</button></div>
-    </form>
-  </div>
-</div>
-
-<!-- QUICK CHANGE ROOM -->
-<div class="modal-bg" id="roomModal">
-  <div class="modal-box" style="width:380px">
-    <div class="ch flex-sb" style="padding-bottom:12px">
-      <div class="ct">Change Room</div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('roomModal')"><i class="fas fa-xmark"></i></button>
-    </div>
-    <form method="POST" action="/edit_timetable">
-      <input type="hidden" name="tt_id" id="r-id">
-      <input type="hidden" name="day" id="r-day">
-      <input type="hidden" name="time" id="r-time">
-      <input type="hidden" name="subject" id="r-subj">
-      <input type="hidden" name="slot_type" id="r-type">
-      <input type="hidden" name="teacher" id="r-tchr">
-      <input type="hidden" name="division" id="r-div">
-      <div class="cb" style="padding-top:0">
-        <div class="fgrp"><label>Room / Lab</label>
-          <input type="text" name="room" id="r-room" list="rdl3" placeholder="e.g. Lab-303">
-          <datalist id="rdl3">{% for r in rooms %}<option value="{{ r }}">{% endfor %}</datalist>
-        </div>
-      </div>
-      <div class="cf"><button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Update</button><button type="button" class="btn btn-out" onclick="M.hide('roomModal')">Cancel</button></div>
-    </form>
-  </div>
-</div>
-
 <!-- IMPORT MODAL -->
 <div class="modal-bg" id="impModal">
   <div class="modal-box" style="width:480px">
     <div class="ch flex-sb" style="padding-bottom:14px">
-      <div><div class="ct">Import Timetable</div><div class="cs">TY-TT multi-sheet Excel</div></div>
+      <div><div class="ct">Import Timetable</div><div class="cs">TY-TT Multi-Sheet Excel Spreadsheet</div></div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('impModal')"><i class="fas fa-xmark"></i></button>
     </div>
     <form method="POST" action="/import_timetable_v2" enctype="multipart/form-data">
       <div class="cb" style="padding-top:0">
         <div class="alert al-warn" style="margin-bottom:12px"><i class="fas fa-triangle-exclamation"></i>
-          <span style="font-size:12px">Use <strong>Clear All</strong> before re-importing to avoid duplicates.</span>
+          <span style="font-size:12px">Use <strong>Clear All</strong> before re-importing to avoid duplicate records.</span>
         </div>
         <div class="alert al-info" style="margin-bottom:14px"><i class="fas fa-circle-info"></i>
           <div style="font-size:12px;line-height:1.8">
-            <strong>TY-TT-07-02-2026.xlsx</strong> — all 4 sheets auto-imported<br>
-            <code>ML(ST)</code> → Machine Learning / Prof.Shakil Tamboli
+            Select standard <strong>TY-TT-07-02-2026.xlsx</strong> where worksheets represent division classes (e.g. TE CSE-A, TE IT-B).
           </div>
         </div>
         <div class="import-zone" onclick="document.getElementById('imp-f').click()">
-          <i class="fas fa-file-excel" style="color:#059669"></i>
-          <p>Click to select Excel file</p><small>.xlsx</small>
+          <i class="fas fa-file-excel" style="color:#059669; font-size:38px;"></i>
+          <p style="margin-top:10px; font-weight:600;">Click to select Excel spreadsheet</p><small>.xlsx only</small>
           <input type="file" id="imp-f" name="file" accept=".xlsx,.xls" style="display:none"
-                 onchange="this.nextElementSibling.textContent='✓  '+this.files[0].name;document.getElementById('imp-btn').disabled=false">
-          <p style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600"></p>
+                 onchange="this.nextElementSibling.textContent='✓ Selected: '+this.files[0].name;document.getElementById('imp-btn').disabled=false">
+          <p style="font-size:12px;color:var(--color-elective);margin-top:6px;font-weight:600"></p>
         </div>
       </div>
       <div class="cf">
-        <button type="submit" id="imp-btn" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Import Now</button>
+        <button type="submit" id="imp-btn" class="btn btn-dark" disabled><i class="fas fa-upload"></i> Start Import</button>
         <button type="button" class="btn btn-out" onclick="M.hide('impModal')">Cancel</button>
       </div>
     </form>
   </div>
 </div>
+
 <!-- COPY DAY MODAL -->
 <div class="modal-bg" id="copyDayModal">
   <div class="modal-box" style="width:400px">
     <div class="ch flex-sb" style="padding-bottom:12px">
-      <div class="ct">Copy Workday</div>
+      <div class="ct">Copy Workday Schedule</div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('copyDayModal')"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="cb" style="padding-top:0">
-      <p style="font-size:12px;color:var(--ink3);margin-bottom:15px">Duplicate all slots from one day to another.</p>
-      <div class="fgrp"><label>Copy From</label>
+      <p style="font-size:12px;color:#64748b;margin-bottom:15px">Duplicate all schedules from one workday to another.</p>
+      <div class="fgrp"><label>Source Day (Copy From)</label>
         <select id="copy-from">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
       </div>
-      <div class="fgrp"><label>Copy To</label>
+      <div class="fgrp"><label>Destination Day (Copy To)</label>
         <select id="copy-to">{% for d in DAYS %}<option>{{ d }}</option>{% endfor %}</select>
       </div>
     </div>
@@ -940,17 +1913,51 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- BROADCAST MODAL (Admin) -->
+<div id="broadcastModal" class="modal-bg">
+  <div class="modal-box" style="width: 500px;">
+    <div class="ch flex-sb" style="padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #e2e8f0">
+      <div class="ct"><i class="fas fa-paper-plane" style="color:var(--erp-navy)"></i> Broadcast Timetable Updates</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeBroadcastModal()">&times;</button>
+    </div>
+    <form id="broadcastForm">
+      <div class="form-group" style="margin-bottom:15px">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Target Department</label>
+        <select name="department" class="filter-select" style="width:100%">
+          <option value="All">All Departments</option>
+          {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px">
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Year</label>
+          <select name="year" class="filter-select" style="width:100%">
+            <option value="All">All</option>
+            <option value="FE">FE</option><option value="SE">SE</option><option value="TE">TE</option><option value="BE">BE</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:block; font-size:12px; font-weight:600; margin-bottom:5px">Division</label>
+          <input type="text" name="division" class="filter-select" style="width:100%" placeholder="e.g. A">
+        </div>
+      </div>
+      <div style="text-align:right" class="cf">
+        <button type="submit" class="btn btn-primary">Send Update Notifications</button>
+        <button type="button" class="btn btn-out" onclick="closeBroadcastModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- Slot Settings Modal -->
 <div class="modal-bg" id="slotSettingsModal">
   <div class="modal-box" style="width:500px">
-    <div class="ch flex-sb" style="padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #eee">
-      <div class="ct"><i class="fas fa-clock"></i> Manage Time Slots</div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="M.hide('slotSettingsModal')">&times;</button>
+    <div class="ch flex-sb" style="padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid #e2e8f0">
+      <div class="ct"><i class="fas fa-clock"></i> Manage Time Periods</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeSlotSettings()">&times;</button>
     </div>
     <div class="cb" style="max-height:400px; overflow-y:auto; padding-top:0">
-      <p style="font-size:12px;color:var(--ink3);margin-bottom:15px">Defined slots for the weekly view.</p>
+      <p style="font-size:12px;color:#64748b;margin-bottom:15px">Defined default periods for the weekly calendar view.</p>
       <table class="tbl" style="width:100%">
         <thead><tr><th style="text-align:left">Slot Time</th><th style="width:80px">Action</th></tr></thead>
         <tbody>
@@ -962,58 +1969,89 @@
           {% endfor %}
         </tbody>
       </table>
-      <div style="margin-top:20px; padding:15px; background:var(--bg); border:1px dashed var(--border); border-radius:8px">
-        <div style="font-weight:600; font-size:12px; margin-bottom:10px; color:var(--ink2)">Add New Time Slot</div>
+      <div style="margin-top:20px; padding:15px; background:#f8fafc; border:1px dashed var(--erp-border); border-radius:8px">
+        <div style="font-weight:600; font-size:12px; margin-bottom:10px; color:#334155">Add New Time Period</div>
         <div class="flex-ac gap10">
-          <input type="text" id="newSlot" class="ff" placeholder="e.g. 09:00-10:00" style="flex:1">
+          <input type="text" id="newSlot" class="filter-select" placeholder="e.g. 09:00-10:00" style="flex:1">
           <button class="btn btn-dark btn-sm" onclick="addSlot()">Add</button>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<div id="toast"></div>
+
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script>
 'use strict';
 
-// ── Modal ──────────────────────────────────────────────
+// ── Date helper for print ───────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  document.getElementById('print-date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+});
+
+// ── Modal Handlers ──────────────────────────────────────
 var M = {
   show: function(id){ document.getElementById(id).classList.add('show'); },
   hide: function(id){ document.getElementById(id).classList.remove('show'); }
 };
+
 document.querySelectorAll('.modal-bg').forEach(function(m){
   m.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); });
 });
 
-// ── View toggle ─────────────────────────────────────────
-function setView(v, btn){
-  ['Grid','List','Wl'].forEach(function(n){
-    var el = document.getElementById('vw'+n);
-    if(el) el.style.display = (n.toLowerCase()===v) ? '' : 'none';
-  });
-  document.querySelectorAll('.vtb').forEach(function(b){ b.classList.remove('on'); });
-  btn.classList.add('on');
-  var fv = document.getElementById('filterView');
-  if(fv) fv.value = v;
+// ── View Mode Redirection ────────────────────────────────
+function changeViewMode(mode) {
+  document.getElementById('filterView').value = mode;
+  // Clear conflicting filters to let defaults work
+  if (mode === 'grid') {
+    document.querySelectorAll("[name='teacher'], [name='room']").forEach(e => e.value = '');
+  } else if (mode === 'faculty') {
+    document.querySelectorAll("[name='division'], [name='room']").forEach(e => e.value = '');
+  } else if (mode === 'room') {
+    document.querySelectorAll("[name='division'], [name='teacher']").forEach(e => e.value = '');
+  }
+  document.getElementById('filterForm').submit();
 }
 
-// ── Compact ─────────────────────────────────────────────
-var compact = false;
-function toggleCompact(){
-  compact = !compact;
-  document.body.classList.toggle('compact', compact);
-  document.getElementById('compBtn').innerHTML = compact
-    ? '<i class="fas fa-expand"></i> Expand'
-    : '<i class="fas fa-compress"></i> Compact';
+// ── Segment Tab Redirection (for new ERP card design) ──
+function changeSegment(seg) {
+  var viewMap = { 'class': 'grid', 'faculty': 'faculty', 'room': 'room', 'master': 'grid' };
+  var url = new URL(window.location.href);
+  var currentView = url.searchParams.get('view');
+  
+  // Keep the current view mode (grid, list, wl) if possible, otherwise default based on segment
+  var view = currentView;
+  if (!view || (seg !== 'master' && view === 'list')) {
+    view = viewMap[seg] || 'grid';
+  }
+  
+  url.searchParams.set('view', view);
+  url.searchParams.set('view_type', seg);
+  if (seg === 'class')   { url.searchParams.delete('teacher'); url.searchParams.delete('room'); }
+  if (seg === 'faculty') { url.searchParams.delete('division'); url.searchParams.delete('room'); }
+  if (seg === 'room')    { url.searchParams.delete('division'); url.searchParams.delete('teacher'); }
+  window.location.href = url.toString();
 }
 
-// ── Toast ────────────────────────────────────────────────
+// ── Grid Style Toggle (Card / Table) ────────────────────
+function setGridStyle(style) {
+  var url = new URL(window.location.href);
+  url.searchParams.set('grid_style', style);
+  // Ensure we transition to the academic grid layout view
+  url.searchParams.set('view', 'grid');
+  window.location.href = url.toString();
+}
+
+// ── Toast Notifications ──────────────────────────────────
 var _tt;
 function toast(msg, type){
   var el = document.getElementById('toast');
+  if(!el) return;
   el.className = type || 'ok';
   el.innerHTML = (type==='err'?'❌ ':'✅ ') + msg;
   el.style.display='block'; el.style.opacity='1';
@@ -1021,32 +2059,51 @@ function toast(msg, type){
   _tt = setTimeout(function(){ el.style.opacity='0'; setTimeout(function(){ el.style.display='none'; },300); },3000);
 }
 
-// ── Dropdown ─────────────────────────────────────────────
-var DD = {
-  toggle: function(id){
-    var dd = document.getElementById('dd'+id);
-    var was = dd.classList.contains('open');
-    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
-    if(!was) dd.classList.add('open');
-  }
-};
+// ── Card Dropdown Menus ─────────────────────────────────
+function toggleCardDropdown(id) {
+  var dd = document.getElementById('dd'+id);
+  if(!dd) return;
+  var was = dd.classList.contains('open');
+  document.querySelectorAll('.sc-dropdown.open').forEach(function(d){ d.classList.remove('open'); });
+  if(!was) dd.classList.add('open');
+}
+
 document.addEventListener('click',function(e){
-  if(!e.target.closest('.dot-btn') && !e.target.closest('.sc-drop')){
-    document.querySelectorAll('.sc-drop.open').forEach(function(d){ d.classList.remove('open'); });
+  if(!e.target.closest('.sc-actions-btn') && !e.target.closest('.sc-dropdown')){
+    document.querySelectorAll('.sc-dropdown.open').forEach(function(d){ d.classList.remove('open'); });
   }
 });
 
-// ── Add pre-fill ──────────────────────────────────────────
+// ── Add Pre-fill ─────────────────────────────────────────
 var A = {
   prefill: function(day, time){
     document.getElementById('a-day').value = day;
     document.getElementById('a-time').value = time;
+    
+    // Auto-fill division class if we are viewing a specific class division
+    const activeDiv = "{{ f_div or '' }}";
+    if (activeDiv) {
+      document.getElementById('a-div').value = activeDiv;
+    }
+    
+    // Auto-fill faculty if in faculty view
+    const activeFaculty = "{{ f_teach or '' }}";
+    if (activeFaculty && document.getElementById('a-tchr')) {
+      document.getElementById('a-tchr').value = activeFaculty;
+    }
+    
+    // Auto-fill room if in room view
+    const activeRoom = "{{ f_room or '' }}";
+    if (activeRoom && document.getElementById('a-room')) {
+      document.getElementById('a-room').value = activeRoom;
+    }
+
     document.getElementById('addCF').innerHTML = '';
     M.show('addModal');
   }
 };
 
-// ── Edit ──────────────────────────────────────────────────
+// ── Edit Slot Prefill ────────────────────────────────────
 var _editId = null;
 var ED = {
   open: function(id){
@@ -1062,16 +2119,19 @@ var ED = {
     document.getElementById('e-room').value = d.room||'';
     document.getElementById('e-type').value = d.type||'Theory';
     document.getElementById('e-div').value  = d.division||'';
+    if(d.semester && document.getElementById('e-sem')) {
+      document.getElementById('e-sem').value = d.semester;
+    }
     document.getElementById('editCF').innerHTML = '';
     document.getElementById('editDelBtn').onclick = function(){
       M.hide('editModal'); DEL.show(id, d.subject);
     };
-    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    document.querySelectorAll('.sc-dropdown.open').forEach(function(x){ x.classList.remove('open'); });
     M.show('editModal');
   }
 };
 
-// ── Delete ────────────────────────────────────────────────
+// ── Delete ───────────────────────────────────────────────
 var DEL = {
   show: function(id, name){
     document.getElementById('del-id').value = id;
@@ -1080,39 +2140,61 @@ var DEL = {
   }
 };
 
-// ── Quick Faculty ─────────────────────────────────────────
+// ── Quick Change Faculty ─────────────────────────────────
 var QF = {
   open: function(id){
     var c = document.getElementById('sc'+id); if(!c) return;
     var d = c.dataset;
-    ['id','day','time','subj','type','room','div'].forEach(function(k){
-      var dk = k==='subj'?'subject':k==='type'?'type':k;
-      var el = document.getElementById('f-'+k);
-      if(el) el.value = d[dk]||'';
-    });
+    document.getElementById('f-id').value = id;
+    document.getElementById('f-day').value = d.day||'';
+    document.getElementById('f-time').value = d.time||'';
+    document.getElementById('f-subj').value = d.subject||'';
+    document.getElementById('f-type').value = d.type||'Theory';
+    document.getElementById('f-room').value = d.room||'';
+    document.getElementById('f-div').value = d.division||'';
+    document.getElementById('f-sem').value = d.semester||'';
     document.getElementById('f-tchr').value = d.teacher||'';
-    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    document.querySelectorAll('.sc-dropdown.open').forEach(function(x){ x.classList.remove('open'); });
     M.show('facModal');
   }
 };
 
-// ── Quick Room ────────────────────────────────────────────
+// ── Quick Change Room ────────────────────────────────────
 var QR = {
   open: function(id){
     var c = document.getElementById('sc'+id); if(!c) return;
     var d = c.dataset;
-    ['id','day','time','subj','type','tchr','div'].forEach(function(k){
-      var dk = k==='subj'?'subject':k==='tchr'?'teacher':k==='type'?'type':k;
-      var el = document.getElementById('r-'+k);
-      if(el) el.value = d[dk]||'';
-    });
+    document.getElementById('r-id').value = id;
+    document.getElementById('r-day').value = d.day||'';
+    document.getElementById('r-time').value = d.time||'';
+    document.getElementById('r-subj').value = d.subject||'';
+    document.getElementById('r-type').value = d.type||'Theory';
+    document.getElementById('r-tchr').value = d.teacher||'';
+    document.getElementById('r-div').value = d.division||'';
+    document.getElementById('r-sem').value = d.semester||'';
     document.getElementById('r-room').value = d.room||'';
-    document.querySelectorAll('.sc-drop.open').forEach(function(x){ x.classList.remove('open'); });
+    document.querySelectorAll('.sc-dropdown.open').forEach(function(x){ x.classList.remove('open'); });
     M.show('roomModal');
   }
 };
 
-// ── Conflict check ────────────────────────────────────────
+// ── Faculty Substitution ─────────────────────────────────
+var SUB = {
+  open: function(id){
+    var c = document.getElementById('sc'+id); if(!c) return;
+    var d = c.dataset;
+    document.getElementById('sub-tt-id').value = id;
+    document.getElementById('sub-details-text').textContent = `Class: ${d.division} | Day: ${d.day} | Time: ${d.time} | Subject: ${d.subject}`;
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sub-date').value = today;
+    
+    document.querySelectorAll('.sc-dropdown.open').forEach(function(x){ x.classList.remove('open'); });
+    M.show('substituteModal');
+  }
+};
+
+// ── Conflict Check API ──────────────────────────────────
 var CF = {
   check: async function(mode){
     var p = mode==='add' ? 'a' : 'e';
@@ -1126,117 +2208,172 @@ var CF = {
     var excl = mode==='edit' ? document.getElementById('e-id').value : null;
     var cfDiv = document.getElementById(mode+'CF');
     try {
-      var csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
-      var r = await fetch('/check_conflicts_api',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
-        body:JSON.stringify({day:day,time:time,teacher:tchr,room:room,division:div,subject:subj,exclude_id:excl})});
+      var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      var r = await fetch('/check_conflicts_api',{
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+        body: JSON.stringify({day:day, time:time, teacher:tchr, room:room, division:div, subject:subj, exclude_id:excl})
+      });
       var data = await r.json();
       if(data.conflicts && data.conflicts.length){
         cfDiv.innerHTML = '<div class="cf-box" style="display:block"><strong><i class="fas fa-triangle-exclamation"></i> Conflicts detected:</strong><ul style="list-style:disc;padding-left:16px;margin-top:4px">' +
           data.conflicts.map(function(c){ return '<li>'+c+'</li>'; }).join('') + '</ul></div>';
       } else {
-        cfDiv.innerHTML=''; form.submit();
+        cfDiv.innerHTML = ''; 
+        form.submit();
       }
-    } catch(e){ form.submit(); }
+    } catch(e) { 
+      form.submit(); 
+    }
   }
 };
 
-// ── Auto type detect ──────────────────────────────────────
+// ── Auto Slot-Type detector ─────────────────────────────
 function autoType(inp, selId){
   var v=inp.value.toLowerCase(), s=document.getElementById(selId);
   if(!s) return;
-  if(v.includes('lab')) s.value='Lab';
+  if(v.includes('lab') || v.includes('practical')) s.value='Lab';
   else if(v.includes('elective')) s.value='Elective';
   else if(v.includes('minor')) s.value='Minor';
-  else if(v.includes('practical')) s.value='Practical';
   else s.value='Theory';
 }
 
-// ── Drag & Drop ──────────────────────────────────────────
+// ── HTML5 Drag & Drop Timetable Moves ───────────────────
 document.querySelectorAll('.tt-cell').forEach(function(cell){
-  cell.addEventListener('dragover', function(e){ e.preventDefault(); this.classList.add('dz-over'); });
-  cell.addEventListener('dragleave', function(){ this.classList.remove('dz-over'); });
+  cell.addEventListener('dragover', function(e){ 
+    e.preventDefault(); 
+    this.classList.add('dz-over'); 
+  });
+  cell.addEventListener('dragleave', function(){ 
+    this.classList.remove('dz-over'); 
+  });
   cell.addEventListener('drop', async function(e){
-    e.preventDefault(); this.classList.remove('dz-over');
-    var id=e.dataTransfer.getData('text/plain'), day=this.dataset.day, time=this.dataset.time;
-    if(!id||!day||!time) return;
-    var csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
-    var r=await fetch('/move_timetable',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
-      body:JSON.stringify({id:id,day:day,time:time})});
-    var data=await r.json();
-    if(data.ok){ toast('Moved to '+day+' '+time); setTimeout(function(){ location.reload(); },700); }
-    else if(data.conflicts){ toast('Conflict: '+data.conflicts[0],'warn'); }
-    else { toast('Move failed','err'); }
+    e.preventDefault(); 
+    this.classList.remove('dz-over');
+    var id = e.dataTransfer.getData('text/plain');
+    var day = this.dataset.day;
+    var time = this.dataset.time;
+    if(!id || !day || !time) return;
+    
+    var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    var r = await fetch('/move_timetable',{
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body: JSON.stringify({id:id, day:day, time:time})
+    });
+    var data = await r.json();
+    if(data.ok){ 
+      toast('Moved slot successfully to ' + day + ' ' + time); 
+      setTimeout(function(){ location.reload(); }, 700); 
+    }
+    else if(data.conflicts){ 
+      toast('Conflict Warning: ' + data.conflicts[0], 'warn'); 
+    }
+    else { 
+      toast('Move rejected', 'err'); 
+    }
   });
 });
 
-document.querySelectorAll('.sc').forEach(function(card){
-  card.addEventListener('dragstart',function(e){
-    e.dataTransfer.setData('text/plain',this.dataset.id);
-    e.dataTransfer.effectAllowed='move';
-    setTimeout(function(){ card.classList.add('dragging'); },0);
+document.querySelectorAll('.sc-card').forEach(function(card){
+  card.addEventListener('dragstart', function(e){
+    e.dataTransfer.setData('text/plain', this.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function(){ card.classList.add('dragging'); }, 0);
   });
-  card.addEventListener('dragend',function(){
+  card.addEventListener('dragend', function(){
     this.classList.remove('dragging');
     document.querySelectorAll('.dz-over').forEach(function(c){ c.classList.remove('dz-over'); });
   });
 });
 
-// ── Conflict Highlight ─────────────────────────────────
+// ── Conflict Highlight algorithm ───────────────────────
 function highlightConflicts(){
-  const s = document.querySelectorAll('.sc');
-  s.forEach(c => c.classList.remove('conflict-border'));
+  const cards = document.querySelectorAll('.sc-card');
+  cards.forEach(c => c.classList.remove('conflict-border'));
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('view_type') === 'master') {
+    return;
+  }
+  
   const facultySet = new Set();
   const roomSet = new Set();
   
-  s.forEach(c => {
+  cards.forEach(c => {
     const d = c.dataset;
     const fKey = `${d.day}|${d.time}|${d.teacher}`;
     const rKey = `${d.day}|${d.time}|${d.room}`;
     
-    if(d.teacher && d.teacher!=='—' && facultySet.has(fKey)) c.classList.add('conflict-border');
-    else if(d.teacher && d.teacher!=='—') facultySet.add(fKey);
+    if(d.teacher && d.teacher!=='—' && d.teacher!=='None' && facultySet.has(fKey)) {
+      c.classList.add('conflict-border');
+    } else if(d.teacher && d.teacher!=='—') {
+      facultySet.add(fKey);
+    }
     
-    if(d.room && d.room!=='—' && roomSet.has(rKey)) c.classList.add('conflict-border');
-    else if(d.room && d.room!=='—') roomSet.add(rKey);
+    if(d.room && d.room!=='—' && d.room!=='None' && roomSet.has(rKey)) {
+      c.classList.add('conflict-border');
+    } else if(d.room && d.room!=='—') {
+      roomSet.add(rKey);
+    }
   });
 }
 document.addEventListener('DOMContentLoaded', highlightConflicts);
 
-// ── Keyboard shortcuts ────────────────────────────────────
-document.addEventListener('keydown',function(e){
-  if(e.target.matches('input,select,textarea')) return;
-  if(e.key==='n'||e.key==='N') M.show('addModal');
-  if(e.key==='c'||e.key==='C') toggleCompact();
-  if(e.key==='Escape') {
-    document.querySelectorAll('.modal-bg').forEach(function(m){ m.classList.remove('show'); });
-    closeBroadcastModal(); M.hide('slotSettingsModal'); M.hide('copyDayModal');
+// ── Compact Mode Toggle ──────────────────────────────────
+function toggleCompactMode() {
+  const table = document.querySelector('.tt-grid-table');
+  const btn = document.querySelector('.tt-tbtn-compact');
+  if (table) {
+    const isCompact = table.classList.toggle('compact-mode');
+    if (btn) {
+      btn.classList.toggle('active', isCompact);
+    }
+    localStorage.setItem('timetable_compact', isCompact ? '1' : '0');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (localStorage.getItem('timetable_compact') === '1') {
+    const table = document.querySelector('.tt-grid-table');
+    const btn = document.querySelector('.tt-tbtn-compact');
+    if (table) table.classList.add('compact-mode');
+    if (btn) btn.classList.add('active');
   }
 });
 
-// ── BROADCAST & SLOTS ─────────────────────────────────────
-function openBroadcastModal() { document.getElementById('broadcastModal').style.display = 'block'; }
-// Keep original function signature
-function closeBroadcastModal() { document.getElementById('broadcastModal').style.display = 'none'; }
+// ── Broadcast Update Modals ──────────────────────────────
+function openBroadcastModal() { document.getElementById('broadcastModal').classList.add('show'); }
+function closeBroadcastModal() { document.getElementById('broadcastModal').classList.remove('show'); }
 document.getElementById('broadcastForm').onsubmit = async function(e) {
   e.preventDefault();
-  const t = document.querySelector('button[type="submit"]', this); if(t) t.disabled=true;
+  const btn = document.querySelector('button[type="submit"]', this); 
+  if(btn) btn.disabled = true;
   try {
     const fd = new FormData(this);
-    const r = await fetch('/api/send_timetable', { method: 'POST', body: fd, headers: {'X-CSRF-Token': '{{ csrf_token() }}'} });
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const r = await fetch('/api/send_timetable', { 
+      method: 'POST', 
+      body: fd, 
+      headers: {'X-CSRF-Token': csrf} 
+    });
     const data = await r.json();
-    toast('Notification sent to ' + (data.sent||0) + ' students!', 'ok');
+    toast('Broadcast updates sent to ' + (data.sent||0) + ' students!', 'ok');
     closeBroadcastModal();
-  } catch(err) { toast('Failed to send broadcast', 'err'); }
-  if(t) t.disabled = false;
+  } catch(err) { 
+    toast('Broadcast failed to deliver', 'err'); 
+  }
+  if(btn) btn.disabled = false;
 };
 
+// ── Time slots Management ────────────────────────────────
 function openSlotSettings() { M.show('slotSettingsModal'); }
 function closeSlotSettings() { M.hide('slotSettingsModal'); }
 
 async function addSlot() {
   const val = document.getElementById('newSlot').value;
   if(!val) return;
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   try {
     const r = await fetch('/api/add_time_slot', {
       method: 'POST',
@@ -1244,17 +2381,25 @@ async function addSlot() {
       body: JSON.stringify({slot: val})
     });
     const res = await r.json();
-    if(res.ok) { toast('Slot added!'); setTimeout(()=>location.reload(),800); }
-    else toast(res.error||'Failed','err');
-  } catch(e) { toast('Connection error','err'); }
+    if(res.ok) { 
+      toast('New period slot added!'); 
+      setTimeout(()=>location.reload(), 800); 
+    }
+    else {
+      toast(res.error||'Failed to add','err');
+    }
+  } catch(e) { 
+    toast('Connection error','err'); 
+  }
 }
 
+// ── Day Copier ──────────────────────────────────────────
 function openCopyDayModal() { M.show('copyDayModal'); }
 async function copyDayNow() {
   const from = document.getElementById('copy-from').value;
   const to = document.getElementById('copy-to').value;
   if(from===to) { toast('Select different days','err'); return; }
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')||'';
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   try {
     const r = await fetch('/api/copy_day', {
       method: 'POST',
@@ -1262,77 +2407,33 @@ async function copyDayNow() {
       body: JSON.stringify({from_day:from, to_day:to})
     });
     const res = await r.json();
-    if(res.ok) { toast(`Copied ${res.count} slots!`); setTimeout(()=>location.reload(),800); }
-    else toast(res.error||'Copy failed','err');
-  } catch(e) { toast('Connection error','err'); }
-}
-
-// ── Mobile Timetable View Logic ─────────────────────────
-function toggleTimetableMobileView(viewName) {
-  const tableView = document.getElementById('mobileTableView');
-  const cardView = document.getElementById('mobileCardView');
-  const btnTable = document.getElementById('mobToggleTable');
-  const btnCard = document.getElementById('mobToggleCard');
-  
-  if (!tableView || !cardView) return;
-  
-  if (viewName === 'table') {
-    tableView.style.display = 'block';
-    cardView.style.display = 'none';
-    if (btnTable) btnTable.classList.add('on');
-    if (btnCard) btnCard.classList.remove('on');
-  } else {
-    tableView.style.display = 'none';
-    cardView.style.display = 'block';
-    if (btnTable) btnTable.classList.remove('on');
-    if (btnCard) btnCard.classList.add('on');
-  }
-  localStorage.setItem('timetable_mobile_view', viewName);
-}
-
-function scrollToTodayTimetable() {
-  const container = document.getElementById('mobileCardView');
-  if (!container) return;
-  const today = container.dataset.today;
-  const header = document.querySelector(`.tt-accordion-header[data-day="${today}"]`);
-  if (header) {
-    const targetId = header.dataset.target;
-    const body = document.getElementById(targetId);
-    if (body && !body.classList.contains('open')) {
-      body.classList.add('open');
-      header.classList.add('active');
-      sessionStorage.setItem('accordion_' + targetId, 'open');
+    if(res.ok) { 
+      toast(`Copied ${res.count} slots successfully!`); 
+      setTimeout(()=>location.reload(), 800); 
     }
-    header.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    toast(`Scrolled to today (${today})`, 'ok');
-  } else {
-    toast(`No classes today (${today})`, 'warn');
+    else {
+      toast(res.error||'Copy failed','err');
+    }
+  } catch(e) { 
+    toast('Connection error','err'); 
   }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  if (window.innerWidth <= 768) {
-    const savedView = localStorage.getItem('timetable_mobile_view') || 'card';
-    toggleTimetableMobileView(savedView);
-    
-    // Auto-open today's card on first load if card view is active
-    const today = document.getElementById('mobileCardView').dataset.today;
-    const header = document.querySelector(`.tt-accordion-header[data-day="${today}"]`);
-    if (header) {
-      const targetId = header.dataset.target;
-      const body = document.getElementById(targetId);
-      if (body && !sessionStorage.getItem('accordion_' + targetId)) {
-        body.classList.add('open');
-        header.classList.add('active');
-        sessionStorage.setItem('accordion_' + targetId, 'open');
-      }
-    }
+// ── Keyboard Shortcuts ──────────────────────────────────
+document.addEventListener('keydown', function(e){
+  if(e.target.matches('input,select,textarea')) return;
+  if(e.key==='n'||e.key==='N') M.show('addModal');
+  if(e.key==='Escape') {
+    document.querySelectorAll('.modal-bg').forEach(function(m){ m.classList.remove('show'); });
+    closeBroadcastModal(); 
+    closeSlotSettings();
   }
 });
 
-// ── Init toasts ───────────────────────────────────────────
-{% if request.args.get('saved') %}toast('Slot saved');{% endif %}
-{% if request.args.get('deleted') %}toast('Slot deleted');{% endif %}
-{% if request.args.get('imported') %}toast('{{ request.args.get("imported") }} slots imported!');{% endif %}
+// ── Initialize message notifications ──────────────────────
+{% if request.args.get('saved') %}toast('Slot saved successfully');{% endif %}
+{% if request.args.get('deleted') %}toast('Slot removed');{% endif %}
+{% if request.args.get('imported') %}toast('{{ request.args.get("imported") }} slots successfully imported!');{% endif %}
+{% if request.args.get('cleaned') %}toast('{{ request.args.get("cleaned") }} slots successfully cleaned/fixed!');{% endif %}
 </script>
 {% endblock %}

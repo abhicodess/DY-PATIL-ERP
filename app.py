@@ -332,13 +332,13 @@ def create_app(config_class=Config):
         ) or request.headers.get("Authorization"):
             return
             
+        if "_csrf_token" not in session:
+            session["_csrf_token"] = secrets.token_urlsafe(32)
+
         # FIX: Enforce CSRF validation for specific routes during testing to satisfy security tests
         if app.config.get("WTF_CSRF_ENABLED") is False:
             if request.path not in ("/delete_student", "/cumulative_commit", "/clear_all_attendance_summary"):
                 return
-            
-        if "_csrf_token" not in session:
-            session["_csrf_token"] = secrets.token_urlsafe(32)
         
         if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
             return

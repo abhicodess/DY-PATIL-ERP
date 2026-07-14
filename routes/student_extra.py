@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
-from utils.pg_wrapper import qry, qone
+from utils.pg_wrapper import qry, qone, exe
 from blueprints.auth.decorators import login_required, student_required
 import logging
 import math
@@ -143,9 +143,81 @@ def student_settings():
     return render_template("student/settings.html")
 
 @student_extra_bp.route("/messages")
-@login_required(["student", "faculty", "admin"])
+@login_required
 def messages():
-    return render_template("messages/messages.html", messages=[])
+    role = session.get("role")
+    uid  = session.get("faculty_id") or session.get("student_id") or (1 if role=="admin" else 0)
+    if not role: return redirect("/auth/login")
+    msgs = qry("SELECT * FROM messages WHERE to_role=%s AND to_id=%s ORDER BY id DESC", (role, uid))
+    exe("UPDATE messages SET is_read=1 WHERE to_role=%s AND to_id=%s", (role, uid))
+    return render_template("messages/messages.html", msgs=msgs, view="inbox", role=role)
+
+@student_extra_bp.route("/messages/sent")
+@login_required
+def messages_sent():
+    role = session.get("role")
+    uid  = session.get("faculty_id") or session.get("student_id") or (1 if role=="admin" else 0)
+    if not role: return redirect("/auth/login")
+    msgs = qry("SELECT * FROM messages WHERE from_role=%s AND from_id=%s ORDER BY id DESC", (role, uid))
+    return render_template("messages/messages.html", msgs=msgs, view="sent", role=role)
+
+@student_extra_bp.route("/messages/compose", methods=["GET","POST"])
+@login_required
+def messages_compose():
+    role = session.get("role")
+    if not role: return redirect("/auth/login")
+    uid  = session.get("faculty_id") or session.get("student_id") or (1 if role=="admin" else 0)
+    name = session.get("name","")
+
+    if request.method == "POST":
+        to_role = request.form.get("to_role","")
+        to_id   = safe_int(request.form.get("to_id","0"))
+        if to_role == "student":
+            rec = qone("SELECT name FROM students WHERE id=%s", (to_id,))
+        elif to_role == "faculty":
+            rec = qone("SELECT name FROM faculty WHERE id=%s", (to_id,))
+        else: rec = None
+        to_name = rec["name"] if rec else "Unknown"
+        exe("""INSERT INTO messages(from_role,from_id,from_name,to_role,to_id,to_name,subject,body)
+               VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (role, uid, name, to_role, to_id, to_name,
+             request.form.get("subject",""), request.form.get("body","")))
+        return redirect("/messages?sent=1")
+
+    students_list = qry("SELECT id,name,roll,department FROM students ORDER BY name")
+    faculty_list  = qry("SELECT id,name,department FROM faculty ORDER BY name")
+    reply_to = request.args.get("reply_to","")
+    prefill  = {}
+    if reply_to:
+        orig = qone("SELECT * FROM messages WHERE id=%s", (reply_to,))
+        if orig:
+            prefill = {"to_role":orig["from_role"],"to_id":orig["from_id"],
+                       "subject":"Re: "+orig["subject"]}
+    return render_template("messages/messages_compose.html",
+                           students=students_list, faculty_list=faculty_list,
+                           role=role, prefill=prefill)
+
+@student_extra_bp.route("/messages/delete", methods=["POST"])
+@login_required
+def messages_delete():
+    exe("DELETE FROM messages WHERE id=%s", (request.form.get("msg_id",""),))
+    return redirect("/messages")
+
+@student_extra_bp.route("/messages/search")
+@login_required
+def messages_search():
+    role = session.get("role")
+    if not role: return redirect("/auth/login")
+    q    = request.args.get("q","").strip()
+    results = []
+    if q:
+        like = f"%{q}%"
+        # Search students by name or roll
+        students_found = qry("SELECT id,'student' as role,name,roll as identifier,department as extra FROM students WHERE name ILIKE %s OR roll ILIKE %s LIMIT 10", (like,like))
+        # Search faculty by name or email
+        faculty_found  = qry("SELECT id,'faculty' as role,name,email as identifier,department as extra FROM faculty WHERE name ILIKE %s OR email ILIKE %s LIMIT 10", (like,like))
+        results = [dict(r) for r in students_found] + [dict(r) for r in faculty_found]
+    return render_template("messages/messages_search.html", q=q, results=results, role=role)
 
 
 def att_match_student_sql(prefix=""):

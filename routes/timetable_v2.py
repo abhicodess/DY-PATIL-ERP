@@ -1,3 +1,4 @@
+# force reload gunicorn process
 import logging
 from flask import Blueprint, render_template, request, session, jsonify, flash, redirect, send_file
 from services.timetable_service import TimetableService
@@ -59,7 +60,9 @@ def timetable_view():
     f_div = request.args.get("division", "")
     f_sem = request.args.get("semester", "")
     f_type = request.args.get("slot_type", "")
+    f_room = request.args.get("room", "")
     view = request.args.get("view", "grid")
+    view_type = request.args.get("view_type", "").strip()
     
     # 2. Query all entries with coalesced teacher name
     all_entries = db.session.query(
@@ -87,6 +90,61 @@ def timetable_view():
     subjects = sorted(list(set(e.subject for e in all_entries if e.subject)))
     teachers = sorted(list(set(e.teacher for e in all_entries if e.teacher)))
     divs = sorted(list(set(e.division for e in all_entries if e.division)))
+    rooms = sorted(list(set(e.room for e in all_entries if e.room)))
+    faculty_list = [dict(f) for f in qry("SELECT id, name FROM faculty ORDER BY name")]
+
+    # Smart default view_type resolution
+    if not view_type:
+        if view == "faculty":
+            view_type = "faculty"
+        elif view == "room":
+            view_type = "room"
+        else:
+            view_type = "class"
+
+    # Apply smart defaults based on segment view_type to prevent a jumbled initial master grid
+    if view_type == "class" and not f_div and not q and not f_subj and not f_teach and not f_room and not f_type and not f_sem:
+        f_div = divs[0] if divs else ""
+    elif view_type == "faculty" and not f_teach and not q and not f_subj and not f_div and not f_room and not f_type and not f_sem:
+        f_teach = teachers[0] if teachers else ""
+    elif view_type == "room" and not f_room and not q and not f_subj and not f_div and not f_teach and not f_type and not f_sem:
+        f_room = rooms[0] if rooms else ""
+
+    # Contextually filter dropdown options based on active segment selection to prevent mismatch filters
+    if f_div:
+        div_entries = [e for e in all_entries if e.division and e.division.strip().lower() == f_div.strip().lower()]
+        subjects = sorted(list(set(e.subject for e in div_entries if e.subject)))
+        teachers = sorted(list(set(e.teacher for e in div_entries if e.teacher)))
+        rooms = sorted(list(set(e.room for e in div_entries if e.room)))
+        # Keep selected option visible if not in scoped list
+        if f_subj and f_subj not in subjects:
+            subjects.append(f_subj); subjects.sort()
+        if f_teach and f_teach not in teachers:
+            teachers.append(f_teach); teachers.sort()
+        if f_room and f_room not in rooms:
+            rooms.append(f_room); rooms.sort()
+    elif f_teach:
+        teach_entries = [e for e in all_entries if e.teacher and e.teacher.strip().lower() == f_teach.strip().lower()]
+        subjects = sorted(list(set(e.subject for e in teach_entries if e.subject)))
+        divs = sorted(list(set(e.division for e in teach_entries if e.division)))
+        rooms = sorted(list(set(e.room for e in teach_entries if e.room)))
+        if f_subj and f_subj not in subjects:
+            subjects.append(f_subj); subjects.sort()
+        if f_div and f_div not in divs:
+            divs.append(f_div); divs.sort()
+        if f_room and f_room not in rooms:
+            rooms.append(f_room); rooms.sort()
+    elif f_room:
+        room_entries = [e for e in all_entries if e.room and e.room.strip().lower() == f_room.strip().lower()]
+        subjects = sorted(list(set(e.subject for e in room_entries if e.subject)))
+        teachers = sorted(list(set(e.teacher for e in room_entries if e.teacher)))
+        divs = sorted(list(set(e.division for e in room_entries if e.division)))
+        if f_subj and f_subj not in subjects:
+            subjects.append(f_subj); subjects.sort()
+        if f_teach and f_teach not in teachers:
+            teachers.append(f_teach); teachers.sort()
+        if f_div and f_div not in divs:
+            divs.append(f_div); divs.sort()
 
     # Compute faculty workload stats
     workload = {}
@@ -114,6 +172,9 @@ def timetable_view():
     if f_div:
         sql += " AND t.division ILIKE %s"
         params.append(f"%{f_div}%")
+    if f_room:
+        sql += " AND t.room ILIKE %s"
+        params.append(f"%{f_room}%")
     if f_type:
         sql += " AND t.slot_type=%s"
         params.append(f_type)
@@ -127,7 +188,7 @@ def timetable_view():
     sql += f" ORDER BY {DAY_ORD}, t.start_time"
     filtered_entries = qry(sql, params)
     
-    any_filter = bool(q or f_day or f_subj or f_teach or f_div or f_type or f_sem)
+    any_filter = bool(q or f_day or f_subj or f_teach or f_div or f_type or f_sem or f_room)
     filtered_ids = set(e["id"] for e in filtered_entries) if any_filter else None
     
     # Chronological sorting for time slots
@@ -139,11 +200,8 @@ def timetable_view():
         if h < 7: h += 12
         return h * 60 + mn
 
-    # Filter grid time slots to make it compact if a filter is applied
-    if any_filter:
-        time_slots = sorted(list(set(e["time"] for e in filtered_entries if e.get("time"))), key=_sk)
-    else:
-        time_slots = sorted(list(set(e.time for e in all_entries if e.time)), key=_sk)
+    # Always keep full stable columns of time slots for professional presentation
+    time_slots = sorted(list(set(e.time for e in all_entries if e.time)), key=_sk)
 
     grid = {d: {ts: [] for ts in time_slots} for d in DAYS}
     for e in all_entries:
@@ -165,6 +223,8 @@ def timetable_view():
         subjects=subjects,
         teachers=teachers,
         divs=divs,
+        rooms=rooms,
+        faculty_list=faculty_list,
         workload=workload,
         total=total,
         theory=theory,
@@ -174,7 +234,8 @@ def timetable_view():
         any_filter=any_filter,
         filtered_ids=filtered_ids,
         q=q, f_day=f_day, f_subj=f_subj, f_teach=f_teach,
-        f_div=f_div, f_sem=f_sem, f_type=f_type, view=view,
+        f_div=f_div, f_sem=f_sem, f_type=f_type, f_room=f_room, view=view,
+        view_type=view_type,
         DAYS=DAYS,
         today_name=date.today().strftime("%A")
     )
@@ -655,13 +716,13 @@ def export_timetable_excel():
 def delete_timetable():
     tid = request.form.get("tt_id","")
     exe("DELETE FROM timetable WHERE id=%s", (tid,))
-    return redirect("/timetable/?deleted=1")
+    return redirect("/timetable_v2?deleted=1")
 
 @timetable_v2_bp.route("/clear_timetable", methods=["POST"])
 @login_required("admin")
 def clear_timetable():
     exe("DELETE FROM timetable")
-    return redirect("/timetable/?cleared=1")
+    return redirect("/timetable_v2?cleared=1")
 
 @timetable_v2_bp.route("/clean_timetable", methods=["POST"])
 @login_required("admin")
@@ -669,7 +730,7 @@ def clean_timetable():
     valid = "'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'"
     n = qone(f"SELECT COUNT(*) as c FROM timetable WHERE day NOT IN ({valid}) OR subject='' OR subject IS NULL")["c"]  # nosec B608
     exe(f"DELETE FROM timetable WHERE day NOT IN ({valid}) OR subject='' OR subject IS NULL")  # nosec B608
-    return redirect(f"/timetable/?cleaned={n}")
+    return redirect(f"/timetable_v2?cleaned={n}")
 
 @timetable_v2_bp.route("/duplicate_timetable", methods=["POST"])
 @login_required("admin")
@@ -679,7 +740,7 @@ def duplicate_timetable():
         exe("INSERT INTO timetable(day,time,start_time,end_time,subject_id,subject,teacher,room,division,semester,slot_type,color,faculty_id,branch,year) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (r["day"],r["time"],r.get("start_time"),r.get("end_time"),r.get("subject_id"),r["subject"],r["teacher"],r["room"] or "",
              r["division"] or "",r["semester"] or "",r["slot_type"] or "Theory",r["color"] or "", r.get("faculty_id"), r.get("branch"), r.get("year")))
-    return redirect("/timetable/?added=1")
+    return redirect("/timetable_v2?added=1")
 
 @timetable_v2_bp.route("/move_timetable", methods=["POST"])
 @login_required("admin")
@@ -743,3 +804,142 @@ def api_send_timetable():
         sent += 1
         
     return jsonify({"status": "ok", "sent": sent})
+
+@timetable_v2_bp.route("/add_substitution", methods=["POST"])
+@login_required("admin")
+def add_substitution():
+    tt_id = safe_int(request.form.get("tt_id"))
+    sub_faculty_id = safe_int(request.form.get("substitute_faculty_id"))
+    session_date = request.form.get("session_date")
+    
+    if not tt_id or not sub_faculty_id or not session_date:
+        return redirect("/timetable_v2?error=missing_substitution_fields")
+        
+    try:
+        exe("""
+            INSERT INTO timetable_substitutions (timetable_id, substitute_faculty_id, session_date, created_by)
+            VALUES (%s, %s, %s, %s)
+        """, (tt_id, sub_faculty_id, session_date, session.get("name", "admin")))
+        
+        log_audit("Faculty Substitution", f"Substituted timetable ID {tt_id} with faculty ID {sub_faculty_id} for date {session_date}")
+        return redirect("/timetable_v2?saved=1")
+    except Exception as e:
+        logger.error(f"Failed to add substitution: {e}")
+        return redirect(f"/timetable_v2?error=Failed to add substitution: {e}")
+
+@timetable_v2_bp.route("/timetable_v2/fix_data")
+@login_required("admin")
+def fix_timetable_data():
+    valid_days = "'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'"
+    # 1. Clean up invalid/garbage rows
+    bad_rows = qry(f"""
+        SELECT id FROM timetable 
+        WHERE day NOT IN ({valid_days}) 
+           OR subject IS NULL 
+           OR subject = '' 
+           OR subject = 'Subject' 
+           OR subject = 'New Slot'
+    """)
+    
+    deleted_count = 0
+    for r in bad_rows:
+        exe("DELETE FROM timetable WHERE id=%s", (r["id"],))
+        deleted_count += 1
+        
+    # 2. Retrieve remaining entries to perform automatic fixes
+    entries = qry("SELECT * FROM timetable")
+    fixed_count = 0
+    
+    for entry in entries:
+        tid = entry["id"]
+        updates = {}
+        
+        # Normalize time
+        orig_time = entry.get("time")
+        norm_time = normalize_time(orig_time)
+        if norm_time != orig_time:
+            updates["time"] = norm_time
+            
+        # Parse start and end time if missing or time slot changed
+        current_start = entry.get("start_time")
+        current_end = entry.get("end_time")
+        time_to_use = norm_time or orig_time
+        if time_to_use:
+            m = re.match(r"(\d+):(\d+)\s*-\s*(\d+):(\d+)", time_to_use)
+            if m:
+                h1, m1, h2, m2 = map(int, m.groups())
+                if h1 < 7: h1 += 12
+                if h2 < 7: h2 += 12
+                calculated_start = f"{h1:02d}:{m1:02d}:00"
+                calculated_end = f"{h2:02d}:{m2:02d}:00"
+                
+                curr_start_str = current_start.strftime("%H:%M:%S") if hasattr(current_start, "strftime") else str(current_start or "")
+                curr_end_str = current_end.strftime("%H:%M:%S") if hasattr(current_end, "strftime") else str(current_end or "")
+                
+                if calculated_start not in curr_start_str:
+                    updates["start_time"] = calculated_start
+                if calculated_end not in curr_end_str:
+                    updates["end_time"] = calculated_end
+
+        # Resolve faculty_id if missing
+        teacher = entry.get("teacher")
+        faculty_id = entry.get("faculty_id")
+        if teacher and not faculty_id:
+            f_row = qone("SELECT id FROM faculty WHERE name=%s LIMIT 1", (teacher.strip(),))
+            if f_row:
+                updates["faculty_id"] = f_row["id"]
+                faculty_id = f_row["id"]
+                
+        # Resolve subject_id if missing
+        subject = entry.get("subject")
+        subject_id = entry.get("subject_id")
+        if subject and not subject_id:
+            sub_row = qone("SELECT id FROM subjects WHERE name=%s LIMIT 1", (subject.strip(),))
+            if sub_row:
+                updates["subject_id"] = sub_row["id"]
+                subject_id = sub_row["id"]
+
+        # Resolve branch & year from division if missing
+        division = entry.get("division")
+        branch = entry.get("branch")
+        year = entry.get("year")
+        if division and (not branch or not year):
+            s_row = qone("SELECT department, year FROM students WHERE division=%s LIMIT 1", (division.strip(),))
+            if s_row:
+                if not branch:
+                    updates["branch"] = s_row["department"]
+                    branch = s_row["department"]
+                if not year:
+                    updates["year"] = s_row["year"]
+                    year = s_row["year"]
+
+        # Resolve slot_type color if color is missing
+        color = entry.get("color")
+        slot_type = entry.get("slot_type") or "Theory"
+        calculated_color = assign_color(subject, slot_type)
+        if not color or color != calculated_color:
+            updates["color"] = calculated_color
+
+        # If we have updates, perform them
+        if updates:
+            set_clause = ", ".join(f"{k}=%s" for k in updates.keys())
+            params = list(updates.values()) + [tid]
+            exe(f"UPDATE timetable SET {set_clause} WHERE id=%s", params)
+            fixed_count += 1
+
+        # Synchronize faculty_subject_assignments
+        if faculty_id and subject_id:
+            try:
+                exe("""
+                    INSERT INTO faculty_subject_assignments
+                        (faculty_id, subject_id, subject_name, department, semester,
+                         class_name, division, academic_year)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, '2025-26')
+                    ON CONFLICT (faculty_id, subject_id, division) DO NOTHING
+                """, (faculty_id, subject_id, subject, branch or '',
+                      entry.get("semester") or '', f"{year}-{branch}" if year and branch else (division or ''),
+                      division or ''))
+            except Exception as e:
+                logger.warning(f"Fix data auto-assignment failed for ID {tid}: {e}")
+
+    return redirect(f"/timetable_v2?cleaned={deleted_count + fixed_count}")

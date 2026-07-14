@@ -38,6 +38,34 @@ from utils.pg_wrapper import get_db, qry as _qry, qone as _qone, exe as _exe
 from blueprints.auth.decorators import login_required
 admin_required = login_required("admin")
 
+def is_hod_or_admin():
+    role = session.get("role")
+    if role == "admin":
+        return True
+    if role == "faculty":
+        if session.get("designation") == "HOD":
+            return True
+        from utils.pg_wrapper import qone
+        fac_id = session.get("faculty_id")
+        if fac_id:
+            fac = qone("SELECT designation FROM faculty WHERE id = %s", (fac_id,))
+            if fac and fac.get("designation") == "HOD":
+                return True
+    return False
+
+def hod_or_admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("role"):
+            flash("Please log in to access this page.", "warning")
+            return redirect(url_for('auth.login', next=request.url))
+        if not is_hod_or_admin():
+            from flask import abort
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ═══════════════════════════════════════════════════════════
 #  CORE CALCULATION ENGINE
 # ═══════════════════════════════════════════════════════════
@@ -913,8 +941,9 @@ def grade(obtained, total):
 
 def _do_import(f):
     from openpyxl import load_workbook
-    from flask import flash, current_app
+    from flask import flash, current_app, session
     import re
+    from services.results_service import get_components_for_subject, parse_marks_value
     
     wb = load_workbook(f, data_only=True)
     current_app.logger.info(f"Uploaded file: {f.filename}, Sheet names: {wb.sheetnames}")
@@ -935,6 +964,7 @@ def _do_import(f):
         flash("No sheets with valid student name or PRN columns found in the Excel file.", "error")
         return False
         
+    session["import_warnings"] = []
     added = 0
     for ws in sheets_to_process:
         current_app.logger.info(f"--- Inspecting Sheet: {ws.title} ---")
@@ -1048,21 +1078,13 @@ def _do_import(f):
                 total_val = ws.cell(r_idx, col_total).value if col_total else None
                 exam_val = str(ws.cell(r_idx, col_exam).value or "Semester Exam").strip() if col_exam else "Semester Exam"
                 
-                if str(marks_val or "").strip().upper() == "AB":
-                    marks = 0.0
+                # Stage 3: unified AB handling via parse_marks_value
+                marks, is_absent = parse_marks_value(marks_val)
+                if is_absent:
                     exam_val = "ABSENT"
-                else:
-                    try:
-                        marks = float(marks_val) if marks_val is not None else 0.0
-                    except ValueError:
-                        continue
-                        
-                total = 60.0
-                if total_val is not None:
-                    try:
-                        total = float(total_val)
-                    except ValueError:
-                        pass
+                    marks = 0.0
+                elif marks is None:
+                    continue
                         
                 if roll and (not dept or not year or not sem):
                     student = _qone("SELECT department, year FROM students WHERE roll=%s", (roll,))
@@ -1072,6 +1094,30 @@ def _do_import(f):
                 if not dept: dept = sheet_dept
                 if not sem: sem = sheet_sem
                 if not year: year = sem_to_year(sem)
+                
+                # Stage 3: check configured max_total from subject_mark_components
+                sub_info = get_components_for_subject(sub, dept, sem)
+                db_max_total = sub_info["max_total"]
+
+                total_val_float = None
+                if total_val is not None:
+                    try:
+                        total_val_float = float(total_val)
+                    except ValueError:
+                        pass
+
+                # Mismatch = warning row; skip insert, require admin confirmation
+                if total_val_float is not None and abs(total_val_float - db_max_total) > 0.01:
+                    warnings = session.get("import_warnings", [])
+                    warnings.append(
+                        f"MISMATCH|Row {r_idx} ({ws.title}): '{sub}' sheet total "
+                        f"({total_val_float}) != configured total ({db_max_total}). "
+                        f"Row skipped - confirm manually to import."
+                    )
+                    session["import_warnings"] = warnings
+                    continue
+
+                total = db_max_total
                 
                 pct_val = (marks / total * 100) if total > 0 else 0
                 grade_letter, _, _ = calc_grade(pct_val)
@@ -1152,18 +1198,33 @@ def _do_import(f):
                 
                 for sc in subject_cols:
                     sub = sc["subject"]
-                    total = sc["total"]
+                    sheet_total = sc["total"]
                     marks_val = ws.cell(r_idx, sc["col_idx"]).value
                     
                     exam_val = "Semester Exam"
-                    if str(marks_val or "").strip().upper() == "AB":
+                    # Stage 3: unified AB handling via parse_marks_value
+                    marks, is_absent = parse_marks_value(marks_val)
+                    if is_absent:
                         marks = 0.0
                         exam_val = "ABSENT"
-                    else:
-                        try:
-                            marks = float(marks_val) if marks_val is not None else 0.0
-                        except ValueError:
-                            continue
+                    elif marks is None:
+                        continue
+
+                    # Stage 3: check configured max from subject_mark_components
+                    sub_info = get_components_for_subject(sub, dept, sem)
+                    db_max_total = sub_info["max_total"]
+
+                    if abs(sheet_total - db_max_total) > 0.01:
+                        warnings = session.get("import_warnings", [])
+                        warnings.append(
+                            f"MISMATCH|Row {r_idx} ({ws.title}): '{sub}' sheet total "
+                            f"({sheet_total}) != configured total ({db_max_total}). "
+                            f"Row skipped - confirm manually to import."
+                        )
+                        session["import_warnings"] = warnings
+                        continue
+
+                    total = db_max_total
                             
                     pct_val = (marks / total * 100) if total > 0 else 0
                     grade_letter, _, _ = calc_grade(pct_val)
@@ -1186,8 +1247,10 @@ def _do_import(f):
                     added += 1
                     
     flash(f"Successfully imported/updated {added} student results.", "success")
+    import_warns = session.get("import_warnings", [])
+    if import_warns:
+        flash(f"Import finished with {len(import_warns)} warnings/mismatches. Please check.", "warning")
     return True
-
 @results_bp.route("/admin_results")
 @admin_required
 def admin_results():
@@ -1234,103 +1297,350 @@ def admin_save_result():
     roll = roll_row["roll"] if roll_row else request.form.get("roll","")
     dept = roll_row["department"] if roll_row else request.form.get("department","")
     yr   = roll_row["year"] if roll_row else request.form.get("year","")
-    assignment_marks = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
-    attendance_marks = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
-    teacher_assessment = min(float(request.form.get("teacher_assessment", 0) or 0), 10.0)
-    ut_marks = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
-    mse_marks = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
-    tw_marks = float(request.form.get("tw_marks", 0) or 0)
-    pr_or_marks = float(request.form.get("pr_or_marks", 0) or 0)
-    
-    # Calculate sum dynamically if not directly provided
+    subject_val = request.form.get("subject","").strip()
+    sem_val = request.form.get("semester","I").strip()
+
+    # Stage 3: unified component lookup
+    from services.results_service import get_components_for_subject, write_audit_log
+    sub_info  = get_components_for_subject(subject_val, dept, sem_val)
+    max_total = sub_info["max_total"]
+    comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
+
+    def _cap(form_key, comp_name, fallback_max):
+        val = float(request.form.get(form_key, 0) or 0)
+        limit = comp_caps.get(comp_name.lower(), fallback_max)
+        return min(val, limit)
+
+    assignment_marks    = _cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks    = _cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment  = _cap("teacher_assessment", "Teacher Assessment",10.0)
+    ut_marks            = _cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks           = _cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks            = _cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks         = _cap("pr_or_marks",        "Practical/Oral",     0.0)
+
     marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
     if marks_val == 0:
         marks_val = float(request.form.get("marks", 0) or 0)
 
-    marks_val = min(marks_val, 60.0)
-    total_val = 60.0
-    pct_val   = pct(marks_val, total_val)
+    marks_val = min(marks_val, max_total)
+    pct_val   = pct(marks_val, max_total)
     g, _, _   = calc_grade(pct_val)
     result_val= "Pass" if pct_val >= 40 else "Fail"
-    
+    status_val = request.form.get("status", "draft").strip()
+
     _exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
-                               marks,total,exam_type,grade,result,published,
+                               marks,total,exam_type,grade,result,published,status,
                                assignment_marks, attendance_marks, ut_marks, mse_marks,
                                teaching_assessment, tw_marks, pr_or_marks)
-           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-        (student_name, roll, dept, yr,
-         request.form.get("semester","I"),
-         request.form.get("subject",""),
-         marks_val, total_val,
-         request.form.get("exam_type","Semester Exam"),
-         g, result_val, 0, assignment_marks, attendance_marks, ut_marks, mse_marks,
+           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (student_name, roll, dept, yr, sem_val, subject_val,
+         marks_val, max_total, request.form.get("exam_type","Semester Exam"),
+         g, result_val, 0, status_val, assignment_marks, attendance_marks, ut_marks, mse_marks,
          teacher_assessment, tw_marks, pr_or_marks))
+
+    # Audit log
+    new_row = _qone("SELECT id FROM results WHERE student_name=%s AND subject=%s AND semester=%s ORDER BY id DESC LIMIT 1",
+                    (student_name, subject_val, sem_val))
+    if new_row:
+        write_audit_log(new_row["id"], "created", session.get("user_id"))
+
     return redirect("/admin_results?success=1")
 
 @results_bp.route("/admin_edit_result", methods=["POST"])
 @admin_required
 def admin_edit_result():
     rid = request.form.get("result_id","")
-    assignment_marks = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
-    attendance_marks = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
-    teacher_assessment = min(float(request.form.get("teacher_assessment", 0) or 0), 10.0)
-    ut_marks = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
-    mse_marks = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
-    tw_marks = float(request.form.get("tw_marks", 0) or 0)
-    pr_or_marks = float(request.form.get("pr_or_marks", 0) or 0)
-    
+    existing = _qone("SELECT department, semester, subject FROM results WHERE id=%s", (rid,))
+    dept = existing["department"] if existing else ""
+    subject_val = request.form.get("subject", existing["subject"] if existing else "").strip()
+    sem_val = request.form.get("semester", existing["semester"] if existing else "").strip()
+
+    # Stage 3: unified component lookup
+    from services.results_service import get_components_for_subject, write_audit_log
+    sub_info  = get_components_for_subject(subject_val, dept, sem_val)
+    total_val = sub_info["max_total"]
+    comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
+
+    def _cap(form_key, comp_name, fallback_max):
+        val = float(request.form.get(form_key, 0) or 0)
+        limit = comp_caps.get(comp_name.lower(), fallback_max)
+        return min(val, limit)
+
+    assignment_marks    = _cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks    = _cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment  = _cap("teacher_assessment", "Teacher Assessment",10.0)
+    ut_marks            = _cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks           = _cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks            = _cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks         = _cap("pr_or_marks",        "Practical/Oral",     0.0)
+
     marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
     if marks_val == 0:
         marks_val = float(request.form.get("marks", 0) or 0)
-        
-    marks_val = min(marks_val, 60.0)
-    total_val = 60.0
+
+    marks_val = min(marks_val, total_val)
     pct_val = pct(marks_val, total_val)
     g, _, _ = calc_grade(pct_val)
     result_val = "Pass" if pct_val >= 40 else "Fail"
-    
+    status_val = request.form.get("status", "draft").strip()
+
     _exe("""UPDATE results SET semester=%s,subject=%s,marks=%s,total=%s,
            exam_type=%s,grade=%s,result=%s, assignment_marks=%s, attendance_marks=%s, ut_marks=%s, mse_marks=%s,
-           teaching_assessment=%s, tw_marks=%s, pr_or_marks=%s WHERE id=%s""",
-        (request.form.get("semester",""), request.form.get("subject",""),
+           teaching_assessment=%s, tw_marks=%s, pr_or_marks=%s, status=%s WHERE id=%s""",
+        (sem_val, subject_val,
          marks_val, total_val, request.form.get("exam_type",""),
          g, result_val, assignment_marks, attendance_marks, ut_marks, mse_marks,
-         teacher_assessment, tw_marks, pr_or_marks, rid))
+         teacher_assessment, tw_marks, pr_or_marks, status_val, rid))
+
+    write_audit_log(rid, "edited", session.get("user_id"))
     return redirect("/admin_results?updated=1")
 
 @results_bp.route("/admin_delete_result", methods=["POST"])
 @admin_required
 def admin_delete_result():
     rid = request.form.get("result_id", "")
+    from services.results_service import write_audit_log
+    write_audit_log(rid, "deleted", session.get("user_id"))
     _exe("DELETE FROM results WHERE id=%s", (rid,))
     return redirect("/admin_results?deleted=1")
+
+@results_bp.route("/admin_submit_result", methods=["POST"])
+@admin_required
+def admin_submit_result():
+    """Move result from draft -> submitted."""
+    rid = request.form.get("result_id", "")
+    existing = _qone("SELECT status FROM results WHERE id=%s", (rid,))
+    if not existing or existing["status"] not in ("draft", None, ""):
+        flash("Only draft results can be submitted.", "warning")
+        return redirect("/admin_results")
+    _exe("UPDATE results SET status='submitted' WHERE id=%s", (rid,))
+    from services.results_service import write_audit_log
+    write_audit_log(rid, "submitted", session.get("user_id"))
+    return redirect("/admin_results?submitted=1")
+
+
+@results_bp.route("/admin_verify_result", methods=["POST"])
+@admin_required
+def admin_verify_result():
+    """Move result from submitted -> verified (HOD verification)."""
+    rid = request.form.get("result_id", "")
+    existing = _qone("SELECT status FROM results WHERE id=%s", (rid,))
+    if not existing or existing["status"] not in ("submitted",):
+        flash("Only submitted results can be verified.", "warning")
+        return redirect("/admin_results")
+    _exe("UPDATE results SET status='verified', approved_by=%s, approved_at=NOW() WHERE id=%s",
+         (session.get("username"), rid))
+    from services.results_service import write_audit_log
+    write_audit_log(rid, "verified", session.get("user_id"))
+    return redirect("/admin_results?verified=1")
+
+
+@results_bp.route("/admin_approve_result", methods=["POST"])
+@admin_required
+def admin_approve_result():
+    """Move result from verified -> approved (Principal/Admin approval). Only approved can be published."""
+    rid = request.form.get("result_id", "")
+    reason = request.form.get("reason", "").strip()
+    existing = _qone("SELECT status FROM results WHERE id=%s", (rid,))
+    if not existing or existing["status"] not in ("verified",):
+        flash("Only verified results can be approved.", "warning")
+        return redirect("/admin_results")
+    _exe("UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE id=%s",
+         (session.get("username"), rid))
+    from services.results_service import write_audit_log
+    write_audit_log(rid, "approved", session.get("user_id"), reason or None)
+    return redirect("/admin_results?approved=1")
+
+
+@results_bp.route("/admin_bulk_submit", methods=["POST"])
+@admin_required
+def admin_bulk_submit():
+    """Bulk move draft results for a semester+dept to submitted."""
+    semester = request.form.get("semester", "").strip()
+    dept     = request.form.get("dept", "").strip()
+    if not semester:
+        flash("Semester is required.", "warning")
+        return redirect("/admin_results")
+    sql = "UPDATE results SET status='submitted' WHERE semester=%s AND (status='draft' OR status IS NULL OR status='')"
+    params = [semester]
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
+    cur = _exe(sql, params)
+    flash(f"{cur.rowcount} draft results submitted for review.", "success")
+    return redirect("/admin_results")
+
+
+@results_bp.route("/admin_bulk_verify", methods=["POST"])
+@admin_required
+def admin_bulk_verify():
+    """Bulk verify all submitted results for a semester+dept."""
+    semester = request.form.get("semester", "").strip()
+    dept     = request.form.get("dept", "").strip()
+    if not semester:
+        flash("Semester is required.", "warning")
+        return redirect("/admin_results")
+    sql = "UPDATE results SET status='verified', approved_by=%s, approved_at=NOW() WHERE semester=%s AND status='submitted'"
+    params = [session.get("username"), semester]
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
+    cur = _exe(sql, params)
+    flash(f"{cur.rowcount} results verified.", "success")
+    return redirect("/admin_results")
+
+
+@results_bp.route("/admin_bulk_approve", methods=["POST"])
+@admin_required
+def admin_bulk_approve():
+    """Bulk approve all verified results for a semester+dept."""
+    semester = request.form.get("semester", "").strip()
+    dept     = request.form.get("dept", "").strip()
+    if not semester:
+        flash("Semester is required.", "warning")
+        return redirect("/admin_results")
+    sql = "UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE semester=%s AND status='verified'"
+    params = [session.get("username"), semester]
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
+    cur = _exe(sql, params)
+    flash(f"{cur.rowcount} results approved and ready to publish.", "success")
+    return redirect("/admin_results")
+
+
+@results_bp.route("/admin_publish_validate")
+@admin_required
+def admin_publish_validate():
+    """
+    Stage 7: Pre-publish validation.
+    Returns JSON with a list of issues that would block or warn on publish.
+    Called via JS from the publish modal before the admin submits the form.
+    """
+    semester = request.args.get("semester", "").strip()
+    dept     = request.args.get("dept", "").strip()
+
+    if not semester:
+        return jsonify({"ok": False, "errors": ["Semester is required."], "warnings": []})
+
+    base_sql = "SELECT * FROM results WHERE semester=%s AND status='approved'"
+    params = [semester]
+    if dept:
+        base_sql += " AND department=%s"
+        params.append(dept)
+
+    rows = _qry(base_sql, params) or []
+    errors   = []
+    warnings = []
+
+    if not rows:
+        errors.append(f"No approved results found for {semester}" + (f" / {dept}" if dept else "") + ". Run bulk approve first.")
+        return jsonify({"ok": False, "errors": errors, "warnings": warnings})
+
+    zero_marks = [r for r in rows if (r.get("marks") or 0) == 0 and (r.get("exam_type") or "") != "ABSENT"]
+    if zero_marks:
+        warnings.append(f"{len(zero_marks)} result(s) have 0 marks (not marked absent). Verify before publishing.")
+
+    missing_grade = [r for r in rows if not r.get("grade")]
+    if missing_grade:
+        errors.append(f"{len(missing_grade)} result(s) are missing a grade. Recalculate before publishing.")
+
+    missing_total = [r for r in rows if (r.get("total") or 0) == 0]
+    if missing_total:
+        errors.append(f"{len(missing_total)} result(s) have total=0. Fix component data before publishing.")
+
+    no_student_id = [r for r in rows if not r.get("student_id")]
+    if no_student_id:
+        warnings.append(f"{len(no_student_id)} result(s) have no linked student_id - notification will be skipped for those.")
+
+    return jsonify({
+        "ok": len(errors) == 0,
+        "ready": len(rows),
+        "errors": errors,
+        "warnings": warnings
+    })
+
 
 @results_bp.route("/admin_publish_results", methods=["POST"])
 @admin_required
 def admin_publish_results():
     semester = request.form.get("semester","").strip()
     dept     = request.form.get("dept","").strip()
+    from services.results_service import write_audit_log
     if semester:
-        sql = "UPDATE results SET published=1 WHERE semester=%s"
+        sql_skipped = "SELECT COUNT(*) as c FROM results WHERE semester=%s AND status != 'approved'"
         params = [semester]
         if dept:
-            sql += " AND department=%s"
+            sql_skipped += " AND department=%s"
             params.append(dept)
-        _exe(sql, params)
-    return redirect("/admin_results?published_ok=1")
+        skipped_count = _qone(sql_skipped, params)["c"] or 0
+
+        sql_pub = "UPDATE results SET published=1, status='published' WHERE semester=%s AND status='approved'"
+        params_pub = [semester]
+        if dept:
+            sql_pub += " AND department=%s"
+            params_pub.append(dept)
+        cur = _exe(sql_pub, params_pub)
+        published_count = cur.rowcount
+
+        # Audit each published row
+        published_ids = _qry("SELECT id FROM results WHERE semester=%s AND status='published'"
+                             + (" AND department=%s" if dept else ""),
+                             ([semester, dept] if dept else [semester]))
+        for row in (published_ids or []):
+            write_audit_log(row["id"], "published", session.get("user_id"))
+
+        flash(f"Published {published_count} results. {skipped_count} skipped (not yet approved).", "success")
+
+        # Stage 6: Scoped notifications - only affected students, not a broadcast
+        if published_count > 0:
+            try:
+                from services.notification_service import NotificationService
+                # Fetch unique student_ids whose results were just published
+                notif_sql = (
+                    "SELECT DISTINCT student_id FROM results WHERE semester=%s AND status='published'"
+                    + (" AND department=%s" if dept else "")
+                )
+                notif_rows = _qry(notif_sql, ([semester, dept] if dept else [semester])) or []
+                for row in notif_rows:
+                    if row.get("student_id"):
+                        NotificationService.send_notification(
+                            row["student_id"], "student",
+                            f"Your {semester} semester results have been published. Log in to view your marks."
+                        )
+            except Exception:
+                pass  # Notification failures must never block the publish flow
+
+    return redirect("/admin_results")
+
 
 @results_bp.route("/admin_unpublish_results", methods=["POST"])
 @admin_required
 def admin_unpublish_results():
     semester = request.form.get("semester","").strip()
     dept     = request.form.get("dept","").strip()
+    reason   = request.form.get("reason", "").strip()
+    from services.results_service import write_audit_log
     if semester:
-        sql = "UPDATE results SET published=0 WHERE semester=%s"
+        # Fetch IDs before update for audit
+        id_sql = "SELECT id FROM results WHERE semester=%s AND published=1"
+        id_params = [semester]
+        if dept:
+            id_sql += " AND department=%s"
+            id_params.append(dept)
+        to_unpublish = _qry(id_sql, id_params) or []
+
+        sql = "UPDATE results SET published=0, status='approved' WHERE semester=%s AND published=1"
         params = [semester]
         if dept:
             sql += " AND department=%s"
             params.append(dept)
         _exe(sql, params)
+
+        for row in to_unpublish:
+            write_audit_log(row["id"], "unpublished", session.get("user_id"), reason or None)
+
     return redirect("/admin_results?unpublished_ok=1")
 
 @results_bp.route("/admin_import_results", methods=["POST"])
@@ -1353,3 +1663,281 @@ def admin_import_results():
 @admin_required
 def export_results_excel():
     return results_export_excel()
+
+@results_bp.route("/admin_copy_marks", methods=["POST"])
+@admin_required
+def admin_copy_marks():
+    roll = request.form.get("roll", "").strip()
+    src_sem = request.form.get("src_sem", "").strip()
+    src_sub = request.form.get("src_subject", "").strip()
+    src_exam = request.form.get("src_exam_type", "").strip()
+    
+    dest_sem = request.form.get("dest_sem", "").strip()
+    dest_sub = request.form.get("dest_subject", "").strip()
+    dest_exam = request.form.get("dest_exam_type", "").strip()
+    
+    if not (roll and src_sem and src_sub and src_exam and dest_sem and dest_sub and dest_exam):
+        flash("All fields are required to copy marks.", "error")
+        return redirect("/admin_results")
+        
+    # Find source marks record
+    src_result = _qone("""
+        SELECT * FROM results 
+        WHERE roll = %s AND semester = %s AND subject = %s AND exam_type = %s
+    """, (roll, src_sem, src_sub, src_exam))
+    
+    if not src_result:
+        flash(f"No source marks found for Roll {roll}, Subject '{src_sub}', {src_exam} (Sem {src_sem}).", "error")
+        return redirect("/admin_results")
+        
+    # Upgrade: look up from subject_mark_components
+    from services.results_service import get_components_for_subject
+    sub_info = get_components_for_subject(dest_sub, src_result["department"], dest_sem)
+    dest_total = sub_info["max_total"]
+    
+    # Calculate grade and result based on destination subject's max_total
+    dest_marks = min(src_result["marks"] or 0.0, dest_total)
+    pct_val = (dest_marks / dest_total * 100.0) if dest_total > 0 else 0.0
+    dest_grade, _, _ = calc_grade(pct_val)
+    dest_res = "Pass" if pct_val >= 40 else "Fail"
+    
+    # Check if a destination result record already exists
+    dest_result = _qone("""
+        SELECT id FROM results 
+        WHERE roll = %s AND semester = %s AND subject = %s AND exam_type = %s
+    """, (roll, dest_sem, dest_sub, dest_exam))
+    
+    if dest_result:
+        _exe("""
+            UPDATE results 
+            SET marks = %s, total = %s, grade = %s, result = %s,
+                assignment_marks = %s, attendance_marks = %s, ut_marks = %s, mse_marks = %s,
+                teaching_assessment = %s, tw_marks = %s, pr_or_marks = %s, status = 'draft'
+            WHERE id = %s
+        """, (dest_marks, dest_total, dest_grade, dest_res,
+              src_result["assignment_marks"], src_result["attendance_marks"], src_result["ut_marks"], src_result["mse_marks"],
+              src_result["teaching_assessment"], src_result["tw_marks"], src_result["pr_or_marks"], dest_result["id"]))
+    else:
+        _exe("""
+            INSERT INTO results (student_name, roll, department, year, semester, subject,
+                                marks, total, exam_type, grade, result, published, status,
+                                assignment_marks, attendance_marks, ut_marks, mse_marks,
+                                teaching_assessment, tw_marks, pr_or_marks)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'draft', %s, %s, %s, %s, %s, %s, %s)
+        """, (src_result["student_name"], roll, src_result["department"], src_result["year"], dest_sem, dest_sub,
+              dest_marks, dest_total, dest_exam, dest_grade, dest_res,
+              src_result["assignment_marks"], src_result["attendance_marks"], src_result["ut_marks"], src_result["mse_marks"],
+              src_result["teaching_assessment"], src_result["tw_marks"], src_result["pr_or_marks"]))
+              
+    flash(f"Successfully copied marks for student {src_result['student_name']} (Roll {roll}) to Sem {dest_sem} - {dest_sub} ({dest_exam}).", "success")
+    return redirect("/admin_results")
+
+
+@results_bp.route("/admin_compute_ranks")
+@admin_required
+def admin_compute_ranks():
+    dept = request.args.get("dept", "").strip()
+    semester = request.args.get("semester", "").strip()
+    subject = request.args.get("subject", "").strip()
+    
+    sql = "SELECT * FROM results WHERE 1=1"
+    params = []
+    if dept:
+        sql += " AND department = %s"
+        params.append(dept)
+    if semester:
+        sql += " AND semester = %s"
+        params.append(semester)
+    if subject:
+        sql += " AND subject = %s"
+        params.append(subject)
+        
+    rows = _qry(sql, params)
+    if not rows:
+        return jsonify({"success": True, "ranks": []})
+        
+    # Group by student (roll, name)
+    student_map = {}
+    for r in rows:
+        key = (r["roll"], r["student_name"])
+        if key not in student_map:
+            student_map[key] = {
+                "roll": r["roll"] or "N/A",
+                "name": r["student_name"],
+                "obtained": 0.0,
+                "total": 0.0,
+            }
+        student_map[key]["obtained"] += r["marks"] or 0.0
+        student_map[key]["total"] += r["total"] or 0.0
+        
+    # Compute percentage
+    student_list = []
+    for key, s in student_map.items():
+        pct_val = (s["obtained"] / s["total"] * 100.0) if s["total"] > 0 else 0.0
+        student_list.append({
+            "roll": s["roll"],
+            "name": s["name"],
+            "obtained": round(s["obtained"], 2),
+            "total": round(s["total"], 2),
+            "percentage": round(pct_val, 2)
+        })
+        
+    # Sort by percentage descending
+    student_list.sort(key=lambda x: x["percentage"], reverse=True)
+    
+    # Assign ranks with tie handling
+    ranked_list = []
+    current_rank = 0
+    prev_pct = -1
+    for i, s in enumerate(student_list):
+        if s["percentage"] != prev_pct:
+            current_rank = i + 1
+            prev_pct = s["percentage"]
+        ranked_list.append({
+            "rank": current_rank,
+            **s
+        })
+
+    # Write computed ranks back to DB (rank_in_subject if filtered by subject, else rank_in_class)
+    rank_col = "rank_in_subject" if subject else "rank_in_class"
+    for item in ranked_list:
+        _exe(
+            f"UPDATE results SET {rank_col}=%s WHERE roll=%s AND semester=%s"
+            + (" AND subject=%s" if subject else ""),
+            ([item["rank"], item["roll"], semester] + ([subject] if subject else [])) if semester
+            else [item["rank"], item["roll"]] + ([semester, subject] if subject else [])
+        )
+
+    return jsonify({"success": True, "ranks": ranked_list})
+
+
+@results_bp.route("/admin_bulk_delete_results", methods=["POST"])
+@admin_required
+def admin_bulk_delete_results():
+    dept = request.form.get("dept", "").strip()
+    semester = request.form.get("semester", "").strip()
+    year = request.form.get("year", "").strip()
+    q = request.form.get("q", "").strip()
+    published = request.form.get("published", "").strip()
+    exam_type = request.form.get("exam_type", "").strip()
+    
+    sql = "DELETE FROM results WHERE 1=1"
+    params = []
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
+    if semester:
+        sql += " AND semester=%s"
+        params.append(semester)
+    if year:
+        sql += " AND year=%s"
+        params.append(year)
+    if q:
+        sql += " AND (student_name ILIKE %s OR roll ILIKE %s)"
+        params += [f"%{q}%", f"%{q}%"]
+    if published != "":
+        sql += " AND published=%s"
+        params.append(int(published))
+    if exam_type:
+        sql += " AND exam_type=%s"
+        params.append(exam_type)
+        
+    # Fetch IDs for audit before deletion
+    id_sql = "SELECT id FROM results WHERE 1=1"
+    id_params = []
+    if dept: id_sql += " AND department=%s"; id_params.append(dept)
+    if semester: id_sql += " AND semester=%s"; id_params.append(semester)
+    if year: id_sql += " AND year=%s"; id_params.append(year)
+    if q:
+        id_sql += " AND (student_name ILIKE %s OR roll ILIKE %s)"
+        id_params += [f"%{q}%", f"%{q}%"]
+    if published != "": id_sql += " AND published=%s"; id_params.append(int(published))
+    if exam_type: id_sql += " AND exam_type=%s"; id_params.append(exam_type)
+    to_delete = _qry(id_sql, id_params) or []
+
+    cur = _exe(sql, params)
+    deleted_count = cur.rowcount
+
+    from services.results_service import write_audit_log
+    for row in to_delete:
+        write_audit_log(row["id"], "deleted", session.get("user_id"), "bulk delete")
+
+    flash(f"Successfully deleted {deleted_count} results matching the current filter selection.", "success")
+    return redirect("/admin_results")
+
+
+# ═══════════════════════════════════════════════════════════
+#  HOD — SHARE RESULTS VIA SMS
+# ═══════════════════════════════════════════════════════════
+
+@results_bp.route("/share_results_sms", methods=["POST"])
+@hod_or_admin_required
+def share_results_sms():
+    """
+    Sends SMS to parents of all students who FAIL or have ATKT
+    in the selected semester/department filter.
+    """
+    dept     = request.form.get("dept", "").strip()
+    semester = request.form.get("semester", "").strip()
+    status_f = request.form.get("status", "FAIL").strip()   # FAIL / ATKT / both
+
+    # We need build_student_records helper
+    from routes.results import build_student_records
+    students = build_student_records(
+        dept=dept, semester=semester,
+        status_filter=status_f if status_f in ("FAIL", "ATKT") else None,
+    )
+
+    if not students:
+        return jsonify({"success": False, "error": "No students match the filter."}), 400
+
+    sent, failed = 0, 0
+    details = []
+
+    for s in students:
+        if s["status"] not in ("FAIL", "ATKT"):
+            continue
+
+        # Fetch parent contact from students table
+        row = _qone(
+            "SELECT parent_contact FROM students WHERE roll = %s LIMIT 1",
+            (s["roll"],)
+        )
+        parent_phone = (row or {}).get("parent_contact", "")
+
+        if not parent_phone:
+            failed += 1
+            details.append({"roll": s["roll"], "name": s["name"], "status": "no_phone"})
+            continue
+
+        context = {
+            "student_name": s["name"],
+            "roll":         s["roll"],
+            "semester":     s["semester"],
+            "status":       s["status"],
+            "percentage":   s["percentage"],
+        }
+
+        try:
+            from services.sms_service import SMSService
+            result = SMSService.send_immediate(parent_phone, "result_alert", context)
+            if result.get("success"):
+                sent += 1
+                details.append({"roll": s["roll"], "name": s["name"], "status": "sent"})
+            else:
+                failed += 1
+                details.append({"roll": s["roll"], "name": s["name"],
+                                 "status": "failed", "error": result.get("error", "")})
+        except Exception as e:
+            failed += 1
+            details.append({"roll": s["roll"], "name": s["name"],
+                             "status": "error", "error": str(e)})
+
+    return jsonify({
+        "success": True,
+        "sent":    sent,
+        "failed":  failed,
+        "total":   sent + failed,
+        "details": details
+    })
+

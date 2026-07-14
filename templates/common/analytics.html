@@ -7,7 +7,7 @@
 {% block content %}
 <style>
     .an-container { padding-bottom: 40px; }
-    
+
     /* Stats Row */
     .an-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
     .an-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r-md); padding: 20px; box-shadow: var(--sh-sm); }
@@ -148,164 +148,162 @@
 
 {% block extra_js %}
 <script>
-    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-    Chart.defaults.font.weight = 600;
-    Chart.defaults.color = '#64748b';
+// ── Guarantee Chart.js is loaded before drawing ──────────────────────────────
+if (typeof Chart === 'undefined') {
+    var s = document.createElement('script');
+    s.src = '/static/js/chart.umd.min.js';
+    s.async = false; // synchronous-equivalent when injected before other scripts execute
+    document.head.appendChild(s);
+}
+</script>
+<script>
+(function() {
+    // Baked-in data from server
+    var CHART_DATA = {
+        monthLabels:  {{ month_labels|tojson }},
+        monthPcts:    {{ month_pcts|tojson }},
+        attLabels:    {{ (att_status.keys()|list)|tojson }},
+        attValues:    {{ (att_status.values()|list)|tojson }},
+        deptLabels:   {{ (dept_att|map(attribute='dept')|list)|tojson }},
+        deptPcts:     {{ (dept_att|map(attribute='pct')|list)|tojson }},
+        deptMarks:    {{ (dept_marks|map(attribute='avg')|list)|tojson }},
+        subjLabels:   {{ sm_labels|tojson }},
+        subjData:     {{ sm_data|tojson }},
+        gradeLabels:  {{ (grade_dist.keys()|list)|tojson }},
+        gradeValues:  {{ (grade_dist.values()|list)|tojson }},
+        examLabels:   {{ exam_labels|tojson }},
+        examData:     {{ exam_data|tojson }}
+    };
 
-    // 1. Monthly Trend
-    const trendCtx = document.getElementById('trendChart');
-    if (trendCtx) {
-        new Chart(trendCtx, {
+    function initCharts() {
+        if (typeof Chart === 'undefined') return false;
+
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.font.weight = 600;
+        Chart.defaults.color = '#64748b';
+
+        function make(id, cfg) {
+            var el = document.getElementById(id);
+            if (!el || el._ch) return;
+            el._ch = true;
+            new Chart(el, cfg);
+        }
+
+        // 1. Monthly Attendance Trend
+        make('trendChart', {
             type: 'line',
             data: {
-                labels: {{ month_labels|tojson }},
+                labels: CHART_DATA.monthLabels,
                 datasets: [{
                     label: 'Attendance %',
-                    data: {{ month_pcts|tojson }},
+                    data: CHART_DATA.monthPcts,
                     borderColor: '#2563EB',
-                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#fff',
-                    pointBorderWidth: 2
+                    backgroundColor: 'rgba(37,99,235,0.08)',
+                    fill: true, tension: 0.4, borderWidth: 3,
+                    pointRadius: 5, pointBackgroundColor: '#fff',
+                    pointBorderColor: '#2563EB', pointBorderWidth: 2
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { max: 100, min: 0, grid: { borderDash: [5,5] } }, x: { grid: { display: false } } }
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
             }
         });
-    }
 
-    // 2. Status Breakdown
-    const statusCtx = document.getElementById('statusChart');
-    if (statusCtx) {
-        new Chart(statusCtx, {
+        // 2. Attendance Status Doughnut
+        make('statusChart', {
             type: 'doughnut',
             data: {
-                labels: {{ (att_status.keys()|list)|tojson }},
+                labels: CHART_DATA.attLabels,
                 datasets: [{
-                    data: {{ (att_status.values()|list)|tojson }},
-                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6'],
-                    borderWidth: 0,
-                    cutout: '75%'
+                    data: CHART_DATA.attValues,
+                    backgroundColor: ['#10b981','#ef4444','#f59e0b','#3b82f6','#8b5cf6'],
+                    borderWidth: 0, cutout: '72%'
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }
             }
         });
-    }
 
-    // 3. Dept Performance
-    const deptCtx = document.getElementById('deptChart');
-    if (deptCtx) {
-        new Chart(deptCtx, {
+        // 3. Department Health Bar
+        make('deptChart', {
             type: 'bar',
             data: {
-                labels: {{ (dept_att|map(attribute='dept')|list)|tojson }},
+                labels: CHART_DATA.deptLabels,
                 datasets: [
-                    {
-                        label: 'Attendance %',
-                        data: {{ (dept_att|map(attribute='pct')|list)|tojson }},
-                        backgroundColor: '#DBEAFE',
-                        borderColor: '#2563EB',
-                        borderWidth: 1,
-                        borderRadius: 6
-                    },
-                    {
-                        label: 'Avg Marks',
-                        data: {{ (dept_marks|map(attribute='avg')|list)|tojson }},
-                        backgroundColor: '#F5F3FF',
-                        borderColor: '#7C3AED',
-                        borderWidth: 1,
-                        borderRadius: 6
-                    }
+                    { label: 'Attendance %', data: CHART_DATA.deptPcts,
+                      backgroundColor: 'rgba(37,99,235,0.15)', borderColor: '#2563EB', borderWidth: 2, borderRadius: 6 },
+                    { label: 'Avg Marks', data: CHART_DATA.deptMarks,
+                      backgroundColor: 'rgba(124,58,237,0.15)', borderColor: '#7C3AED', borderWidth: 2, borderRadius: 6 }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { max: 100, min: 0 } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
         });
-    }
 
-    // 4. Subject Comparison
-    const subjCtx = document.getElementById('subjChart');
-    if (subjCtx) {
-        new Chart(subjCtx, {
+        // 4. Subject Avg Marks (horizontal bar)
+        make('subjChart', {
             type: 'bar',
             data: {
-                labels: {{ sm_labels|tojson }},
-                datasets: [{
-                    label: 'Avg Marks',
-                    data: {{ sm_data|tojson }},
-                    backgroundColor: '#2563EB',
-                    borderRadius: 4
-                }]
+                labels: CHART_DATA.subjLabels,
+                datasets: [{ label: 'Avg Marks', data: CHART_DATA.subjData, backgroundColor: '#2563EB', borderRadius: 4 }]
             },
             options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } }
             }
         });
-    }
 
-    // 5. Grade Distribution
-    const gradeCtx = document.getElementById('gradeChart');
-    if (gradeCtx) {
-        new Chart(gradeCtx, {
+        // 5. Grade Distribution (polar)
+        make('gradeChart', {
             type: 'polarArea',
             data: {
-                labels: {{ (grade_dist.keys()|list)|tojson }},
+                labels: CHART_DATA.gradeLabels,
                 datasets: [{
-                    data: {{ (grade_dist.values()|list)|tojson }},
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.6)',
-                        'rgba(59, 130, 246, 0.6)',
-                        'rgba(139, 92, 246, 0.6)',
-                        'rgba(245, 158, 11, 0.6)',
-                        'rgba(239, 68, 68, 0.6)'
-                    ],
+                    data: CHART_DATA.gradeValues,
+                    backgroundColor: ['rgba(16,185,129,0.6)','rgba(59,130,246,0.6)','rgba(139,92,246,0.6)','rgba(245,158,11,0.6)','rgba(239,68,68,0.6)'],
                     borderWidth: 0
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }
             }
         });
-    }
 
-    // 6. Exam Analysis
-    const examCtx = document.getElementById('examChart');
-    if (examCtx) {
-        new Chart(examCtx, {
+        // 6. Exam Type Pie
+        make('examChart', {
             type: 'pie',
             data: {
-                labels: {{ exam_labels|tojson }},
+                labels: CHART_DATA.examLabels,
                 datasets: [{
-                    data: {{ exam_data|tojson }},
-                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#7c3aed', '#ec4899'],
+                    data: CHART_DATA.examData,
+                    backgroundColor: ['#10b981','#3b82f6','#f59e0b','#7c3aed','#ec4899'],
                     borderWidth: 0
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }
             }
         });
+
+        return true;
     }
+
+    // Try immediately — if Chart.js is already parsed, we're done
+    if (initCharts()) return;
+
+    // Retry every 100ms for up to 5 seconds (handles deferred/async loading)
+    var tries = 0;
+    var poll = setInterval(function() {
+        if (initCharts() || ++tries > 50) clearInterval(poll);
+    }, 100);
+})();
 </script>
 {% endblock %}

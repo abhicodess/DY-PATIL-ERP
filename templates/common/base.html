@@ -2,6 +2,23 @@
 <html lang="en">
 
 <head>
+  <script>
+    window.addEventListener('error', function(e) {
+      var div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.bottom = '10px';
+      div.style.right = '10px';
+      div.style.background = 'red';
+      div.style.color = 'white';
+      div.style.padding = '10px';
+      div.style.zIndex = '99999';
+      div.style.borderRadius = '5px';
+      div.style.fontSize = '12px';
+      div.style.maxWidth = '400px';
+      div.textContent = 'JS Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+      document.body ? document.body.appendChild(div) : window.addEventListener('DOMContentLoaded', function() { document.body.appendChild(div); });
+    });
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -51,26 +68,7 @@
       --mono: 'DM Mono', monospace;
     }
 
-    body.dark-theme {
-      --white: #1E293B;
-      --bg: #0F172A;
-      --bg2: #1E293B;
-      --ink: #F1F5F9;
-      --ink2: #E2E8F0;
-      --ink3: #94A3B8;
-      --ink4: #64748B;
-      --border: #334155;
-      --border2: #475569;
-      --blue-s: #1E293B;
-      --blue-m: #1E293B;
-      --green-s: #064E3B;
-      --amber-s: #451A03;
-      --red-s: #450A0A;
-      --violet-s: #2E1065;
-      --teal-s: #134E4A;
-      --sh-sm: 0 1px 3px rgba(0, 0, 0, .4);
-      --sh-md: 0 4px 12px rgba(0, 0, 0, .5);
-    }
+
 
     *,
     *::before,
@@ -1759,7 +1757,7 @@
   {% block extra_css %}{% endblock %}
 </head>
 
-<body class="{% if session.get('dark_mode') %}dark-theme{% endif %}">
+<body class="">
   <!-- Mobile Header Bar -->
   <header class="mob-header">
     <button id="sbToggle" class="mob-header-btn" onclick="openDrawer()"><i class="fa-solid fa-bars"></i></button>
@@ -1934,6 +1932,7 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
   {% block extra_js %}{% endblock %}
   <script>
     // Industrial-Grade CSRF & UI Persistence
@@ -2009,7 +2008,7 @@
     document.getElementById('sbOverlay').addEventListener('click', closeSidebar);
     window.addEventListener('resize', function() { if (window.innerWidth > 768) closeSidebar(); });
   </script>
-  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}" defer></script>
+
   <script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
   <script>
   /* ── Buttery page transitions + progress bar ── */
@@ -2018,7 +2017,7 @@
     bar.id = 'nprogress';
     document.body.appendChild(bar);
 
-    var prog = 0, raf = null, done = false;
+    var prog = 0, raf = null, done = false, recoveryTimeout = null;
 
     function setBar(n){
       prog = n;
@@ -2038,11 +2037,23 @@
       bar.classList.add('running');
       setBar(.08);
       raf = requestAnimationFrame(trickle);
+
+      // Failsafe: if the page doesn't unload/navigate within 2.5 seconds, recover and fade back in
+      if(recoveryTimeout) clearTimeout(recoveryTimeout);
+      recoveryTimeout = setTimeout(function(){
+        finish();
+      }, 2500);
     }
 
     function finish(){
       done = true;
       if(raf) cancelAnimationFrame(raf);
+      if(recoveryTimeout) clearTimeout(recoveryTimeout);
+
+      // Ensure the content fades back in
+      var main = document.querySelector('.main');
+      if(main) main.classList.remove('leaving');
+
       bar.style.transition = 'transform .15s ease';
       setBar(1);
       setTimeout(function(){
@@ -2059,6 +2070,23 @@
       var href = a.getAttribute('href');
       if(!href || href.startsWith('#') || href.startsWith('mailto') || href.startsWith('javascript')) return;
       if(a.target === '_blank') return;
+      
+      // Skip download / export / backup links to avoid getting stuck in transition state since they do not reload the page
+      var lowercaseHref = href.toLowerCase();
+      if (a.hasAttribute('download') || 
+          a.hasAttribute('data-no-transition') ||
+          a.classList.contains('no-transition') ||
+          lowercaseHref.includes('export') || 
+          lowercaseHref.includes('download') || 
+          lowercaseHref.includes('backup') || 
+          lowercaseHref.endsWith('.xlsx') || 
+          lowercaseHref.endsWith('.xls') || 
+          lowercaseHref.endsWith('.csv') || 
+          lowercaseHref.endsWith('.pdf') ||
+          lowercaseHref.includes('format=')) {
+        return;
+      }
+
       try{
         var url = new URL(href, location.href);
         if(url.origin !== location.origin) return;
@@ -2077,7 +2105,8 @@
 
     /* Complete on page load */
     window.addEventListener('pageshow', finish);
-    if(document.readyState === 'complete') finish();
+    document.addEventListener('DOMContentLoaded', finish);
+    if(document.readyState === 'complete' || document.readyState === 'interactive') finish();
     else window.addEventListener('load', finish);
   })();
   </script>

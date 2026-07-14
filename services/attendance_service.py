@@ -112,10 +112,27 @@ def mark_single_attendance(role, actor_id, form_data, actor_name=""):
     """Marks attendance for a single student in a specific session."""
     try:
         student_id = form_data.get("student_id")
+        student_name = form_data.get("student_name", "").strip()
         subject = form_data.get("subject")
         lecture_date = form_data.get("date") or datetime.now().strftime("%Y-%m-%d")
         status = form_data.get("status", "Present")
-        
+
+        # If student_name not provided in form, look it up from DB
+        if not student_name and student_id:
+            rec = qone("SELECT name FROM students WHERE id=%s", (student_id,))
+            if rec:
+                student_name = rec["name"]
+
+        # If still no student_name, we cannot proceed (NOT NULL constraint)
+        if not student_name:
+            return {"ok": False, "error": "Student name is required. Please select a valid student."}
+
+        # Also resolve student_id from name if not provided
+        if not student_id and student_name:
+            rec = qone("SELECT id FROM students WHERE name ILIKE %s LIMIT 1", (student_name,))
+            if rec:
+                student_id = rec["id"]
+
         # Check if session exists or create one
         session_row = qone(
             "SELECT id FROM attendance_sessions WHERE subject=%s AND lecture_date=%s AND faculty_id=%s",
@@ -132,10 +149,10 @@ def mark_single_attendance(role, actor_id, form_data, actor_name=""):
             lecture_id = cur.fetchone()["id"]
 
         exe(
-            """INSERT INTO attendance (student_id, date, subject, status, lecture_id, faculty_id) 
-               VALUES (%s,%s,%s,%s,%s,%s)
-               ON CONFLICT (student_id, lecture_id) DO UPDATE SET status = EXCLUDED.status""",
-            (student_id, lecture_date, subject, status, lecture_id, actor_id if role == "faculty" else None)
+            """INSERT INTO attendance (student_id, student_name, date, subject, status, lecture_id, faculty_id) 
+               VALUES (%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (student_id, lecture_id) DO UPDATE SET status = EXCLUDED.status, student_name = EXCLUDED.student_name""",
+            (student_id, student_name, lecture_date, subject, status, lecture_id, actor_id if role == "faculty" else None)
         )
         
         log_attendance_action(role, actor_id, "mark_single", {"student_id": student_id, "status": status})

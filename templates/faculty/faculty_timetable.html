@@ -10,7 +10,24 @@
 {% block content %}
 <style>
 /* ══ FACULTY TIMETABLE ═══════════════════════════════════ */
-.tt-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);box-shadow:var(--sh-sm);background:var(--white)}
+html, body {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+.main {
+  height: 100vh !important;
+  overflow-y: auto !important;
+}
+
+.tt-wrap{
+  overflow-x:auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.02) !important;
+}
 .tt-tbl{border-collapse:collapse;min-width:800px;table-layout:fixed}
 .tt-tbl thead th{
   background:#0F172A;color:rgba(255,255,255,.88);font-size:11px;font-weight:700;
@@ -19,28 +36,46 @@
 }
 .tt-tbl thead th:first-child{width:110px;min-width:110px;position:sticky;left:0;z-index:20;background:#0F172A;text-align:left;padding-left:14px}
 .tt-tbl thead th.hl{background:#5B21B6}
-.tt-time{background:#F8FAFC;padding:8px 14px;text-align:left;vertical-align:top;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:10;min-width:110px}
+.tt-time{
+  background: rgba(248, 250, 252, 0.65);
+  backdrop-filter: blur(4px);
+  padding:8px 14px;text-align:left;vertical-align:top;border-right:2px solid var(--border2);border-bottom:1px solid var(--border);position:sticky;left:0;z-index:10;min-width:110px
+}
 .tt-day-name{font-size:13px;font-weight:700;color:var(--ink)}
 .tt-day-sub{font-size:10px;color:var(--ink4)}
 .tt-today .tt-day-name{color:#7C3AED}
-.tt-today{background:#F5F3FF}
+.tt-today{background: rgba(124, 58, 237, 0.05)}
 .today-badge{font-size:9px;background:#7C3AED;color:#fff;padding:1px 5px;border-radius:3px;margin-top:2px;display:inline-block}
-.tt-cell{padding:5px;vertical-align:top;border-right:1px solid var(--border);border-bottom:1px solid var(--border);width:150px;background:var(--white)}
+.tt-cell{
+  padding:5px;vertical-align:top;
+  border-right:1px solid rgba(0,0,0,0.06);
+  border-bottom:1px solid rgba(0,0,0,0.06);
+  width:150px;
+  background: rgba(255, 255, 255, 0.4);
+}
 .tt-tbl tbody tr:last-child .tt-cell,.tt-tbl tbody tr:last-child .tt-time{border-bottom:none}
 
 /* Slot card — faculty style */
-.fsc{border-radius:8px;padding:9px 11px;margin-bottom:3px;border-left:3px solid #7C3AED;background:#F5F3FF;position:relative;transition:all .14s}
+.fsc{
+  border-radius:10px;padding:9px 11px;margin-bottom:3px;border-left:3px solid #7C3AED;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-left: 3px solid #7C3AED !important;
+  position:relative;transition:all .14s;
+}
 .fsc:last-child{margin-bottom:0}
-.fsc:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.15)}
-.fsc.ty{background:#EFF6FF;border-left-color:#2563EB}
-.fsc.la{background:#F5F3FF;border-left-color:#7C3AED}
-.fsc.el{background:#ECFDF5;border-left-color:#059669}
-.fsc.mi{background:#FFFBEB;border-left-color:#D97706}
-.fsc.pr{background:#ECFEFF;border-left-color:#0891B2}
+.fsc:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(124,58,237,.1)}
+.fsc.ty{border-left-color:#2563EB !important}
+.fsc.la{border-left-color:#7C3AED !important}
+.fsc.el{border-left-color:#059669 !important}
+.fsc.mi{border-left-color:#D97706 !important}
+.fsc.pr{border-left-color:#0891B2 !important}
 .fsc-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3;padding-right:22px}
 .fsc-meta{font-size:10px;color:var(--ink3);margin-top:3px;display:flex;align-items:center;gap:4px}
 .fsc-foot{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
-.fsc-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.fsc-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;background:rgba(0,0,0,0.04);color:#475569;}
 .fsc-div{font-size:9px;color:var(--ink4);font-family:var(--mono)}
 .fsc-tip{position:absolute;bottom:calc(100% + 6px);left:0;background:#1E293B;color:#fff;border-radius:7px;padding:9px 13px;font-size:11px;z-index:9999;display:none;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:none;line-height:1.7}
 .fsc-tip::after{content:'';position:absolute;top:100%;left:14px;border:5px solid transparent;border-top-color:#1E293B}
@@ -49,24 +84,59 @@
 /* 3-dot menu */
 .dot-btn{position:absolute;top:5px;right:4px;width:20px;height:20px;border-radius:4px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;font-size:12px;color:var(--ink3)}
 .fsc:hover .dot-btn{opacity:1}
-.dot-btn:hover{background:rgba(0,0,0,.1);color:var(--ink)}
+.dot-btn:hover{background:rgba(0,0,0,.05);color:var(--ink)}
 .sc-drop{position:absolute;top:26px;right:0;z-index:9999;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:0 10px 30px rgba(0,0,0,.13);min-width:165px;display:none}
 .sc-drop.open{display:block}
 .ddi{display:flex;align-items:center;gap:9px;padding:10px 14px;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:var(--font);transition:background .1s}
 .ddi:hover{background:var(--bg)}
 
 /* Empty cell */
-.empty-cell{height:42px;border:2px dashed var(--border2);border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink4)}
+.empty-cell{
+  height:42px;
+  border:2px dashed rgba(0,0,0,0.08);
+  border-radius:7px;
+  background: rgba(255, 255, 255, 0.2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink4)
+}
 
 /* Filter bar */
-.fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:12px;box-shadow:var(--sh-sm)}
-.ff{padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--font);color:var(--ink);background:var(--white);outline:none;min-width:130px;flex:1 1 auto}
-.ff.on{border-color:#7C3AED;background:var(--violet-s);color:#7C3AED;font-weight:600}
+.fbar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.03) !important;
+  border-radius: 16px !important;
+  padding:12px 16px;margin-bottom:12px;
+}
+.ff{
+  padding:8px 12px !important;
+  border:1.5px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+  font-size:12px;
+  color: #334155 !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  outline:none;
+  min-width:130px;
+  flex:1 1 auto;
+}
+.ff.on{border-color:#7C3AED !important;background:#fff !important;color:#7C3AED;font-weight:600}
 .fbar-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* Stats */
 .tts-row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.tts{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 16px;flex:1;min-width:90px;display:flex;align-items:center;gap:10px}
+.tts{
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.03) !important;
+  border-radius: 16px !important;
+  padding:10px 16px;flex:1;min-width:90px;display:flex;align-items:center;gap:10px;
+}
 .tts-v{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--ink)}
 .tts-l{font-size:10px;color:var(--ink3)}
 

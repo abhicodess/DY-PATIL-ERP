@@ -25,7 +25,7 @@ class FakeRepo:
     def get_application_by_id(self, app_id):
         mock = MagicMock()
         mock.applied_year = "2024"
-        mock.token = "ABCD1234"
+        mock.token = "TEST_TOKEN_PLACEHOLDER"  # noqa: S105 - test-only mock value
         return mock
 
     def create_document(self, data):

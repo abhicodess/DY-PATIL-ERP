@@ -68,7 +68,7 @@
           <td class="mono" style="font-size:12px">{{ f.phone or "—" }}</td>
           <td>
             <div class="flex-ac gap6">
-              <button class="btn btn-out btn-sm" onclick="openEditF({{ f.id }},'{{ f.name }}','{{ f.department }}','{{ f.designation or '' }}','{{ f.email }}','{{ f.phone or '' }}')"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-out btn-sm" onclick="openEditF(this, {{ f.id }},'{{ f.name }}','{{ f.department }}','{{ f.designation or '' }}','{{ f.email }}','{{ f.phone or '' }}')"><i class="fas fa-pen"></i></button>
               <form method="POST" action="/delete_faculty" style="display:inline" onsubmit="return confirm('Delete {{ f.name }}?')">
                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <input type="hidden" name="faculty_id" value="{{ f.id }}">
@@ -95,14 +95,14 @@
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><div class="cb" style="padding-top:0">
       <input type="hidden" name="faculty_id" id="feid">
       <div class="fg2">
-        <div class="fgrp"><label>Name *</label><input type="text" name="name" id="fen" required></div>
-        <div class="fgrp"><label>Department</label><select name="department" id="fed">{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select></div>
+        <div class="fgrp"><label>Name *</label><input type="text" name="name" id="fen" required style="width: 100%"></div>
+        <div class="fgrp"><label>Department</label><select name="department" id="fed" style="width: 100%">{% for d in DEPARTMENTS %}<option>{{ d }}</option>{% endfor %}</select></div>
       </div>
-      <div class="fg2">
-        <div class="fgrp"><label>Designation</label><select name="designation" id="fedes">{% for d in DESIGNATIONS %}<option>{{ d }}</option>{% endfor %}</select></div>
-        <div class="fgrp"><label>Phone</label><input type="text" name="phone" id="feph"></div>
+      <div class="fg2" style="margin-top: 12px;">
+        <div class="fgrp"><label>Designation</label><select name="designation" id="fedes" style="width: 100%">{% for d in DESIGNATIONS %}<option>{{ d }}</option>{% endfor %}</select></div>
+        <div class="fgrp"><label>Phone</label><input type="text" name="phone" id="feph" style="width: 100%"></div>
       </div>
-      <div class="fgrp"><label>Email *</label><input type="email" name="email" id="fee" required></div>
+      <div class="fgrp" style="margin-top: 12px;"><label>Email *</label><input type="email" name="email" id="fee" required style="width: 100%"></div>
     </div><div class="cf">
       <button type="submit" class="btn btn-dark"><i class="fas fa-save"></i> Save</button>
       <button type="button" class="btn btn-out" onclick="document.getElementById('editFacModal').classList.remove('show')">Cancel</button>
@@ -144,12 +144,63 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+  .modal-bg.contextual-modal {
+    display: none;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+  .modal-bg.contextual-modal.show {
+    display: block;
+  }
+</style>
 <script>
-function openEditF(id,name,dept,des,email,phone){
-  document.getElementById('editFacModal').classList.add('show');
-  document.getElementById('feid').value=id; document.getElementById('fen').value=name;
-  document.getElementById('fed').value=dept; document.getElementById('fedes').value=des;
-  document.getElementById('fee').value=email; document.getElementById('feph').value=phone;
+function openEditF(btn, id, name, dept, des, email, phone) {
+  var modal = document.getElementById('editFacModal');
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+  modal.classList.add('contextual-modal');
+  modal.classList.add('show');
+  
+  var box = modal.querySelector('.modal-box');
+  var rect = btn.getBoundingClientRect();
+  var boxHeight = box.offsetHeight || 380;
+  
+  // Align the vertical center of the modal with the vertical center of the clicked button
+  var targetTop = rect.top - (boxHeight / 2) + (rect.height / 2);
+  
+  var minTop = 80; // keep beneath topbar
+  var maxTop = window.innerHeight - boxHeight - 20;
+  
+  if (targetTop < minTop) targetTop = minTop;
+  if (targetTop > maxTop) targetTop = maxTop;
+  
+  box.style.position = 'absolute';
+  box.style.top = targetTop + 'px';
+  box.style.margin = '0';
+
+  // Align horizontally with the clicked button (right-aligned with edit column)
+  var rightPos = window.innerWidth - rect.right;
+  if (window.innerWidth < 600) {
+    box.style.left = '50%';
+    box.style.right = 'auto';
+    box.style.transform = 'translateX(-50%)';
+    box.style.width = 'calc(100% - 40px)';
+  } else {
+    box.style.left = 'auto';
+    box.style.right = rightPos + 'px';
+    box.style.transform = 'none';
+    box.style.width = '480px';
+  }
+  
+  // Set form values
+  document.getElementById('feid').value = id;
+  document.getElementById('fen').value = name;
+  document.getElementById('fed').value = dept;
+  document.getElementById('fedes').value = des;
+  document.getElementById('fee').value = email;
+  document.getElementById('feph').value = phone;
 }
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');}));
 
