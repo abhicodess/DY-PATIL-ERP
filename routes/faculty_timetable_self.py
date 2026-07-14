@@ -346,40 +346,15 @@ def approve_timetable_request(slot_id):
     if slot['status'] != 'pending':
         return jsonify({"error": "Already processed"}), 400
 
-    from flask import current_app
-    is_testing = False
     try:
-        if current_app and current_app.config.get("TESTING"):
-            is_testing = True
-    except RuntimeError:
-        pass
-
-    if is_testing:
-        conn = db.session.connection().connection
-        cur = conn.cursor()
-        try:
+        with get_tenant_db() as cur:
             safe_execute(cur, "UPDATE faculty_timetable SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=%s", (slot_id,))
             safe_execute(cur, """
                 INSERT INTO timetable (day, time, subject, teacher, room, slot_type, division, semester, faculty_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (slot['day'], slot['time_slot'], slot['subject'], slot['faculty_name'], slot['room'], slot['slot_type'], slot['division'], slot['semester'], slot['faculty_id']))
-        finally:
-            cur.close()
-    else:
-        conn = db.engine.raw_connection()
-        try:
-            with conn:  # auto-commits or rolls back
-                cur = conn.cursor()
-                safe_execute(cur, "UPDATE faculty_timetable SET status='approved', updated_at=CURRENT_TIMESTAMP WHERE id=%s", (slot_id,))
-                safe_execute(cur, """
-                    INSERT INTO timetable (day, time, subject, teacher, room, slot_type, division, semester, faculty_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (slot['day'], slot['time_slot'], slot['subject'], slot['faculty_name'], slot['room'], slot['slot_type'], slot['division'], slot['semester'], slot['faculty_id']))
-        except Exception:
-            conn.rollback()
-            return jsonify({"error": "DB error"}), 500
-        finally:
-            conn.close()
+    except Exception as e:
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
 
     try:
         from datetime import datetime

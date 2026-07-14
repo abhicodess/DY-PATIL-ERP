@@ -1301,43 +1301,50 @@ def admin_save_result():
     sem_val = request.form.get("semester","I").strip()
 
     # Stage 3: unified component lookup
-    from services.results_service import get_components_for_subject, write_audit_log
+    from services.results_service import get_components_for_subject, write_audit_log, parse_marks_value, calculate_result
     sub_info  = get_components_for_subject(subject_val, dept, sem_val)
     max_total = sub_info["max_total"]
     comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
 
-    def _cap(form_key, comp_name, fallback_max):
-        val = float(request.form.get(form_key, 0) or 0)
+    def _parse_and_cap(form_key, comp_name, fallback_max):
+        raw_val = request.form.get(form_key)
+        val, is_ab = parse_marks_value(raw_val)
         limit = comp_caps.get(comp_name.lower(), fallback_max)
-        return min(val, limit)
+        return min(val, limit), is_ab
 
-    assignment_marks    = _cap("assignment_marks",   "Assignment",        5.0)
-    attendance_marks    = _cap("attendance_marks",   "Attendance",        5.0)
-    teacher_assessment  = _cap("teacher_assessment", "Teacher Assessment",10.0)
-    ut_marks            = _cap("ut_marks",           "Unit Test",         20.0)
-    mse_marks           = _cap("mse_marks",          "Mid-Sem Exam",      20.0)
-    tw_marks            = _cap("tw_marks",           "Term Work",          0.0)
-    pr_or_marks         = _cap("pr_or_marks",        "Practical/Oral",     0.0)
+    assignment_marks,   as_ab = _parse_and_cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks,   at_ab = _parse_and_cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment, ta_ab = _parse_and_cap("teacher_assessment", "Teacher Assessment",10.0)
+    ut_marks,           ut_ab = _parse_and_cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks,          ms_ab = _parse_and_cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks,           tw_ab = _parse_and_cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks,        pr_ab = _parse_and_cap("pr_or_marks",        "Practical/Oral",     0.0)
 
-    marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
-    if marks_val == 0:
-        marks_val = float(request.form.get("marks", 0) or 0)
+    is_absent = as_ab or at_ab or ta_ab or ut_ab or ms_ab or tw_ab or pr_ab or (request.form.get("is_absent") in ('1', 'true', 'on', True))
 
-    marks_val = min(marks_val, max_total)
-    pct_val   = pct(marks_val, max_total)
-    g, _, _   = calc_grade(pct_val)
-    result_val= "Pass" if pct_val >= 40 else "Fail"
+    marks_val, g, result_val, passed = calculate_result(
+        assignment=assignment_marks,
+        attendance=attendance_marks,
+        teaching=teacher_assessment,
+        ut=ut_marks,
+        mse=mse_marks,
+        tw=tw_marks,
+        pr_or=pr_or_marks,
+        max_total=max_total,
+        is_absent=is_absent
+    )
+
     status_val = request.form.get("status", "draft").strip()
 
     _exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
                                marks,total,exam_type,grade,result,published,status,
                                assignment_marks, attendance_marks, ut_marks, mse_marks,
-                               teaching_assessment, tw_marks, pr_or_marks)
-           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                               teaching_assessment, tw_marks, pr_or_marks, is_absent)
+           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (student_name, roll, dept, yr, sem_val, subject_val,
          marks_val, max_total, request.form.get("exam_type","Semester Exam"),
          g, result_val, 0, status_val, assignment_marks, attendance_marks, ut_marks, mse_marks,
-         teacher_assessment, tw_marks, pr_or_marks))
+         teacher_assessment, tw_marks, pr_or_marks, is_absent))
 
     # Audit log
     new_row = _qone("SELECT id FROM results WHERE student_name=%s AND subject=%s AND semester=%s ORDER BY id DESC LIMIT 1",
@@ -1357,41 +1364,48 @@ def admin_edit_result():
     sem_val = request.form.get("semester", existing["semester"] if existing else "").strip()
 
     # Stage 3: unified component lookup
-    from services.results_service import get_components_for_subject, write_audit_log
+    from services.results_service import get_components_for_subject, write_audit_log, parse_marks_value, calculate_result
     sub_info  = get_components_for_subject(subject_val, dept, sem_val)
     total_val = sub_info["max_total"]
     comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
 
-    def _cap(form_key, comp_name, fallback_max):
-        val = float(request.form.get(form_key, 0) or 0)
+    def _parse_and_cap(form_key, comp_name, fallback_max):
+        raw_val = request.form.get(form_key)
+        val, is_ab = parse_marks_value(raw_val)
         limit = comp_caps.get(comp_name.lower(), fallback_max)
-        return min(val, limit)
+        return min(val, limit), is_ab
 
-    assignment_marks    = _cap("assignment_marks",   "Assignment",        5.0)
-    attendance_marks    = _cap("attendance_marks",   "Attendance",        5.0)
-    teacher_assessment  = _cap("teacher_assessment", "Teacher Assessment",10.0)
-    ut_marks            = _cap("ut_marks",           "Unit Test",         20.0)
-    mse_marks           = _cap("mse_marks",          "Mid-Sem Exam",      20.0)
-    tw_marks            = _cap("tw_marks",           "Term Work",          0.0)
-    pr_or_marks         = _cap("pr_or_marks",        "Practical/Oral",     0.0)
+    assignment_marks,   as_ab = _parse_and_cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks,   at_ab = _parse_and_cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment, ta_ab = _parse_and_cap("teacher_assessment", "Teacher Assessment",10.0)
+    ut_marks,           ut_ab = _parse_and_cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks,          ms_ab = _parse_and_cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks,           tw_ab = _parse_and_cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks,        pr_ab = _parse_and_cap("pr_or_marks",        "Practical/Oral",     0.0)
 
-    marks_val = assignment_marks + attendance_marks + teacher_assessment + ut_marks + mse_marks + tw_marks + pr_or_marks
-    if marks_val == 0:
-        marks_val = float(request.form.get("marks", 0) or 0)
+    is_absent = as_ab or at_ab or ta_ab or ut_ab or ms_ab or tw_ab or pr_ab or (request.form.get("is_absent") in ('1', 'true', 'on', True))
 
-    marks_val = min(marks_val, total_val)
-    pct_val = pct(marks_val, total_val)
-    g, _, _ = calc_grade(pct_val)
-    result_val = "Pass" if pct_val >= 40 else "Fail"
+    marks_val, g, result_val, passed = calculate_result(
+        assignment=assignment_marks,
+        attendance=attendance_marks,
+        teaching=teacher_assessment,
+        ut=ut_marks,
+        mse=mse_marks,
+        tw=tw_marks,
+        pr_or=pr_or_marks,
+        max_total=total_val,
+        is_absent=is_absent
+    )
+
     status_val = request.form.get("status", "draft").strip()
 
     _exe("""UPDATE results SET semester=%s,subject=%s,marks=%s,total=%s,
            exam_type=%s,grade=%s,result=%s, assignment_marks=%s, attendance_marks=%s, ut_marks=%s, mse_marks=%s,
-           teaching_assessment=%s, tw_marks=%s, pr_or_marks=%s, status=%s WHERE id=%s""",
+           teaching_assessment=%s, tw_marks=%s, pr_or_marks=%s, status=%s, is_absent=%s WHERE id=%s""",
         (sem_val, subject_val,
          marks_val, total_val, request.form.get("exam_type",""),
          g, result_val, assignment_marks, attendance_marks, ut_marks, mse_marks,
-         teacher_assessment, tw_marks, pr_or_marks, status_val, rid))
+         teacher_assessment, tw_marks, pr_or_marks, status_val, is_absent, rid))
 
     write_audit_log(rid, "edited", session.get("user_id"))
     return redirect("/admin_results?updated=1")

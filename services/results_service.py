@@ -19,19 +19,28 @@ class ResultsService:
         if score >= 35: return "D"
         return "F"
 
-def calculate_result(assignment, attendance, teaching, ut, mse):
-    total = assignment + attendance + teaching + ut + mse
-    pct = (total / 60) * 100
-    passed = (ut >= 8) and (mse >= 8) and (total >= 24)
+def calculate_result(assignment=0.0, attendance=0.0, teaching=0.0, ut=0.0, mse=0.0, tw=0.0, pr_or=0.0, max_total=60.0, is_absent=False):
+    if is_absent:
+        return None, 'AB', 'Absent', False
+        
+    def _val(v):
+        if v is None: return 0.0
+        try: return float(v)
+        except: return 0.0
+        
+    total = _val(assignment) + _val(attendance) + _val(teaching) + _val(ut) + _val(mse) + _val(tw) + _val(pr_or)
+    pct = (total / max_total * 100.0) if max_total > 0 else 0.0
+    passed = pct >= 40.0
     
     if not passed:
         grade = 'F'
         result = 'Fail'
     elif pct >= 75: grade, result = 'O', 'Pass'
-    elif pct >= 65: grade, result = 'A', 'Pass'
-    elif pct >= 55: grade, result = 'B', 'Pass'
-    elif pct >= 45: grade, result = 'C', 'Pass'
-    else:           grade, result = 'D', 'Pass'
+    elif pct >= 70: grade, result = 'A+', 'Pass'
+    elif pct >= 60: grade, result = 'A', 'Pass'
+    elif pct >= 55: grade, result = 'B+', 'Pass'
+    elif pct >= 50: grade, result = 'B', 'Pass'
+    else:           grade, result = 'C', 'Pass'
     
     return total, grade, result, passed
 
@@ -96,13 +105,18 @@ def get_components_for_subject(subject_name, department=None, semester=None):
     from utils.pg_wrapper import qry, qone
     try:
         # Try subject_mark_components first (new unified schema)
-        sql = "SELECT * FROM subject_mark_components WHERE subject_name = %s"
+        sql = """
+            SELECT smc.* 
+            FROM subject_mark_components smc
+            JOIN subjects_master sm ON smc.subject_id = sm.id
+            WHERE sm.subject_name = %s
+        """
         params = [subject_name]
         if department:
-            sql += " AND department = %s"
+            sql += " AND sm.department = %s"
             params.append(department)
         if semester:
-            sql += " AND semester = %s"
+            sql += " AND sm.semester = %s"
             params.append(semester)
         rows = qry(sql, params)
         if rows:

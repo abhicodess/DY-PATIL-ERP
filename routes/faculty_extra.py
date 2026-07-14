@@ -707,34 +707,58 @@ def faculty_save_result():
     roll = roll_row["roll"] if roll_row else ""
     dept = roll_row["department"] if roll_row else ""
     yr   = roll_row["year"] if roll_row else ""
+    subject_val = request.form.get("subject","").strip()
+    sem_val = request.form.get("semester","IV").strip()
 
-    assignment_m   = min(float(request.form.get("assignment_marks",   0) or 0), 5.0)
-    attendance_m   = min(float(request.form.get("attendance_marks",   0) or 0), 5.0)
-    teaching_m     = min(float(request.form.get("teaching_assessment",0) or 0), 10.0)
-    ut_m           = min(float(request.form.get("ut_marks",           0) or 0), 20.0)
-    mse_m          = min(float(request.form.get("mse_marks",          0) or 0), 20.0)
+    from services.results_service import get_components_for_subject, write_audit_log, parse_marks_value, calculate_result
+    sub_info  = get_components_for_subject(subject_val, dept, sem_val)
+    max_total = sub_info["max_total"]
+    comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
 
-    marks_val = assignment_m + attendance_m + teaching_m + ut_m + mse_m
-    if marks_val == 0:
-        marks_val = min(float(request.form.get("marks", 0) or 0), 60.0)
+    def _parse_and_cap(form_key, comp_name, fallback_max):
+        raw_val = request.form.get(form_key)
+        val, is_ab = parse_marks_value(raw_val)
+        limit = comp_caps.get(comp_name.lower(), fallback_max)
+        return min(val, limit), is_ab
 
-    marks_val = min(marks_val, 60.0)
-    total_val = 60.0
-    g = request.form.get("grade", "").strip() or grade(marks_val, total_val)
-    res = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
+    assignment_marks,   as_ab = _parse_and_cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks,   at_ab = _parse_and_cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment, ta_ab = _parse_and_cap("teaching_assessment", "Teacher Assessment",10.0)
+    ut_marks,           ut_ab = _parse_and_cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks,          ms_ab = _parse_and_cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks,           tw_ab = _parse_and_cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks,        pr_ab = _parse_and_cap("pr_or_marks",        "Practical/Oral",     0.0)
+
+    is_absent = as_ab or at_ab or ta_ab or ut_ab or ms_ab or tw_ab or pr_ab or (request.form.get("is_absent") in ('1', 'true', 'on', True))
+
+    marks_val, g, result_val, passed = calculate_result(
+        assignment=assignment_marks,
+        attendance=attendance_marks,
+        teaching=teacher_assessment,
+        ut=ut_marks,
+        mse=mse_marks,
+        tw=tw_marks,
+        pr_or=pr_or_marks,
+        max_total=max_total,
+        is_absent=is_absent
+    )
 
     exe("""INSERT INTO results(student_name,roll,department,year,semester,subject,
-                               marks,total,exam_type,grade,result,faculty_id,published,
+                               marks,total,exam_type,grade,result,faculty_id,published,status,
                                assignment_marks,attendance_marks,teaching_assessment,
-                               ut_marks,mse_marks)
-           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s,%s,%s,%s)""",
-        (student_name, roll, dept, yr,
-         request.form.get("semester","IV"),
-         request.form.get("subject",""),
-         marks_val, total_val,
-         request.form.get("exam_type","Semester Exam"),
-         g, res, fid,
-         assignment_m, attendance_m, teaching_m, ut_m, mse_m))
+                               ut_marks,mse_marks,tw_marks,pr_or_marks,is_absent)
+           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,\'draft\',%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (student_name, roll, dept, yr, sem_val, subject_val,
+         marks_val, max_total, request.form.get("exam_type","Semester Exam"),
+         g, result_val, fid, assignment_marks, attendance_marks, teacher_assessment,
+         ut_marks, mse_marks, tw_marks, pr_or_marks, is_absent))
+
+    # Audit log
+    new_row = qone("SELECT id FROM results WHERE student_name=%s AND subject=%s AND semester=%s ORDER BY id DESC LIMIT 1",
+                    (student_name, subject_val, sem_val))
+    if new_row:
+        write_audit_log(new_row["id"], "created", fid)
+
     return redirect("/faculty_results?success=1")
 
 @faculty_extra_bp.route("/faculty_edit_result", methods=["POST"])
@@ -742,30 +766,58 @@ def faculty_save_result():
 def faculty_edit_result():
     rid = request.form.get("result_id", "")
     fid = session["faculty_id"]
-    assignment_m = min(float(request.form.get("assignment_marks", 0) or 0), 5.0)
-    attendance_m = min(float(request.form.get("attendance_marks", 0) or 0), 5.0)
-    teaching_m = min(float(request.form.get("teacher_assessment", 0) or 0), 10.0)
-    ut_m = min(float(request.form.get("ut_marks", 0) or 0), 20.0)
-    mse_m = min(float(request.form.get("mse_marks", 0) or 0), 20.0)
-    tw_m = float(request.form.get("tw_marks", 0) or 0)
-    pr_or_m = float(request.form.get("pr_or_marks", 0) or 0)
+    existing = qone("SELECT department, semester, subject FROM results WHERE id=%s AND faculty_id=%s", (rid, fid))
+    if not existing:
+         return redirect("/faculty_results?error=not_found")
+    dept = existing["department"] or ""
+    subject_val = request.form.get("subject", existing["subject"] or "").strip()
+    sem_val = request.form.get("semester", existing["semester"] or "").strip()
 
-    marks_val = assignment_m + attendance_m + teaching_m + ut_m + mse_m + tw_m + pr_or_m
-    if marks_val == 0:
-        marks_val = min(float(request.form.get("marks", 0) or 0), 60.0)
+    from services.results_service import get_components_for_subject, write_audit_log, parse_marks_value, calculate_result
+    sub_info  = get_components_for_subject(subject_val, dept, sem_val)
+    total_val = sub_info["max_total"]
+    comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
 
-    marks_val = min(marks_val, 60.0)
-    total_val = 60.0
-    g = request.form.get("grade", "").strip() or grade(marks_val, total_val)
-    res = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
+    def _parse_and_cap(form_key, comp_name, fallback_max):
+        raw_val = request.form.get(form_key)
+        val, is_ab = parse_marks_value(raw_val)
+        limit = comp_caps.get(comp_name.lower(), fallback_max)
+        return min(val, limit), is_ab
+
+    assignment_marks,   as_ab = _parse_and_cap("assignment_marks",   "Assignment",        5.0)
+    attendance_marks,   at_ab = _parse_and_cap("attendance_marks",   "Attendance",        5.0)
+    teacher_assessment, ta_ab = _parse_and_cap("teacher_assessment", "Teacher Assessment",10.0)
+    ut_marks,           ut_ab = _parse_and_cap("ut_marks",           "Unit Test",         20.0)
+    mse_marks,          ms_ab = _parse_and_cap("mse_marks",          "Mid-Sem Exam",      20.0)
+    tw_marks,           tw_ab = _parse_and_cap("tw_marks",           "Term Work",          0.0)
+    pr_or_marks,        pr_ab = _parse_and_cap("pr_or_marks",        "Practical/Oral",     0.0)
+
+    is_absent = as_ab or at_ab or ta_ab or ut_ab or ms_ab or tw_ab or pr_ab or (request.form.get("is_absent") in ('1', 'true', 'on', True))
+
+    marks_val, g, result_val, passed = calculate_result(
+        assignment=assignment_marks,
+        attendance=attendance_marks,
+        teaching=teacher_assessment,
+        ut=ut_marks,
+        mse=mse_marks,
+        tw=tw_marks,
+        pr_or=pr_or_marks,
+        max_total=total_val,
+        is_absent=is_absent
+    )
+
     exe("""UPDATE results SET semester=%s,subject=%s,marks=%s,total=%s,
            exam_type=%s,grade=%s,result=%s, assignment_marks=%s, attendance_marks=%s,
-           teaching_assessment=%s, ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s
+           teaching_assessment=%s, ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s,
+           status=\'draft\', is_absent=%s
            WHERE id=%s AND faculty_id=%s""",
-        (request.form.get("semester", ""), request.form.get("subject", ""),
+        (sem_val, subject_val,
          marks_val, total_val, request.form.get("exam_type", ""),
-         g, res, assignment_m, attendance_m, teaching_m, ut_m, mse_m, tw_m, pr_or_m,
+         g, result_val, assignment_marks, attendance_marks, teacher_assessment,
+         ut_marks, mse_marks, tw_marks, pr_or_marks, is_absent,
          rid, fid))
+
+    write_audit_log(rid, "edited", fid)
     return redirect("/faculty_results?updated=1")
 
 @faculty_extra_bp.route("/faculty_delete_result", methods=["POST"])
@@ -1075,7 +1127,10 @@ def faculty_import_results():
             from flask import flash
             flash("Invalid Excel format. Name and Subject columns are required.", "error")
             return redirect("/faculty_results")
-        for row in ws.iter_rows(min_row=hdr_row+1, values_only=True):
+
+        from services.results_service import get_components_for_subject, write_audit_log, parse_marks_value, calculate_result
+        warnings = []
+        for row_idx, row in enumerate(ws.iter_rows(min_row=hdr_row+1, values_only=True), start=hdr_row+1):
             if not row or len(row) < cn: continue
             name = str(row[cn-1] or "").strip()
             if not name or name.lower() in ("name", "student name", "student"): continue
@@ -1083,46 +1138,73 @@ def faculty_import_results():
             subj = str(row[cs-1] or "").strip() if cs and cs <= len(row) else ""
             sem = str(row[csem-1] or "IV").strip() if csem and csem <= len(row) else "IV"
             exam_t = str(row[c_exam-1] or "Semester Exam").strip() if c_exam and c_exam <= len(row) else "Semester Exam"
-            def get_val(col_idx):
+
+            def get_val_ab(col_idx):
                 if col_idx and col_idx <= len(row) and row[col_idx-1] is not None:
-                    try: return float(row[col_idx-1])
-                    except: return 0.0
-                return 0.0
-            assign = get_val(c_assign)
-            attend = get_val(c_attend)
-            ta = get_val(c_ta)
-            ut = get_val(c_ut)
-            mse = get_val(c_mse)
-            tw = get_val(c_tw)
-            pr = get_val(c_pr)
+                    return parse_marks_value(row[col_idx-1])
+                return 0.0, False
+
+            assign,   as_ab = get_val_ab(c_assign)
+            attend,   at_ab = get_val_ab(c_attend)
+            ta,       ta_ab = get_val_ab(c_ta)
+            ut,       ut_ab = get_val_ab(c_ut)
+            mse,      ms_ab = get_val_ab(c_mse)
+            tw,       tw_ab = get_val_ab(c_tw)
+            pr,       pr_ab = get_val_ab(c_pr)
+
+            is_absent = as_ab or at_ab or ta_ab or ut_ab or ms_ab or tw_ab or pr_ab
+
             stu_id = resolve_student_id(name, roll)
             sr = qone("SELECT roll, department, year FROM students WHERE id=%s", (stu_id,)) if stu_id else None
             dept = sr["department"] if sr else ""
             yr = sr["year"] if sr else ""
             roll = sr["roll"] if sr else roll
-            marks_val = min(assign + attend + ta + ut + mse + tw + pr, 60.0)
-            total_val = 60.0
-            g_letter = grade(marks_val, total_val)
-            res_val = "Pass" if pct(marks_val, total_val) >= 35 else "Fail"
+
+            sub_info = get_components_for_subject(subj, dept, sem)
+            db_max_total = sub_info["max_total"]
+            comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
+
+            # Cap each component
+            assign = min(assign, comp_caps.get("assignment", 5.0))
+            attend = min(attend, comp_caps.get("attendance", 5.0))
+            ta = min(ta, comp_caps.get("teacher assessment", 10.0))
+            ut = min(ut, comp_caps.get("unit test", 20.0))
+            mse = min(mse, comp_caps.get("mid-sem exam", 20.0))
+            tw = min(tw, comp_caps.get("term work", 0.0))
+            pr = min(pr, comp_caps.get("practical/oral", 0.0))
+
+            marks_val, g_letter, res_val, passed = calculate_result(
+                assignment=assign, attendance=attend, teaching=ta, ut=ut, mse=mse, tw=tw, pr_or=pr,
+                max_total=db_max_total, is_absent=is_absent
+            )
+
             existing = qone("SELECT id FROM results WHERE student_name=%s AND roll=%s AND subject=%s AND exam_type=%s AND semester=%s",
                             (name, roll, subj, exam_t, sem))
             if existing:
                 exe("""UPDATE results SET marks=%s, total=%s, grade=%s, result=%s,
                                          assignment_marks=%s, attendance_marks=%s, teaching_assessment=%s,
-                                         ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s
+                                         ut_marks=%s, mse_marks=%s, tw_marks=%s, pr_or_marks=%s,
+                                         status=\'draft\', is_absent=%s
                        WHERE id=%s""",
-                    (marks_val, total_val, g_letter, res_val, assign, attend, ta, ut, mse, tw, pr, existing["id"]))
+                    (marks_val, db_max_total, g_letter, res_val, assign, attend, ta, ut, mse, tw, pr, is_absent, existing["id"]))
+                write_audit_log(existing["id"], "edited", fid)
             else:
                 exe("""INSERT INTO results(student_name, roll, department, year, semester, subject,
-                                           marks, total, exam_type, grade, result, faculty_id, published,
+                                           marks, total, exam_type, grade, result, faculty_id, published, status,
                                            assignment_marks, attendance_marks, teaching_assessment,
-                                           ut_marks, mse_marks, tw_marks, pr_or_marks)
-                       VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, %s, %s, %s, %s)""",
-                    (name, roll, dept, yr, sem, subj, marks_val, total_val, exam_t, g_letter, res_val, fid,
-                     assign, attend, ta, ut, mse, tw, pr))
+                                           ut_marks, mse_marks, tw_marks, pr_or_marks, is_absent)
+                       VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, \'draft\', %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (name, roll, dept, yr, sem, subj, marks_val, db_max_total, exam_t, g_letter, res_val, fid,
+                     assign, attend, ta, ut, mse, tw, pr, is_absent))
+                new_row = qone("SELECT id FROM results WHERE student_name=%s AND subject=%s AND semester=%s ORDER BY id DESC LIMIT 1",
+                                (name, subj, sem))
+                if new_row:
+                    write_audit_log(new_row["id"], "created", fid)
             added += 1
         from flask import flash
-        flash(f"Successfully imported {added} results.", "success")
+        flash(f"Successfully imported {added} results as drafts.", "success")
+        if warnings:
+            flash("<br>".join(warnings), "warning")
     except Exception as e:
         import traceback
         from flask import current_app, flash

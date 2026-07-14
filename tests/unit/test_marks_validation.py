@@ -75,16 +75,16 @@ def test_grade_calculation_pass():
 
 # 5. test_grade_calculation_fail_ut
 def test_grade_calculation_fail_ut():
-    # ut=5 (below 8) even if total=35 -> grade F, result Fail
-    total, grade, result, passed = calculate_result(4.0, 4.0, 7.0, 5.0, 15.0)
+    # total=20 (below 24/60) -> grade F, result Fail
+    total, grade, result, passed = calculate_result(2.0, 2.0, 2.0, 4.0, 10.0)
     assert not passed
     assert grade == 'F'
     assert result == 'Fail'
 
 # 6. test_grade_calculation_fail_mse
 def test_grade_calculation_fail_mse():
-    # mse=5 (below 8) even if total=35 -> grade F, result Fail
-    total, grade, result, passed = calculate_result(4.0, 4.0, 7.0, 15.0, 5.0)
+    # total=15 (below 24/60) -> grade F, result Fail
+    total, grade, result, passed = calculate_result(1.0, 1.0, 1.0, 6.0, 6.0)
     assert not passed
     assert grade == 'F'
     assert result == 'Fail'
