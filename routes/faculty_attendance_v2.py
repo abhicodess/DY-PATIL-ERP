@@ -607,6 +607,25 @@ def marking_session(session_id):
                 ORDER BY roll, name
             """, dept_params + [div.upper()])
             
+        # 2b. Match year, div (regardless of department) if division was specified
+        if not students and year and div:
+            students = safe_query("""
+                SELECT id, name, roll, prn 
+                FROM students 
+                WHERE TRIM(UPPER(year)) = %s 
+                  AND TRIM(UPPER(division)) = %s
+                ORDER BY roll, name
+            """, (year.upper(), div.upper()))
+
+        # 2c. Match div only (regardless of department) if division was specified
+        if not students and div:
+            students = safe_query("""
+                SELECT id, name, roll, prn 
+                FROM students 
+                WHERE TRIM(UPPER(division)) = %s
+                ORDER BY roll, name
+            """, (div.upper(),))
+            
         # 3. Match year, depts
         if not students and year:
             students = safe_query(f"""
