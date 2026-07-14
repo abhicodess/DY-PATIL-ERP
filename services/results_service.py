@@ -181,12 +181,14 @@ def write_audit_log(result_id, action, actor_id=None, notes=None):
     """
     Writes one row to results_audit_log.
     Silently swallows errors so audit failures never break the main flow.
+
+    Column mapping (DDL): performed_by=actor_id, performed_at=NOW(), reason=notes
     """
     try:
         from utils.pg_wrapper import exe
         exe(
             """
-            INSERT INTO results_audit_log (result_id, action, actor_id, notes, created_at)
+            INSERT INTO results_audit_log (result_id, action, performed_by, reason, performed_at)
             VALUES (%s, %s, %s, %s, NOW())
             """,
             (result_id, action, actor_id, notes)
