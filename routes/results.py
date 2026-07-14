@@ -1461,8 +1461,9 @@ def admin_approve_result():
     """Move result from verified -> approved (Principal/Admin/HOD approval). Only approved can be published."""
     rid = request.form.get("result_id", "")
     reason = request.form.get("reason", "").strip()
+    override = request.form.get("override", "") == "true"
     
-    existing = _qone("SELECT status, faculty_id FROM results WHERE id=%s", (rid,))
+    existing = _qone("SELECT * FROM results WHERE id=%s", (rid,))
     if not existing:
         flash("Result record not found.", "warning")
         return redirect("/admin_results")
@@ -1476,10 +1477,19 @@ def admin_approve_result():
         flash("You cannot self-approve results you entered yourself.", "danger")
         return redirect("/admin_results")
         
+    # Stage 7 Validation
+    if not override:
+        from services.results_service import validate_result_record_rules
+        is_valid, errors = validate_result_record_rules(existing)
+        if not is_valid:
+            flash(f"Validation Blocked Approval: {'; '.join(errors)}", "danger")
+            return redirect(f"/admin_results?confirm_override_id={rid}&reason={reason}")
+            
     _exe("UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE id=%s",
          (session.get("username"), rid))
     from services.results_service import write_audit_log
-    write_audit_log(rid, "approved", session.get("user_id"), reason or None)
+    audit_notes = (reason or "") + (" (Overridden)" if override else "")
+    write_audit_log(rid, "approved", session.get("user_id"), audit_notes or None)
     return redirect("/admin_results?approved=1")
 
 
@@ -1508,15 +1518,47 @@ def admin_bulk_verify():
     """Bulk verify all submitted results for a semester+dept."""
     semester = request.form.get("semester", "").strip()
     dept     = request.form.get("dept", "").strip()
+    override = request.form.get("override", "") == "true"
+    
     if not semester:
         flash("Semester is required.", "warning")
         return redirect("/admin_results")
+        
+    # Stage 7 Validation
+    if not override:
+        # Fetch candidate rows
+        find_sql = "SELECT * FROM results WHERE semester=%s AND status='submitted'"
+        find_params = [semester]
+        if dept:
+            find_sql += " AND department=%s"
+            find_params.append(dept)
+        candidates = _qry(find_sql, find_params) or []
+        
+        all_errors = []
+        from services.results_service import validate_result_record_rules
+        for r in candidates:
+            is_valid, errors = validate_result_record_rules(r)
+            if not is_valid:
+                all_errors.append(f"{r['student_name']} ({r['subject']}): {', '.join(errors)}")
+                
+        if all_errors:
+            flash(f"Validation Blocked Bulk Verification: {len(all_errors)} record(s) failed validation. First error: {all_errors[0]}", "danger")
+            return redirect(f"/admin_results?confirm_bulk_override=1&bulk_action=verify&semester={semester}&dept={dept}")
+
     sql = "UPDATE results SET status='verified', approved_by=%s, approved_at=NOW() WHERE semester=%s AND status='submitted'"
     params = [session.get("username"), semester]
     if dept:
         sql += " AND department=%s"
         params.append(dept)
     cur = _exe(sql, params)
+    
+    # Audit log each verified record
+    verified_ids = _qry("SELECT id FROM results WHERE semester=%s AND status='verified'" + (" AND department=%s" if dept else ""), ([semester, dept] if dept else [semester]))
+    from services.results_service import write_audit_log
+    audit_notes = "Bulk verified" + (" (Overridden)" if override else "")
+    for r in (verified_ids or []):
+        write_audit_log(r["id"], "verified", session.get("user_id"), audit_notes)
+        
     flash(f"{cur.rowcount} results verified.", "success")
     return redirect("/admin_results")
 
@@ -1527,10 +1569,38 @@ def admin_bulk_approve():
     """Bulk approve all verified results for a semester+dept."""
     semester = request.form.get("semester", "").strip()
     dept     = request.form.get("dept", "").strip()
+    override = request.form.get("override", "") == "true"
+    
     if not semester:
         flash("Semester is required.", "warning")
         return redirect("/admin_results")
         
+    # Faculty/HOD cannot self-approve their own entries
+    candidate_sql = "SELECT * FROM results WHERE semester=%s AND status='verified'"
+    candidate_params = [semester]
+    if dept:
+        candidate_sql += " AND department=%s"
+        candidate_params.append(dept)
+        
+    if session.get("role") == "faculty" and session.get("faculty_id"):
+        candidate_sql += " AND (faculty_id IS NULL OR faculty_id != %s)"
+        candidate_params.append(session.get("faculty_id"))
+        
+    candidates = _qry(candidate_sql, candidate_params) or []
+    
+    # Stage 7 Validation
+    if not override:
+        all_errors = []
+        from services.results_service import validate_result_record_rules
+        for r in candidates:
+            is_valid, errors = validate_result_record_rules(r)
+            if not is_valid:
+                all_errors.append(f"{r['student_name']} ({r['subject']}): {', '.join(errors)}")
+                
+        if all_errors:
+            flash(f"Validation Blocked Bulk Approval: {len(all_errors)} record(s) failed validation. First error: {all_errors[0]}", "danger")
+            return redirect(f"/admin_results?confirm_bulk_override=1&bulk_action=approve&semester={semester}&dept={dept}")
+
     sql = "UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE semester=%s AND status='verified'"
     params = [session.get("username"), semester]
     if dept:
@@ -1556,15 +1626,10 @@ def admin_bulk_approve():
     
     # Audit log
     if approved_count > 0:
-        ids_sql = "SELECT id FROM results WHERE semester=%s AND status='approved'"
-        ids_params = [semester]
-        if dept:
-            ids_sql += " AND department=%s"
-            ids_params.append(dept)
-        approved_ids = _qry(ids_sql, ids_params) or []
         from services.results_service import write_audit_log
-        for r in approved_ids:
-            write_audit_log(r["id"], "approved", session.get("user_id"), "Bulk approved")
+        audit_notes = "Bulk approved" + (" (Overridden)" if override else "")
+        for r in candidates:
+            write_audit_log(r["id"], "approved", session.get("user_id"), audit_notes)
             
     msg = f"{approved_count} results approved."
     if skipped > 0:

@@ -210,3 +210,79 @@ def write_audit_log(result_id, action, actor_id=None, notes=None):
     except Exception:
         pass
 
+
+def validate_result_record_rules(r):
+    """
+    Stage 7 validation check.
+    Returns: (is_valid, list_of_errors)
+    """
+    from services.results_service import get_components_for_subject
+    sub_info = get_components_for_subject(r["subject"], r.get("department"), r.get("semester"))
+    
+    errors = []
+    
+    # Map component names to column keys
+    mapping = {
+        "assignment": "assignment_marks",
+        "attendance": "attendance_marks",
+        "teacher assessment": "teaching_assessment",
+        "teaching assessment": "teaching_assessment",
+        "unit test": "ut_marks",
+        "mid-sem exam": "mse_marks",
+        "mid-sem": "mse_marks",
+        "mse": "mse_marks",
+        "term work": "tw_marks",
+        "practical/oral": "pr_or_marks",
+        "practical": "pr_or_marks",
+        "oral": "pr_or_marks"
+    }
+    
+    # Check is_absent
+    is_absent = r.get("is_absent", False)
+    
+    computed_sum = 0.0
+    
+    for comp in sub_info["components"]:
+        comp_name = comp["component_name"].lower()
+        col = mapping.get(comp_name)
+        if not col:
+            # Let's search by prefix/substring if not exact match
+            for k, v in mapping.items():
+                if k in comp_name or comp_name in k:
+                    col = v
+                    break
+        
+        if not col:
+            continue
+            
+        val = r.get(col)
+        max_marks = comp.get("max_marks") or 0.0
+        
+        # Check marks exceeding configured caps
+        if val is not None:
+            val_f = 0.0
+            try:
+                val_f = float(val)
+            except:
+                pass
+            if val_f > float(max_marks):
+                errors.append(f"Component '{comp['component_name']}' marks ({val}) exceeds max cap ({max_marks}).")
+            computed_sum += val_f
+        else:
+            # Check missing base components unless absent
+            if not is_absent and max_marks > 0:
+                errors.append(f"Missing base component '{comp['component_name']}' which is required.")
+                
+    # Check mismatched totals
+    db_marks = r.get("marks")
+    if db_marks is not None:
+        db_marks_f = 0.0
+        try:
+            db_marks_f = float(db_marks)
+        except:
+            pass
+        if abs(db_marks_f - computed_sum) > 0.01:
+            errors.append(f"Mismatched total: DB marks sum is {db_marks} but sum of components is {computed_sum}.")
+            
+    return len(errors) == 0, errors
+

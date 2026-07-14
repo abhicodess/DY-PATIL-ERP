@@ -175,6 +175,44 @@
 {% if request.args.get('imported') %}<div class="notice notice-ok mb16"><i class="fas fa-upload"></i> {{ request.args.get('imported') }} results imported, {{ request.args.get('skipped','0') }} skipped.</div>{% endif %}
 {% if request.args.get('error') %}<div class="notice notice-err mb16"><i class="fas fa-exclamation-circle"></i> Error: {{ request.args.get('error')|replace('_',' ')|title }}</div>{% endif %}
 
+{% if request.args.get('confirm_override_id') %}
+<div style="background:#FFFBEB; border-left:4px solid #F59E0B; padding:16px; border-radius:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+  <div>
+    <h4 style="color:#B45309; font-weight:700; margin-bottom:4px; font-size:14px;"><i class="fas fa-triangle-exclamation"></i> Approving with Overrides?</h4>
+    <p style="color:#78350F; font-size:13px; margin:0;">
+      The system detected validation warnings for this record. Would you like to force approval by overriding warnings?
+    </p>
+  </div>
+  <form method="post" action="/admin_approve_result" style="display:flex; gap:8px; margin:0;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="result_id" value="{{ request.args.get('confirm_override_id') }}">
+    <input type="hidden" name="reason" value="{{ request.args.get('reason','') }}">
+    <input type="hidden" name="override" value="true">
+    <a href="/admin_results" class="modern-btn modern-btn-outline" style="background:#fff; text-decoration:none; padding:8px 12px; font-size:12px; line-height:16px;">Cancel</a>
+    <button type="submit" class="modern-btn" style="background:#F59E0B; color:white; border:none; padding:8px 12px; font-size:12px; line-height:16px; font-weight:600;"><i class="fas fa-check"></i> Force Approve</button>
+  </form>
+</div>
+{% endif %}
+
+{% if request.args.get('confirm_bulk_override') %}
+<div style="background:#FFFBEB; border-left:4px solid #F59E0B; padding:16px; border-radius:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+  <div>
+    <h4 style="color:#B45309; font-weight:700; margin-bottom:4px; font-size:14px;"><i class="fas fa-triangle-exclamation"></i> Bulk Override Confirmation</h4>
+    <p style="color:#78350F; font-size:13px; margin:0;">
+      Some results in Semester <strong>{{ request.args.get('semester','') }}</strong> failed validation checks. Would you like to force the bulk operation anyway?
+    </p>
+  </div>
+  <form method="post" action="/admin_bulk_{{ request.args.get('bulk_action','verify') }}" style="display:flex; gap:8px; margin:0;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="semester" value="{{ request.args.get('semester','') }}">
+    <input type="hidden" name="dept" value="{{ request.args.get('dept','') }}">
+    <input type="hidden" name="override" value="true">
+    <a href="/admin_results" class="modern-btn modern-btn-outline" style="background:#fff; text-decoration:none; padding:8px 12px; font-size:12px; line-height:16px;">Cancel</a>
+    <button type="submit" class="modern-btn" style="background:#F59E0B; color:white; border:none; padding:8px 12px; font-size:12px; line-height:16px; font-weight:600;"><i class="fas fa-check"></i> Force Bulk {{ request.args.get('bulk_action','')|title }}</button>
+  </form>
+</div>
+{% endif %}
+
 <!-- HEADER BRAND -->
 <div class="brand-header">
   <div>
