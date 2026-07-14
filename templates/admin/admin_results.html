@@ -347,7 +347,7 @@
         </td>
         <td>
           <div style="display:flex; gap:8px;">
-            <button style="background:none; border:none; color:var(--ink3); cursor:pointer; font-size:14px; padding:4px;" title="Edit Component Details" onclick="openEdit({{ r.id }}, '{{ r.subject|replace("'","\\'") }}', '{{ r.semester }}', {{ r.assignment_marks|default(0) }}, {{ r.attendance_marks|default(0) }}, {{ r.teacher_assessment|default(0) }}, {{ r.ut_marks|default(0) }}, {{ r.mse_marks|default(0) }}, {{ r.tw_marks|default(0) }}, {{ r.pr_or_marks|default(0) }}, '{{ r.exam_type|replace("'","\\'") }}')"><i class="fas fa-pen-to-square"></i></button>
+            <button style="background:none; border:none; color:var(--ink3); cursor:pointer; font-size:14px; padding:4px;" title="Edit Component Details" onclick="openEdit(this, {{ r.id }}, '{{ r.subject|replace("'","\\'") }}', '{{ r.semester }}', {{ r.assignment_marks|default(0) }}, {{ r.attendance_marks|default(0) }}, {{ r.teacher_assessment|default(0) }}, {{ r.ut_marks|default(0) }}, {{ r.mse_marks|default(0) }}, {{ r.tw_marks|default(0) }}, {{ r.pr_or_marks|default(0) }}, '{{ r.exam_type|replace("'","\\'") }}')"><i class="fas fa-pen-to-square"></i></button>
             <button style="background:none; border:none; color:#DC2626; cursor:pointer; font-size:14px; padding:4px;" title="Delete" onclick="openDelete({{ r.id }}, '{{ r.student_name|replace("'","\\'") }}')"><i class="fas fa-trash-can"></i></button>
           </div>
         </td>
@@ -542,9 +542,138 @@
   </div>
 </div>
 
-<div id="copyMarksModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('copyMarksModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Copy Marks Placeholder</span><button onclick="closeModal('copyMarksModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
-<div id="summaryModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('summaryModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Compute Ranks Placeholder</span><button onclick="closeModal('summaryModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
-<div id="bulkDeleteModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('bulkDeleteModal')"><div class="modal-bx" style="max-width:400px;"><div class="modal-hd"><span>Bulk Delete Placeholder</span><button onclick="closeModal('bulkDeleteModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button></div></div></div>
+<!-- Copy Marks Modal -->
+<div id="copyMarksModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('copyMarksModal')">
+  <div class="modal-bx" style="max-width:450px;">
+    <div class="modal-hd">
+      <span><i class="fas fa-copy"></i> Copy Marks / Roll List</span>
+      <button onclick="closeModal('copyMarksModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_copy_marks">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <h4 style="font-weight:600; margin-bottom:12px; font-size:14px; color:var(--ink2);">Source Settings:</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label class="filter-label">Semester</label>
+            <select name="src_semester" class="filter-select" required>
+              {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">Subject</label>
+            <select name="src_subject" class="filter-select" required>
+              {% for sub in subjects %}<option value="{{ sub }}">{{ sub }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Exam Session</label>
+          <select name="src_exam_type" class="filter-select" required>
+            {% for et in exam_types %}<option value="{{ et }}">{{ et }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <h4 style="font-weight:600; margin-bottom:12px; font-size:14px; color:var(--ink2); border-top:1px dashed var(--border); padding-top:12px;">Destination Settings:</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label class="filter-label">Semester</label>
+            <select name="dest_semester" class="filter-select" required>
+              {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">Subject</label>
+            <select name="dest_subject" class="filter-select" required>
+              {% for sub in subjects %}<option value="{{ sub }}">{{ sub }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="filter-label">Exam Session</label>
+          <select name="dest_exam_type" class="filter-select" required>
+            {% for et in exam_types %}<option value="{{ et }}">{{ et }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('copyMarksModal')">Cancel</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-copy"></i> Copy Marks</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Compute Ranks Modal -->
+<div id="summaryModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('summaryModal')">
+  <div class="modal-bx" style="max-width:400px;">
+    <div class="modal-hd">
+      <span><i class="fas fa-calculator"></i> Compute Academic Ranks</span>
+      <button onclick="closeModal('summaryModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" action="/admin_compute_ranks">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="modal-content">
+        <p style="font-size:13px; color:var(--ink4); margin-bottom:16px;">
+          Calculates student rankings within the class (based on total average marks) and within each subject (based on subject marks) for the selected semester scope.
+        </p>
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Semester</label>
+          <select name="semester" class="filter-select" required>
+            <option value="">Select Semester</option>
+            {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Department (Optional)</label>
+          <select name="dept" class="filter-select">
+            <option value="">All Departments</option>
+            {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('summaryModal')">Cancel</button>
+        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-calculator"></i> Calculate Ranks</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div id="bulkDeleteModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('bulkDeleteModal')">
+  <div class="modal-bx" style="max-width:400px;">
+    <div class="modal-hd" style="color:#DC2626;">
+      <span><i class="fas fa-trash-can"></i> Bulk Delete Academic Records</span>
+      <button onclick="closeModal('bulkDeleteModal')" style="background:none; border:none; font-size:20px; color:var(--ink4); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="get" action="/admin_bulk_delete_preview">
+      <div class="modal-content">
+        <p style="font-size:13px; color:var(--ink4); margin-bottom:16px;">
+          Select the semester and department scope to purge academic records. You will review a count of affected records before deletion.
+        </p>
+        <div style="margin-bottom:16px;">
+          <label class="filter-label">Semester</label>
+          <select name="semester" class="filter-select" required>
+            <option value="">Select Semester</option>
+            {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="filter-label">Department (Optional)</label>
+          <select name="dept" class="filter-select">
+            <option value="">All Departments</option>
+            {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="modern-btn modern-btn-outline" onclick="closeModal('bulkDeleteModal')">Cancel</button>
+        <button type="submit" class="modern-btn" style="background:#DC2626; color:white;"><i class="fas fa-trash-can"></i> Preview Bulk Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="deleteModal" class="modal-ov" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;" onclick="if(event.target===this)closeModal('deleteModal')">
   <div class="modal-bx" style="max-width:380px;">
     <div class="modal-hd" style="color:#DC2626; border-bottom-color:#fecaca; background:#fef2f2;">
@@ -569,10 +698,14 @@
 {% block extra_js %}
 <script>
 function openModal(id){
-  document.getElementById(id).style.display='flex';
+  var m = document.getElementById(id);
+  m.style.display='flex';
 }
 function closeModal(id){
-  document.getElementById(id).style.display='none';
+  var m = document.getElementById(id);
+  m.style.display='none';
+  m.style.alignItems = '';
+  m.style.justifyContent = '';
 }
 function togglePublishScopeFields() {
   const scope = document.getElementById("publishScope").value;
@@ -616,7 +749,12 @@ function handlePublishSubmit(event) {
   return true;
 }
 
-function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
+function openEdit(btn, id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
+  var modal = document.getElementById('editModal');
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+  
   document.getElementById('edit_id').value = id;
   document.getElementById('edit_subject').value = subject;
   
@@ -634,7 +772,39 @@ function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or,
   var es = document.getElementById('edit_examtype');
   for(var o of es.options) o.selected = (o.value === examtype);
   
-  openModal('editModal');
+  // Display modal and set contextual positioning alignment
+  modal.style.display = 'block';
+  modal.style.alignItems = 'flex-start';
+  modal.style.justifyContent = 'flex-start';
+  
+  var box = modal.querySelector('.modal-bx');
+  var rect = btn.getBoundingClientRect();
+  var boxHeight = box.offsetHeight || 500;
+  
+  var targetTop = rect.top - (boxHeight / 2) + (rect.height / 2);
+  var minTop = 80;
+  var maxTop = window.innerHeight - boxHeight - 20;
+  
+  if (targetTop < minTop) targetTop = minTop;
+  if (targetTop > maxTop) targetTop = maxTop;
+  
+  box.style.position = 'absolute';
+  box.style.top = targetTop + 'px';
+  box.style.margin = '0';
+  
+  // Align horizontally with the clicked button (right-aligned with edit column)
+  var rightPos = window.innerWidth - rect.right;
+  if (window.innerWidth < 600) {
+    box.style.left = '50%';
+    box.style.right = 'auto';
+    box.style.transform = 'translateX(-50%)';
+    box.style.width = 'calc(100% - 40px)';
+  } else {
+    box.style.left = 'auto';
+    box.style.right = rightPos + 'px';
+    box.style.transform = 'none';
+    box.style.width = '550px'; // modal-bx width max-width is 550px
+  }
 }
 function openDelete(id, name){
   document.getElementById('del_id').value = id;
@@ -642,7 +812,7 @@ function openDelete(id, name){
   openModal('deleteModal');
 }
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape') document.querySelectorAll('.modal-ov').forEach(function(m){m.style.display='none';});
+  if(e.key==='Escape') document.querySelectorAll('.modal-ov').forEach(function(m){closeModal(m.id);});
 });
 </script>
 {% endblock %}

@@ -1,0 +1,63 @@
+﻿{% extends "common/base.html" %}
+{% block title %}Confirm Bulk Delete{% endblock %}
+{% block page_title %}Confirm Bulk Delete{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/admin_results">Results</a> / Bulk Delete{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);">
+  <h2 style="font-size: 20px; font-weight: 700; color: #DC2626; margin-bottom: 8px;">
+    <i class="fas fa-triangle-exclamation" style="margin-right: 8px;"></i>
+    Irreversible Bulk Delete Request
+  </h2>
+  <p style="color: var(--ink4); margin-bottom: 24px; font-size: 14px;">
+    You are about to purge academic result records in bulk. This action cannot be undone. Please review the counts carefully.
+  </p>
+
+  <div style="margin-bottom: 20px; padding: 12px 16px; background: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 4px; font-size: 14px; color: #991B1B;">
+    <strong>Target Scope:</strong> Semester: {{ semester }} {% if department %} | Department: {{ department }} {% endif %}
+    <br>
+    <strong>Records to be Deleted:</strong> {{ count }} record(s)
+  </div>
+
+  {% if count > 0 %}
+  <form method="post" action="/admin_bulk_delete_execute" onsubmit="return validateSafety()" style="margin-top: 24px;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="semester" value="{{ semester }}">
+    <input type="hidden" name="dept" value="{{ department }}">
+
+    <div style="margin-bottom: 20px;">
+      <label class="filter-label" style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--ink);">
+        To confirm safety, please type the word <strong style="color: #DC2626;">DELETE</strong> below:
+      </label>
+      <input type="text" id="safetyWord" name="safety_word" class="filter-select" placeholder="DELETE" required style="border-color: #FCA5A5; font-weight: bold; text-align: center; font-size: 16px;">
+    </div>
+
+    <div style="display: flex; gap: 16px; justify-content: flex-end;">
+      <a href="/admin_results" class="modern-btn modern-btn-outline" style="text-decoration: none; padding: 10px 20px; line-height: 20px;">
+        <i class="fas fa-times"></i> Cancel
+      </a>
+      <button type="submit" class="modern-btn" style="background: #DC2626; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 6px; font-weight: 600;">
+        <i class="fas fa-trash-can"></i> Yes, Permanently Delete {{ count }} Records
+      </button>
+    </div>
+  </form>
+  
+  <script>
+  function validateSafety() {
+    var word = document.getElementById("safetyWord").value.trim();
+    if (word !== "DELETE") {
+      alert("You must type the word DELETE exactly to confirm deletion.");
+      return false;
+    }
+    return true;
+  }
+  </script>
+  {% else %}
+  <div style="display: flex; gap: 16px; justify-content: flex-end; margin-top: 24px;">
+    <a href="/admin_results" class="modern-btn modern-btn-primary" style="text-decoration: none; padding: 10px 20px; line-height: 20px;">
+      Return to Results
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1836,204 +1836,251 @@ def export_results_excel():
     return results_export_excel()
 
 @results_bp.route("/admin_copy_marks", methods=["POST"])
-@admin_required
+@hod_or_admin_required
 def admin_copy_marks():
     roll = request.form.get("roll", "").strip()
-    src_sem = request.form.get("src_sem", "").strip()
+    src_sem = (request.form.get("src_semester") or request.form.get("src_sem") or "").strip()
     src_sub = request.form.get("src_subject", "").strip()
     src_exam = request.form.get("src_exam_type", "").strip()
     
-    dest_sem = request.form.get("dest_sem", "").strip()
+    dest_sem = (request.form.get("dest_semester") or request.form.get("dest_sem") or "").strip()
     dest_sub = request.form.get("dest_subject", "").strip()
     dest_exam = request.form.get("dest_exam_type", "").strip()
     
-    if not (roll and src_sem and src_sub and src_exam and dest_sem and dest_sub and dest_exam):
-        flash("All fields are required to copy marks.", "error")
+    if not (src_sem and src_sub and src_exam and dest_sem and dest_sub and dest_exam):
+        flash("Source and Destination details are required to copy marks.", "error")
         return redirect("/admin_results")
         
-    # Find source marks record
-    src_result = _qone("""
-        SELECT * FROM results 
-        WHERE roll = %s AND semester = %s AND subject = %s AND exam_type = %s
-    """, (roll, src_sem, src_sub, src_exam))
-    
-    if not src_result:
-        flash(f"No source marks found for Roll {roll}, Subject '{src_sub}', {src_exam} (Sem {src_sem}).", "error")
+    # Query source results
+    sql_src = "SELECT * FROM results WHERE semester = %s AND subject = %s AND exam_type = %s"
+    params_src = [src_sem, src_sub, src_exam]
+    if roll:
+        sql_src += " AND roll = %s"
+        params_src.append(roll)
+        
+    src_results = _qry(sql_src, params_src) or []
+    if not src_results:
+        flash("No source marks found matching the criteria.", "error")
         return redirect("/admin_results")
         
-    # Upgrade: look up from subject_mark_components
-    from services.results_service import get_components_for_subject
-    sub_info = get_components_for_subject(dest_sub, src_result["department"], dest_sem)
-    dest_total = sub_info["max_total"]
+    from services.results_service import get_components_for_subject, write_audit_log, calculate_result
     
-    # Calculate grade and result based on destination subject's max_total
-    dest_marks = min(src_result["marks"] or 0.0, dest_total)
-    pct_val = (dest_marks / dest_total * 100.0) if dest_total > 0 else 0.0
-    dest_grade, _, _ = calc_grade(pct_val)
-    dest_res = "Pass" if pct_val >= 40 else "Fail"
-    
-    # Check if a destination result record already exists
-    dest_result = _qone("""
-        SELECT id FROM results 
-        WHERE roll = %s AND semester = %s AND subject = %s AND exam_type = %s
-    """, (roll, dest_sem, dest_sub, dest_exam))
-    
-    if dest_result:
-        _exe("""
-            UPDATE results 
-            SET marks = %s, total = %s, grade = %s, result = %s,
-                assignment_marks = %s, attendance_marks = %s, ut_marks = %s, mse_marks = %s,
-                teaching_assessment = %s, tw_marks = %s, pr_or_marks = %s, status = 'draft'
-            WHERE id = %s
-        """, (dest_marks, dest_total, dest_grade, dest_res,
-              src_result["assignment_marks"], src_result["attendance_marks"], src_result["ut_marks"], src_result["mse_marks"],
-              src_result["teaching_assessment"], src_result["tw_marks"], src_result["pr_or_marks"], dest_result["id"]))
-    else:
-        _exe("""
-            INSERT INTO results (student_name, roll, department, year, semester, subject,
-                                marks, total, exam_type, grade, result, published, status,
-                                assignment_marks, attendance_marks, ut_marks, mse_marks,
-                                teaching_assessment, tw_marks, pr_or_marks)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'draft', %s, %s, %s, %s, %s, %s, %s)
-        """, (src_result["student_name"], roll, src_result["department"], src_result["year"], dest_sem, dest_sub,
-              dest_marks, dest_total, dest_exam, dest_grade, dest_res,
-              src_result["assignment_marks"], src_result["attendance_marks"], src_result["ut_marks"], src_result["mse_marks"],
-              src_result["teaching_assessment"], src_result["tw_marks"], src_result["pr_or_marks"]))
-              
-    flash(f"Successfully copied marks for student {src_result['student_name']} (Roll {roll}) to Sem {dest_sem} - {dest_sub} ({dest_exam}).", "success")
+    copied = 0
+    for src_r in src_results:
+        student_roll = src_r["roll"]
+        dept = src_r["department"]
+        
+        # Look up destination component specs
+        sub_info = get_components_for_subject(dest_sub, dept, dest_sem)
+        dest_total = sub_info["max_total"]
+        comp_caps = {c["component_name"].lower(): c["max_marks"] for c in sub_info["components"]}
+        
+        # Cap each source component mark to destination component limit
+        dest_assign = min(src_r["assignment_marks"] or 0.0, comp_caps.get("assignment", 5.0))
+        dest_attend = min(src_r["attendance_marks"] or 0.0, comp_caps.get("attendance", 5.0))
+        dest_ta     = min(src_r["teaching_assessment"] or 0.0, comp_caps.get("teacher assessment", 10.0))
+        dest_ut     = min(src_r["ut_marks"] or 0.0, comp_caps.get("unit test", 20.0))
+        dest_mse    = min(src_r["mse_marks"] or 0.0, comp_caps.get("mid-sem exam", 20.0))
+        dest_tw     = min(src_r["tw_marks"] or 0.0, comp_caps.get("term work", 0.0))
+        dest_pr     = min(src_r["pr_or_marks"] or 0.0, comp_caps.get("practical/oral", 0.0))
+        
+        # Calculate grade/result
+        dest_marks, dest_grade, dest_res, passed = calculate_result(
+            assignment=dest_assign, attendance=dest_attend, teaching=dest_ta,
+            ut=dest_ut, mse=dest_mse, tw=dest_tw, pr_or=dest_pr,
+            max_total=dest_total, is_absent=src_r["is_absent"]
+        )
+        
+        # Check if already exists in destination
+        dest_r = _qone("""
+            SELECT id FROM results 
+            WHERE roll = %s AND semester = %s AND subject = %s AND exam_type = %s
+        """, (student_roll, dest_sem, dest_sub, dest_exam))
+        
+        if dest_r:
+            _exe("""
+                UPDATE results 
+                SET marks = %s, total = %s, grade = %s, result = %s,
+                    assignment_marks = %s, attendance_marks = %s, ut_marks = %s, mse_marks = %s,
+                    teaching_assessment = %s, tw_marks = %s, pr_or_marks = %s, status = 'draft', is_absent = %s
+                WHERE id = %s
+            """, (dest_marks, dest_total, dest_grade, dest_res,
+                  dest_assign, dest_attend, dest_ut, dest_mse,
+                  dest_ta, dest_tw, dest_pr, src_r["is_absent"], dest_r["id"]))
+            write_audit_log(dest_r["id"], "edited", session.get("user_id"), f"Copied from {src_sub} ({src_exam})")
+        else:
+            _exe("""
+                INSERT INTO results (student_name, roll, department, year, semester, subject,
+                                    marks, total, exam_type, grade, result, published, status,
+                                    assignment_marks, attendance_marks, ut_marks, mse_marks,
+                                    teaching_assessment, tw_marks, pr_or_marks, is_absent)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 'draft', %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (src_r["student_name"], student_roll, dept, src_r["year"], dest_sem, dest_sub,
+                  dest_marks, dest_total, dest_exam, dest_grade, dest_res,
+                  dest_assign, dest_attend, dest_ut, dest_mse,
+                  dest_ta, dest_tw, dest_pr, src_r["is_absent"]))
+            new_r = _qone("SELECT id FROM results WHERE roll=%s AND subject=%s AND semester=%s ORDER BY id DESC LIMIT 1",
+                          (student_roll, dest_sub, dest_sem))
+            if new_r:
+                write_audit_log(new_r["id"], "created", session.get("user_id"), f"Copied from {src_sub} ({src_exam})")
+        copied += 1
+        
+    flash(f"Successfully copied marks for {copied} record(s) to Sem {dest_sem} - {dest_sub} ({dest_exam}) as drafts.", "success")
     return redirect("/admin_results")
 
 
-@results_bp.route("/admin_compute_ranks")
-@admin_required
+@results_bp.route("/admin_compute_ranks", methods=["POST"])
+@hod_or_admin_required
 def admin_compute_ranks():
-    dept = request.args.get("dept", "").strip()
-    semester = request.args.get("semester", "").strip()
-    subject = request.args.get("subject", "").strip()
-    
-    sql = "SELECT * FROM results WHERE 1=1"
-    params = []
-    if dept:
-        sql += " AND department = %s"
-        params.append(dept)
-    if semester:
-        sql += " AND semester = %s"
-        params.append(semester)
-    if subject:
-        sql += " AND subject = %s"
-        params.append(subject)
-        
-    rows = _qry(sql, params)
-    if not rows:
-        return jsonify({"success": True, "ranks": []})
-        
-    # Group by student (roll, name)
-    student_map = {}
-    for r in rows:
-        key = (r["roll"], r["student_name"])
-        if key not in student_map:
-            student_map[key] = {
-                "roll": r["roll"] or "N/A",
-                "name": r["student_name"],
-                "obtained": 0.0,
-                "total": 0.0,
-            }
-        student_map[key]["obtained"] += r["marks"] or 0.0
-        student_map[key]["total"] += r["total"] or 0.0
-        
-    # Compute percentage
-    student_list = []
-    for key, s in student_map.items():
-        pct_val = (s["obtained"] / s["total"] * 100.0) if s["total"] > 0 else 0.0
-        student_list.append({
-            "roll": s["roll"],
-            "name": s["name"],
-            "obtained": round(s["obtained"], 2),
-            "total": round(s["total"], 2),
-            "percentage": round(pct_val, 2)
-        })
-        
-    # Sort by percentage descending
-    student_list.sort(key=lambda x: x["percentage"], reverse=True)
-    
-    # Assign ranks with tie handling
-    ranked_list = []
-    current_rank = 0
-    prev_pct = -1
-    for i, s in enumerate(student_list):
-        if s["percentage"] != prev_pct:
-            current_rank = i + 1
-            prev_pct = s["percentage"]
-        ranked_list.append({
-            "rank": current_rank,
-            **s
-        })
-
-    # Write computed ranks back to DB (rank_in_subject if filtered by subject, else rank_in_class)
-    rank_col = "rank_in_subject" if subject else "rank_in_class"
-    for item in ranked_list:
-        _exe(
-            f"UPDATE results SET {rank_col}=%s WHERE roll=%s AND semester=%s"
-            + (" AND subject=%s" if subject else ""),
-            ([item["rank"], item["roll"], semester] + ([subject] if subject else [])) if semester
-            else [item["rank"], item["roll"]] + ([semester, subject] if subject else [])
-        )
-
-    return jsonify({"success": True, "ranks": ranked_list})
-
-
-@results_bp.route("/admin_bulk_delete_results", methods=["POST"])
-@admin_required
-def admin_bulk_delete_results():
-    dept = request.form.get("dept", "").strip()
     semester = request.form.get("semester", "").strip()
-    year = request.form.get("year", "").strip()
-    q = request.form.get("q", "").strip()
-    published = request.form.get("published", "").strip()
-    exam_type = request.form.get("exam_type", "").strip()
+    dept     = request.form.get("dept", "").strip()
     
-    sql = "DELETE FROM results WHERE 1=1"
-    params = []
+    if not semester:
+        flash("Semester is required to compute ranks.", "warning")
+        return redirect("/admin_results")
+        
+    # 1. Compute Subject Ranks
+    # Fetch unique subjects
+    sub_sql = "SELECT DISTINCT subject FROM results WHERE semester = %s"
+    sub_params = [semester]
+    if dept:
+        sub_sql += " AND department = %s"
+        sub_params.append(dept)
+        
+    subjects_list = _qry(sub_sql, sub_params) or []
+    subject_ranks_calculated = 0
+    
+    for s_row in subjects_list:
+        subj = s_row["subject"]
+        # Fetch results ordered by marks DESC
+        res_sql = "SELECT id, marks FROM results WHERE semester=%s AND subject=%s AND is_absent=False"
+        res_params = [semester, subj]
+        if dept:
+            res_sql += " AND department=%s"
+            res_params.append(dept)
+        res_sql += " ORDER BY marks DESC"
+        
+        rows = _qry(res_sql, res_params) or []
+        
+        # Assign Subject Ranks
+        current_rank = 0
+        last_marks = None
+        for idx, row in enumerate(rows):
+            if row["marks"] != last_marks:
+                current_rank = idx + 1
+                last_marks = row["marks"]
+            _exe("UPDATE results SET rank_in_subject=%s WHERE id=%s", (current_rank, row["id"]))
+            subject_ranks_calculated += 1
+            
+    # 2. Compute Class Ranks
+    # Group total marks and subject counts per student
+    std_sql = """
+        SELECT roll, student_name, SUM(marks) as total_marks, COUNT(subject) as subjects_count
+        FROM results
+        WHERE semester=%s AND is_absent=False
+    """
+    std_params = [semester]
+    if dept:
+        std_sql += " AND department=%s"
+        std_params.append(dept)
+    std_sql += " GROUP BY roll, student_name"
+    
+    students_list = _qry(std_sql, std_params) or []
+    
+    # Calculate average and sort
+    sorted_students = []
+    for std in students_list:
+        avg_marks = (std["total_marks"] / std["subjects_count"]) if std["subjects_count"] > 0 else 0.0
+        sorted_students.append({
+            "roll": std["roll"],
+            "name": std["student_name"],
+            "avg": avg_marks
+        })
+    sorted_students.sort(key=lambda x: x["avg"], reverse=True)
+    
+    # Assign Class Ranks
+    class_ranks_calculated = 0
+    current_class_rank = 0
+    last_avg = None
+    for idx, std in enumerate(sorted_students):
+        if std["avg"] != last_avg:
+            current_class_rank = idx + 1
+            last_avg = std["avg"]
+            
+        update_class_sql = "UPDATE results SET rank_in_class=%s WHERE semester=%s AND roll=%s"
+        update_class_params = [current_class_rank, semester, std["roll"]]
+        if dept:
+            update_class_sql += " AND department=%s"
+            update_class_params.append(dept)
+            
+        _exe(update_class_sql, update_class_params)
+        class_ranks_calculated += 1
+        
+    flash(f"Computed ranks successfully: updated subject ranks for {subject_ranks_calculated} records and class ranks for {class_ranks_calculated} students.", "success")
+    return redirect("/admin_results")
+
+
+@results_bp.route("/admin_bulk_delete_preview", methods=["GET"])
+@hod_or_admin_required
+def admin_bulk_delete_preview():
+    semester = request.args.get("semester", "").strip()
+    dept     = request.args.get("dept", "").strip()
+    
+    if not semester:
+        flash("Semester is required.", "warning")
+        return redirect("/admin_results")
+        
+    sql = "SELECT COUNT(*) as c FROM results WHERE semester=%s"
+    params = [semester]
     if dept:
         sql += " AND department=%s"
         params.append(dept)
-    if semester:
-        sql += " AND semester=%s"
-        params.append(semester)
-    if year:
-        sql += " AND year=%s"
-        params.append(year)
-    if q:
-        sql += " AND (student_name ILIKE %s OR roll ILIKE %s)"
-        params += [f"%{q}%", f"%{q}%"]
-    if published != "":
-        sql += " AND published=%s"
-        params.append(int(published))
-    if exam_type:
-        sql += " AND exam_type=%s"
-        params.append(exam_type)
         
-    # Fetch IDs for audit before deletion
-    id_sql = "SELECT id FROM results WHERE 1=1"
-    id_params = []
-    if dept: id_sql += " AND department=%s"; id_params.append(dept)
-    if semester: id_sql += " AND semester=%s"; id_params.append(semester)
-    if year: id_sql += " AND year=%s"; id_params.append(year)
-    if q:
-        id_sql += " AND (student_name ILIKE %s OR roll ILIKE %s)"
-        id_params += [f"%{q}%", f"%{q}%"]
-    if published != "": id_sql += " AND published=%s"; id_params.append(int(published))
-    if exam_type: id_sql += " AND exam_type=%s"; id_params.append(exam_type)
+    count = _qone(sql, params)["c"] or 0
+    return render_template("admin/bulk_delete_confirm.html", semester=semester, department=dept, count=count)
+
+
+@results_bp.route("/admin_bulk_delete_execute", methods=["POST"])
+@hod_or_admin_required
+def admin_bulk_delete_execute():
+    semester = request.form.get("semester", "").strip()
+    dept     = request.form.get("dept", "").strip()
+    safety_word = request.form.get("safety_word", "").strip()
+    
+    if safety_word != "DELETE":
+        flash("Safety word mismatch. Bulk delete aborted.", "danger")
+        return redirect("/admin_results")
+        
+    if not semester:
+        flash("Semester is required.", "warning")
+        return redirect("/admin_results")
+        
+    # Get IDs for audit before deletion
+    id_sql = "SELECT id FROM results WHERE semester=%s"
+    id_params = [semester]
+    if dept:
+        id_sql += " AND department=%s"
+        id_params.append(dept)
     to_delete = _qry(id_sql, id_params) or []
-
-    cur = _exe(sql, params)
+    
+    if not to_delete:
+        flash("No records found to delete.", "warning")
+        return redirect("/admin_results")
+        
+    # Delete results
+    del_sql = "DELETE FROM results WHERE semester=%s"
+    del_params = [semester]
+    if dept:
+        del_sql += " AND department=%s"
+        del_params.append(dept)
+    cur = _exe(del_sql, del_params)
     deleted_count = cur.rowcount
-
+    
     from services.results_service import write_audit_log
     for row in to_delete:
-        write_audit_log(row["id"], "deleted", session.get("user_id"), "bulk delete")
-
-    flash(f"Successfully deleted {deleted_count} results matching the current filter selection.", "success")
+        write_audit_log(row["id"], "deleted", session.get("user_id"), f"Bulk delete semester {semester}")
+        
+    flash(f"Successfully bulk deleted {deleted_count} academic records.", "success")
     return redirect("/admin_results")
 
 

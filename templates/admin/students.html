@@ -294,7 +294,45 @@ function closeAddModal() { document.getElementById('addStudentModal').classList.
 
 // ── EDIT MODAL ──────────────────────────────────────────
 function openEdit(btn){
-  document.getElementById('editModal').classList.add('show');
+  var modal = document.getElementById('editModal');
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+  modal.classList.add('show');
+  
+  // Custom alignment
+  modal.style.display = 'block';
+  modal.style.alignItems = 'flex-start';
+  modal.style.justifyContent = 'flex-start';
+  
+  var box = modal.querySelector('.modal-box');
+  var rect = btn.getBoundingClientRect();
+  var boxHeight = box.offsetHeight || 380;
+  
+  var targetTop = rect.top - (boxHeight / 2) + (rect.height / 2);
+  var minTop = 80;
+  var maxTop = window.innerHeight - boxHeight - 20;
+  
+  if (targetTop < minTop) targetTop = minTop;
+  if (targetTop > maxTop) targetTop = maxTop;
+  
+  box.style.position = 'absolute';
+  box.style.top = targetTop + 'px';
+  box.style.margin = '0';
+  
+  var rightPos = window.innerWidth - rect.right;
+  if (window.innerWidth < 600) {
+    box.style.left = '50%';
+    box.style.right = 'auto';
+    box.style.transform = 'translateX(-50%)';
+    box.style.width = 'calc(100% - 40px)';
+  } else {
+    box.style.left = 'auto';
+    box.style.right = rightPos + 'px';
+    box.style.transform = 'none';
+    box.style.width = '480px';
+  }
+
   var d = btn.dataset;
   document.getElementById('eid').value=d.id;
   document.getElementById('en').value=d.name;
@@ -310,7 +348,11 @@ function openEdit(btn){
   if(document.getElementById('eaddress')) document.getElementById('eaddress').value = d.address || '';
   if(document.getElementById('eadm')) document.getElementById('eadm').value = d.adm || '';
 }
-function closeModal(){document.getElementById('editModal').classList.remove('show');}
+function closeModal(){
+  var modal = document.getElementById('editModal');
+  modal.classList.remove('show');
+  modal.style.display = '';
+}
 document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.getElementById('impStudSmart').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 

@@ -64,7 +64,7 @@
               <td style="text-align: right; padding-right: 20px;">
                 <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
                   <!-- Edit Button -->
-                  <button class="btn btn-out btn-sm" onclick="openEdit('{{ r.id }}', '{{ r.division }}', '{{ r.semester }}', '{{ r.department }}', '{{ r.day }}', '{{ r.time_slot }}', '{{ r.subject }}', '{{ r.room }}')" title="Edit request details">
+                  <button class="btn btn-out btn-sm" onclick="openEdit(this, '{{ r.id }}', '{{ r.division }}', '{{ r.semester }}', '{{ r.department }}', '{{ r.day }}', '{{ r.time_slot }}', '{{ r.subject }}', '{{ r.room }}')" title="Edit request details">
                     <i class="fa-solid fa-pen-to-square"></i> Edit
                   </button>
                   <!-- Approve Button -->
@@ -185,7 +185,9 @@ function M(id) {
   document.getElementById(id).classList.add('show');
 }
 function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
+  var m = document.getElementById(id);
+  m.classList.remove('show');
+  m.style.display = '';
 }
 
 // Close modal when clicking outside
@@ -317,7 +319,12 @@ function rejectRequest(id) {
 }
 
 // Open Edit Modal with Request Data
-function openEdit(id, division, semester, department, day, time_slot, subject, room) {
+function openEdit(btn, id, division, semester, department, day, time_slot, subject, room) {
+  var modal = document.getElementById('editModal');
+  if (modal && modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+  
   document.getElementById('edit-id').value = id;
   document.getElementById('edit-division').value = division;
   document.getElementById('edit-semester').value = semester;
@@ -326,7 +333,41 @@ function openEdit(id, division, semester, department, day, time_slot, subject, r
   document.getElementById('edit-time_slot').value = time_slot;
   document.getElementById('edit-subject').value = subject;
   document.getElementById('edit-room').value = room;
-  M('editModal');
+  
+  modal.classList.add('show');
+  
+  // Custom alignment
+  modal.style.display = 'block';
+  modal.style.alignItems = 'flex-start';
+  modal.style.justifyContent = 'flex-start';
+  
+  var box = modal.querySelector('.modal-box');
+  var rect = btn.getBoundingClientRect();
+  var boxHeight = box.offsetHeight || 380;
+  
+  var targetTop = rect.top - (boxHeight / 2) + (rect.height / 2);
+  var minTop = 80;
+  var maxTop = window.innerHeight - boxHeight - 20;
+  
+  if (targetTop < minTop) targetTop = minTop;
+  if (targetTop > maxTop) targetTop = maxTop;
+  
+  box.style.position = 'absolute';
+  box.style.top = targetTop + 'px';
+  box.style.margin = '0';
+  
+  var rightPos = window.innerWidth - rect.right;
+  if (window.innerWidth < 600) {
+    box.style.left = '50%';
+    box.style.right = 'auto';
+    box.style.transform = 'translateX(-50%)';
+    box.style.width = 'calc(100% - 40px)';
+  } else {
+    box.style.left = 'auto';
+    box.style.right = rightPos + 'px';
+    box.style.transform = 'none';
+    box.style.width = '480px';
+  }
 }
 
 // AJAX: Edit Form Submission

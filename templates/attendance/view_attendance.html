@@ -375,7 +375,7 @@
                 </span>
               </td>
               <td style="text-align: right;">
-                <button class="btn btn-ghost btn-sm" onclick='openEdit("{{ r.id }}", "{{ r.student_name|e }}", "{{ r.subject|e }}", "{{ r.date }}", "{{ r.status }}", "{{ (r.remark or "")|e }}")'>
+                <button class="btn btn-ghost btn-sm" onclick='openEdit(this, "{{ r.id }}", "{{ r.student_name|e }}", "{{ r.subject|e }}", "{{ r.date }}", "{{ r.status }}", "{{ (r.remark or "")|e }}")'>
                   <i class="fas fa-sliders" style="font-size: 16px; color: var(--primary);"></i>
                 </button>
               </td>
