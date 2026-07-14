@@ -1283,9 +1283,14 @@ def admin_results():
     if not exam_types:
         exam_types = ["Semester Exam", "Internal Assessment", "Re-evaluation"]
 
+    # Fetch unique subjects for the publish modal
+    subjects = [r["subject_name"] for r in _qry("SELECT DISTINCT subject_name FROM subjects_master ORDER BY subject_name")]
+    if not subjects:
+        subjects = [r["subject"] for r in _qry("SELECT DISTINCT subject FROM results ORDER BY subject")]
+
     return render_template("admin/admin_results.html",
         results=results_list, dept=dept, semester=semester, year=year,
-        q=q, published=published, exam_type=exam_type, exam_types=exam_types,
+        q=q, published=published, exam_type=exam_type, exam_types=exam_types, subjects=subjects,
         total_r=total_r, published_r=published_r, pass_r=pass_r, fail_r=fail_r,
         DEPARTMENTS=DEPARTMENTS, SEMESTERS=SEMESTERS, YEARS=YEARS)
 
@@ -1451,15 +1456,26 @@ def admin_verify_result():
 
 
 @results_bp.route("/admin_approve_result", methods=["POST"])
-@admin_required
+@hod_or_admin_required
 def admin_approve_result():
-    """Move result from verified -> approved (Principal/Admin approval). Only approved can be published."""
+    """Move result from verified -> approved (Principal/Admin/HOD approval). Only approved can be published."""
     rid = request.form.get("result_id", "")
     reason = request.form.get("reason", "").strip()
-    existing = _qone("SELECT status FROM results WHERE id=%s", (rid,))
-    if not existing or existing["status"] not in ("verified",):
+    
+    existing = _qone("SELECT status, faculty_id FROM results WHERE id=%s", (rid,))
+    if not existing:
+        flash("Result record not found.", "warning")
+        return redirect("/admin_results")
+        
+    if existing["status"] not in ("verified",):
         flash("Only verified results can be approved.", "warning")
         return redirect("/admin_results")
+        
+    # Regular faculty cannot self-approve their own entries
+    if session.get("role") == "faculty" and existing["faculty_id"] == session.get("faculty_id"):
+        flash("You cannot self-approve results you entered yourself.", "danger")
+        return redirect("/admin_results")
+        
     _exe("UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE id=%s",
          (session.get("username"), rid))
     from services.results_service import write_audit_log
@@ -1506,7 +1522,7 @@ def admin_bulk_verify():
 
 
 @results_bp.route("/admin_bulk_approve", methods=["POST"])
-@admin_required
+@hod_or_admin_required
 def admin_bulk_approve():
     """Bulk approve all verified results for a semester+dept."""
     semester = request.form.get("semester", "").strip()
@@ -1514,13 +1530,46 @@ def admin_bulk_approve():
     if not semester:
         flash("Semester is required.", "warning")
         return redirect("/admin_results")
+        
     sql = "UPDATE results SET status='approved', approved_by=%s, approved_at=NOW() WHERE semester=%s AND status='verified'"
     params = [session.get("username"), semester]
     if dept:
         sql += " AND department=%s"
         params.append(dept)
+        
+    # Faculty/HOD cannot self-approve their own entries
+    skipped = 0
+    if session.get("role") == "faculty" and session.get("faculty_id"):
+        # Let's count how many would be skipped
+        count_sql = "SELECT COUNT(*) as c FROM results WHERE semester=%s AND status='verified' AND faculty_id=%s"
+        count_params = [semester, session.get("faculty_id")]
+        if dept:
+            count_sql += " AND department=%s"
+            count_params.append(dept)
+        skipped = _qone(count_sql, count_params)["c"] or 0
+        
+        sql += " AND (faculty_id IS NULL OR faculty_id != %s)"
+        params.append(session.get("faculty_id"))
+        
     cur = _exe(sql, params)
-    flash(f"{cur.rowcount} results approved and ready to publish.", "success")
+    approved_count = cur.rowcount
+    
+    # Audit log
+    if approved_count > 0:
+        ids_sql = "SELECT id FROM results WHERE semester=%s AND status='approved'"
+        ids_params = [semester]
+        if dept:
+            ids_sql += " AND department=%s"
+            ids_params.append(dept)
+        approved_ids = _qry(ids_sql, ids_params) or []
+        from services.results_service import write_audit_log
+        for r in approved_ids:
+            write_audit_log(r["id"], "approved", session.get("user_id"), "Bulk approved")
+            
+    msg = f"{approved_count} results approved."
+    if skipped > 0:
+        msg += f" (Skipped {skipped} results entered by yourself to prevent self-approval)."
+    flash(msg, "success")
     return redirect("/admin_results")
 
 
@@ -1577,83 +1626,191 @@ def admin_publish_validate():
 
 
 @results_bp.route("/admin_publish_results", methods=["POST"])
-@admin_required
+@hod_or_admin_required
 def admin_publish_results():
-    semester = request.form.get("semester","").strip()
-    dept     = request.form.get("dept","").strip()
+    semester = request.form.get("semester", "").strip()
+    dept     = request.form.get("dept", "").strip()
+    subject  = request.form.get("subject", "").strip()
+    exam_type = request.form.get("exam_type", "").strip()
     from services.results_service import write_audit_log
-    if semester:
-        sql_skipped = "SELECT COUNT(*) as c FROM results WHERE semester=%s AND status != 'approved'"
-        params = [semester]
-        if dept:
-            sql_skipped += " AND department=%s"
-            params.append(dept)
-        skipped_count = _qone(sql_skipped, params)["c"] or 0
 
-        sql_pub = "UPDATE results SET published=1, status='published' WHERE semester=%s AND status='approved'"
-        params_pub = [semester]
-        if dept:
-            sql_pub += " AND department=%s"
-            params_pub.append(dept)
-        cur = _exe(sql_pub, params_pub)
-        published_count = cur.rowcount
+    if not semester or not subject or not exam_type:
+        flash("Semester, Subject, and Exam Session are required to publish.", "danger")
+        return redirect("/admin_results")
 
-        # Audit each published row
-        published_ids = _qry("SELECT id FROM results WHERE semester=%s AND status='published'"
-                             + (" AND department=%s" if dept else ""),
-                             ([semester, dept] if dept else [semester]))
-        for row in (published_ids or []):
-            write_audit_log(row["id"], "published", session.get("user_id"))
+    # Fetch approved rows matching the scope
+    sql = "SELECT id, student_id FROM results WHERE semester=%s AND subject=%s AND exam_type=%s AND status='approved'"
+    params = [semester, subject, exam_type]
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
 
-        flash(f"Published {published_count} results. {skipped_count} skipped (not yet approved).", "success")
+    approved_rows = _qry(sql, params) or []
+    if not approved_rows:
+        flash(f"No approved results found for {subject} ({exam_type}) in Semester {semester}.", "warning")
+        return redirect("/admin_results")
 
-        # Stage 6: Scoped notifications - only affected students, not a broadcast
-        if published_count > 0:
+    # Execute publish
+    update_sql = "UPDATE results SET published=1, status='published' WHERE semester=%s AND subject=%s AND exam_type=%s AND status='approved'"
+    update_params = [semester, subject, exam_type]
+    if dept:
+        update_sql += " AND department=%s"
+        update_params.append(dept)
+    cur = _exe(update_sql, update_params)
+    published_count = cur.rowcount
+
+    # Audit log and Scoped Notifications (only to affected students)
+    for r in approved_rows:
+        write_audit_log(r["id"], "published", session.get("user_id"))
+
+        if r.get("student_id"):
             try:
                 from services.notification_service import NotificationService
-                # Fetch unique student_ids whose results were just published
-                notif_sql = (
-                    "SELECT DISTINCT student_id FROM results WHERE semester=%s AND status='published'"
-                    + (" AND department=%s" if dept else "")
-                )
-                notif_rows = _qry(notif_sql, ([semester, dept] if dept else [semester])) or []
-                for row in notif_rows:
-                    if row.get("student_id"):
-                        NotificationService.send_notification(
-                            row["student_id"], "student",
-                            f"Your {semester} semester results have been published. Log in to view your marks."
-                        )
+                msg = f"Your {exam_type} result for {subject} (Sem {semester}) has been published. Log in to view."
+                NotificationService.send_notification(r["student_id"], "student", msg)
+                write_audit_log(r["id"], "notified", session.get("user_id"), f"Sent notification to student_id {r['student_id']}")
             except Exception:
-                pass  # Notification failures must never block the publish flow
+                pass
 
+    flash(f"Published {published_count} results for {subject} ({exam_type}).", "success")
     return redirect("/admin_results")
 
 
+@results_bp.route("/admin_publish_confirm", methods=["GET", "POST"])
+@hod_or_admin_required
+def admin_publish_confirm():
+    from services.results_service import write_audit_log
+    
+    if request.method == "POST" and request.form.get("confirmed") == "1":
+        semester = request.form.get("semester", "").strip()
+        dept     = request.form.get("dept", "").strip()
+
+        if not semester:
+            flash("Semester is required.", "danger")
+            return redirect("/admin_results")
+
+        # Fetch approved rows matching the scope
+        sql = "SELECT id, student_id, subject, exam_type FROM results WHERE semester=%s AND status='approved'"
+        params = [semester]
+        if dept:
+            sql += " AND department=%s"
+            params.append(dept)
+
+        approved_rows = _qry(sql, params) or []
+        if not approved_rows:
+            flash(f"No approved results found for Semester {semester}.", "warning")
+            return redirect("/admin_results")
+
+        # Execute publish
+        update_sql = "UPDATE results SET published=1, status='published' WHERE semester=%s AND status='approved'"
+        update_params = [semester]
+        if dept:
+            update_sql += " AND department=%s"
+            update_params.append(dept)
+        _exe(update_sql, update_params)
+
+        # Audit log and Scoped Notifications (only to affected students)
+        for r in approved_rows:
+            write_audit_log(r["id"], "published", session.get("user_id"), "Whole-semester publish")
+
+            if r.get("student_id"):
+                try:
+                    from services.notification_service import NotificationService
+                    msg = f"Your {r['exam_type']} result for {r['subject']} (Sem {semester}) has been published."
+                    NotificationService.send_notification(r["student_id"], "student", msg)
+                    write_audit_log(r["id"], "notified", session.get("user_id"), f"Sent notification to student_id {r['student_id']} (semester publish)")
+                except Exception:
+                    pass
+
+        flash(f"Successfully published {len(approved_rows)} results for Semester {semester}.", "success")
+        return redirect("/admin_results")
+
+    # GET method - render confirmation page
+    semester = request.args.get("semester", "").strip()
+    dept     = request.args.get("dept", "").strip()
+
+    if not semester:
+        flash("Semester is required to preview publish.", "warning")
+        return redirect("/admin_results")
+
+    # Get all results in this semester and count approved vs pending by subject
+    sql_all = """
+        SELECT subject, status, COUNT(*) as cnt
+        FROM results
+        WHERE semester = %s
+    """
+    params_all = [semester]
+    if dept:
+        sql_all += " AND department = %s"
+        params_all.append(dept)
+    sql_all += " GROUP BY subject, status"
+
+    rows = _qry(sql_all, params_all) or []
+
+    # Group by subject to show a clean summary
+    summary_dict = {}
+    for r in rows:
+        subj = r["subject"]
+        status = r["status"]
+        cnt = r["cnt"]
+        if subj not in summary_dict:
+            summary_dict[subj] = {"subject": subj, "approved": 0, "pending": 0, "total": 0}
+
+        summary_dict[subj]["total"] += cnt
+        if status == "approved":
+            summary_dict[subj]["approved"] += cnt
+        else:
+            summary_dict[subj]["pending"] += cnt
+
+    summary_list = list(summary_dict.values())
+    total_approved = sum(item["approved"] for item in summary_list)
+
+    return render_template(
+        "admin/publish_confirm.html",
+        semester=semester,
+        department=dept,
+        summary=summary_list,
+        total_approved=total_approved
+    )
+
+
 @results_bp.route("/admin_unpublish_results", methods=["POST"])
-@admin_required
+@hod_or_admin_required
 def admin_unpublish_results():
     semester = request.form.get("semester","").strip()
     dept     = request.form.get("dept","").strip()
     reason   = request.form.get("reason", "").strip()
     from services.results_service import write_audit_log
-    if semester:
-        # Fetch IDs before update for audit
-        id_sql = "SELECT id FROM results WHERE semester=%s AND published=1"
-        id_params = [semester]
-        if dept:
-            id_sql += " AND department=%s"
-            id_params.append(dept)
-        to_unpublish = _qry(id_sql, id_params) or []
 
-        sql = "UPDATE results SET published=0, status='approved' WHERE semester=%s AND published=1"
-        params = [semester]
-        if dept:
-            sql += " AND department=%s"
-            params.append(dept)
-        _exe(sql, params)
+    if not semester:
+        flash("Semester is required to unpublish.", "warning")
+        return redirect("/admin_results")
 
-        for row in to_unpublish:
-            write_audit_log(row["id"], "unpublished", session.get("user_id"), reason or None)
+    if not reason:
+        flash("A typed reason is required to unpublish results.", "danger")
+        return redirect("/admin_results")
+
+    # Fetch IDs before update for audit
+    id_sql = "SELECT id FROM results WHERE semester=%s AND published=1"
+    id_params = [semester]
+    if dept:
+        id_sql += " AND department=%s"
+        id_params.append(dept)
+    to_unpublish = _qry(id_sql, id_params) or []
+
+    if not to_unpublish:
+        flash("No published results found in this scope to unpublish.", "warning")
+        return redirect("/admin_results")
+
+    sql = "UPDATE results SET published=0, status='approved' WHERE semester=%s AND published=1"
+    params = [semester]
+    if dept:
+        sql += " AND department=%s"
+        params.append(dept)
+    _exe(sql, params)
+
+    for row in to_unpublish:
+        write_audit_log(row["id"], "unpublished", session.get("user_id"), reason)
 
     return redirect("/admin_results?unpublished_ok=1")
 

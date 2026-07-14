@@ -460,23 +460,54 @@
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div class="modal-content">
         <div style="margin-bottom:16px;">
+          <label class="filter-label">Publish Scope</label>
+          <select name="scope" id="publishScope" class="filter-select" onchange="togglePublishScopeFields()" required>
+            <option value="subject">Specific Subject & Exam Session</option>
+            <option value="semester">Whole Semester (Requires Preview)</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px;">
           <label class="filter-label">Semester</label>
           <select name="semester" class="filter-select" required>
             <option value="">Select Semester</option>
             {% for s in SEMESTERS %}<option value="{{ s }}">Sem {{ s }}</option>{% endfor %}
           </select>
         </div>
-        <div>
+        <div style="margin-bottom:16px;">
           <label class="filter-label">Department (Optional)</label>
           <select name="dept" class="filter-select">
             <option value="">All Departments</option>
             {% for d in DEPARTMENTS %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
           </select>
         </div>
+        
+        <!-- Subject + Exam Type Fields for Subject-scoped publish -->
+        <div id="subjectScopeFields" style="margin-bottom:16px;">
+          <div style="margin-bottom:16px;">
+            <label class="filter-label">Subject</label>
+            <select name="subject" id="publishSubject" class="filter-select">
+              <option value="">Select Subject</option>
+              {% for sub in subjects %}<option value="{{ sub }}">{{ sub }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">Exam Session</label>
+            <select name="exam_type" id="publishExamType" class="filter-select">
+              <option value="">Select Exam Session</option>
+              {% for et in exam_types %}<option value="{{ et }}">{{ et }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Unpublish Reason Field -->
+        <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border);">
+          <label class="filter-label" style="color:#DC2626;">Reason for Unpublishing (Required to Unpublish)</label>
+          <input type="text" name="reason" placeholder="e.g. Corrections needed" class="filter-select" style="border-color:#FCA5A5;">
+        </div>
       </div>
       <div style="padding:16px; background:#fff; border-top:1px solid var(--border); display:flex; justify-content:space-between; gap:12px;">
-        <button type="submit" formaction="/admin_unpublish_results" class="modern-btn modern-btn-outline"><i class="fas fa-eye-slash"></i> Unpublish</button>
-        <button type="submit" class="modern-btn modern-btn-primary"><i class="fas fa-globe"></i> Publish Live</button>
+        <button type="submit" formaction="/admin_unpublish_results" onclick="return validateUnpublish()" class="modern-btn modern-btn-outline"><i class="fas fa-eye-slash"></i> Unpublish</button>
+        <button type="submit" onclick="return handlePublishSubmit(event)" class="modern-btn modern-btn-primary"><i class="fas fa-globe"></i> Process Publish</button>
       </div>
     </form>
   </div>
@@ -543,6 +574,48 @@ function openModal(id){
 function closeModal(id){
   document.getElementById(id).style.display='none';
 }
+function togglePublishScopeFields() {
+  const scope = document.getElementById("publishScope").value;
+  const fields = document.getElementById("subjectScopeFields");
+  const sub = document.getElementById("publishSubject");
+  const et = document.getElementById("publishExamType");
+  if (scope === "semester") {
+    fields.style.display = "none";
+    sub.required = false;
+    et.required = false;
+  } else {
+    fields.style.display = "block";
+    sub.required = true;
+    et.required = true;
+  }
+}
+// Init toggle on load
+document.addEventListener("DOMContentLoaded", function() {
+  togglePublishScopeFields();
+});
+
+function validateUnpublish() {
+  const reason = document.querySelector('input[name="reason"]').value.trim();
+  if (!reason) {
+    alert("Please enter a reason for unpublishing.");
+    return false;
+  }
+  return true;
+}
+
+function handlePublishSubmit(event) {
+  const scope = document.getElementById("publishScope").value;
+  const form = document.getElementById("publishForm");
+  if (scope === "semester") {
+    form.action = "/admin_publish_confirm";
+    form.method = "get";
+  } else {
+    form.action = "/admin_publish_results";
+    form.method = "post";
+  }
+  return true;
+}
+
 function openEdit(id, subject, semester, assign, attend, ta, ut, mse, tw, pr_or, examtype){
   document.getElementById('edit_id').value = id;
   document.getElementById('edit_subject').value = subject;

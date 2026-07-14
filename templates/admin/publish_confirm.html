@@ -1,0 +1,65 @@
+﻿{% extends "common/base.html" %}
+{% block title %}Confirm Semester Publish{% endblock %}
+{% block page_title %}Confirm Semester Publish{% endblock %}
+{% block breadcrumb %}<a href="/admin">Home</a> / <a href="/admin_results">Results</a> / Publish Confirmation{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);">
+  <h2 style="font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">
+    <i class="fas fa-satellite-dish" style="color: #2563EB; margin-right: 8px;"></i>
+    Confirm Whole-Semester Publishing
+  </h2>
+  <p style="color: var(--ink4); margin-bottom: 24px; font-size: 14px;">
+    You are about to publish results for the entire semester. Please review the affected subjects and record counts below. 
+    Only <strong>approved</strong> results will be published.
+  </p>
+
+  <div style="margin-bottom: 20px; padding: 12px 16px; background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 4px; font-size: 14px;">
+    <strong>Target Scope:</strong> Semester: {{ semester }} {% if department %} | Department: {{ department }} {% endif %}
+  </div>
+
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); text-align: left; background: var(--bg);">
+        <th style="padding: 12px;">Subject</th>
+        <th style="padding: 12px; text-align: center;">Approved (Will Publish)</th>
+        <th style="padding: 12px; text-align: center;">Pending (Draft/Submitted/Verified)</th>
+        <th style="padding: 12px; text-align: center;">Total Records</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in summary %}
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 12px; font-weight: 500;">{{ item.subject }}</td>
+        <td style="padding: 12px; text-align: center; color: #10B981; font-weight: bold;">{{ item.approved }}</td>
+        <td style="padding: 12px; text-align: center; color: #F59E0B;">{{ item.pending }}</td>
+        <td style="padding: 12px; text-align: center; font-weight: 500;">{{ item.total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_approved == 0 %}
+  <div style="padding: 16px; background: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 4px; color: #991B1B; font-size: 14px; margin-bottom: 24px;">
+    <strong>Blocking Warning:</strong> There are no approved results ready to publish in this scope. You must approve the results before they can be published.
+  </div>
+  {% endif %}
+
+  <form method="post" action="/admin_publish_confirm" style="display: flex; gap: 16px; justify-content: flex-end;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="semester" value="{{ semester }}">
+    <input type="hidden" name="dept" value="{{ department }}">
+    <input type="hidden" name="confirmed" value="1">
+    
+    <a href="/admin_results" class="modern-btn modern-btn-outline" style="text-decoration: none; padding: 10px 20px; line-height: 20px;">
+      <i class="fas fa-times"></i> Cancel
+    </a>
+    
+    {% if total_approved > 0 %}
+    <button type="submit" class="modern-btn modern-btn-primary" style="padding: 10px 20px;">
+      <i class="fas fa-globe"></i> Confirm & Publish {{ total_approved }} Records
+    </button>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
