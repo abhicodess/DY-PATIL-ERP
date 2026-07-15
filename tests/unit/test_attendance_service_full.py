@@ -21,7 +21,7 @@ def test_mark_single_attendance_existing_session(app):
              patch("services.attendance_service.log_attendance_action"):
             from services.attendance_service import mark_single_attendance
             result = mark_single_attendance("faculty", 1, {
-                "student_id": 10, "subject": "Math", "date": "2024-06-01", "status": "Present"
+                "student_id": 10, "student_name": "John Doe", "subject": "Math", "date": "2024-06-01", "status": "Present"
             }, actor_name="Prof. Test")
             assert result["ok"] is True
 
@@ -36,7 +36,7 @@ def test_mark_single_attendance_new_session(app):
              patch("services.attendance_service.log_attendance_action"):
             from services.attendance_service import mark_single_attendance
             result = mark_single_attendance("admin", 1, {
-                "student_id": 10, "subject": "Physics", "status": "Absent"
+                "student_id": 10, "student_name": "John Doe", "subject": "Physics", "status": "Absent"
             })
             assert result["ok"] is True
 
